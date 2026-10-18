@@ -67,8 +67,12 @@ data/private/
 
 - As pastas usam IDs anônimos (`P01`, `P02`, ...), nunca nomes. A relação entre ID e pessoa fica junto dos termos, fora do repositório.
 - São duas sessões em cômodos ou com fundos diferentes (podem ser no mesmo dia), com 20 a 30 fotos por pessoa no total, variando iluminação, pose, distância, expressão, óculos e fundo. Coletar só o necessário (minimização de dados).
-- Cada participante envia as fotos pelo WhatsApp, na conversa particular com a integrante responsável pelo convite (nunca em grupo), indicando "Etapa 1" ou "Etapa 2" para separar as sessões. Assim que as fotos são salvas em `data/private/<ID>/`, a conversa é apagada.
-- As fotos são processadas só nos computadores da dupla e nunca são enviadas a serviços externos nem a agentes de IA.
+- As fotos podem ser enviadas por mensageiro (WhatsApp) só por quem assinou o termo com a cláusula que autoriza esse envio. O mensageiro é um serviço de terceiros, então o envio precisa estar coberto pelo consentimento (seções 14 e 23 do enunciado). Quem não autorizou entrega as fotos por pendrive ou as tira com uma de nós.
+- O envio é feito na conversa particular com a integrante responsável pelo convite, nunca em grupo, e-mail, nuvem ou link de compartilhamento. As fotos vão como foto, não como documento, para o aplicativo remover metadados como a localização, e a mensagem diz só "Etapa 1" ou "Etapa 2", sem outros dados pessoais.
+- Antes de receber, a integrante desativa o download automático de mídia, a opção de salvar na galeria e o backup de conversas em nuvem.
+- As fotos são salvas direto em `data/private/<ID>/`, dentro de um cofre VeraCrypt no notebook da RTX 4060 (decisão D10), pelo WhatsApp Web aberto nesse notebook ou por cabo USB. Fotos recebidas no celular da outra integrante chegam por cabo ou por pendrive dentro de um cofre VeraCrypt, nunca reencaminhadas por mensageiro.
+- Em até 24 horas depois de salvas, a integrante apaga as mensagens com "Apagar para todos", limpa a conversa, remove as mídias do celular e esvazia a lixeira da galeria. A data de recebimento e a data de exclusão ficam registradas na planilha de controle, guardada junto aos termos e fora do repositório.
+- As fotos e tudo que deriva delas (recortes, embeddings, checkpoints, resultados por pessoa) ficam só nesse cofre e nunca são enviados a serviços externos nem a agentes de IA.
 - Para excluir uma pessoa, apague `data/private/<ID>/` e os embeddings, checkpoints e resultados derivados dela.
 - Ao fim da disciplina, todo o conteúdo de `data/private/` e os arquivos derivados são apagados.
 
@@ -143,8 +147,12 @@ data/private/
 
 - Folders use anonymous IDs (`P01`, `P02`, ...), never names. The mapping between ID and person is kept with the consent forms, outside the repository.
 - There are two sessions in different rooms or against different backgrounds (they may be on the same day), with 20 to 30 photos per person in total, varying lighting, pose, distance, expression, glasses and background. Collect only what is needed (data minimization).
-- Each participant sends the photos over WhatsApp, in a private chat with the team member responsible for the invitation (never in a group), labeling them "Etapa 1" or "Etapa 2" to separate the sessions. Once the photos are saved to `data/private/<ID>/`, the chat is deleted.
-- Photos are processed only on the team's computers and are never sent to external services or AI agents.
+- Photos may be sent through a messaging app (WhatsApp) only by participants who signed the consent form with the clause authorizing it. The messaging app is a third-party service, so sending must be covered by the consent (sections 14 and 23 of the assignment). Participants who did not authorize it hand the photos over on a USB drive or have them taken by one of us.
+- Photos are sent in a private chat with the team member responsible for the invitation, never in a group, by email, through cloud storage or via a sharing link. They are sent as photos, not as documents, so the app strips metadata such as location, and the message says only "Etapa 1" or "Etapa 2", with no other personal data.
+- Before receiving them, the team member turns off automatic media download, saving to the gallery and cloud chat backup.
+- Photos are saved directly to `data/private/<ID>/`, inside a VeraCrypt vault on the RTX 4060 notebook (decision D10), through WhatsApp Web opened on that notebook or over a USB cable. Photos received on the other team member's phone arrive over a USB cable or on a USB drive inside a VeraCrypt vault, never forwarded through a messaging app.
+- Within 24 hours of being saved, the team member deletes the messages with "Delete for everyone", clears the chat, removes the media from the phone and empties the gallery trash. The date received and the date deleted are recorded in the control spreadsheet, kept with the consent forms and outside the repository.
+- Photos and everything derived from them (crops, embeddings, checkpoints, per-person results) stay only in that vault and are never sent to external services or AI agents.
 - To delete a person, remove `data/private/<ID>/` and the embeddings, checkpoints and results derived from them.
 - At the end of the course, all of `data/private/` and its derived files are deleted.
 
