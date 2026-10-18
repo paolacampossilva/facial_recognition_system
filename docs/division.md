@@ -30,7 +30,7 @@ Cada uma é dona de uma fatia vertical (escreve a spec/ADR, implementa, testa e 
 | **dom 18** | Criar a estrutura do repo (branch `chore/repo-setup` saindo da `dev`), `pyproject`, `ruff`/`pytest`, completar o `.gitignore` e o hook de pre-commit | Enviar o termo de consentimento (Anexo A) às participantes; montar o venv, o `requirements.txt` e o teste de ambiente `tests/test_environment.py`; validar o ambiente na 4060 e na 5070 com `pytest` e `pytest -m gpu -s` | Reunião de 45 min: fechar D1 a D15 aceitando as recomendações, o protocolo de avaliação, o split do privado e o contrato entre as fatias (seções abaixo) |
 | **seg 19** | Download do LFW, pré-processamento com MTCNN, splits por identidade e pares de teste comuns; `data/README.md` com origem, licença e uso do LFW | Wrappers dos modelos; **E01** (baseline FaceNet) e **E02** (ResNet-50 sem fine-tuning) salvando embeddings no formato combinado | **Sessão 1** da coleta privada, com os termos assinados |
 | **ter 20** | Métricas, escolha do threshold na validação, checagem de leakage; ADRs de D1 a D3 e D6 a D9 | Loop de treino com cabeça ArcFace, congelamento parcial e modo `--smoke`; **E04** na 5070 (early stopping por val loss); ADRs de D4, D5, D10 e D11 | |
-| **qua 21** | Avaliação de E01, E02 e E04, gráficos agregados; ADR de D12 | **E06** (Triplet Loss) na 5070; `docs/privacy.md`; ADR de D13 | **Sessão 2** da coleta (outro dia e outro ambiente); juntar as fotos privadas na máquina escolhida, por pendrive; ADRs de D14 e D15 |
+| **qua 21** | Avaliação de E01, E02 e E04, gráficos agregados; ADR de D12 | **E06** (Triplet Loss) na 5070; `docs/privacy.md`; ADR de D13 | **Sessão 2** da coleta (outro cômodo ou outro fundo, pode ser no mesmo dia da sessão 1); juntar as fotos privadas na máquina escolhida, por pendrive; ADRs de D14 e D15 |
 | **qui 22** | Avaliação de E06; MTCNN nas fotos privadas; **E07 e E08** com todas as participantes, localmente | Tabela de experimentos e análise de E01 a E06 (seção 33); acompanhar E07 e E08 para saber explicar | ADR "modelo escolhido" |
 | **sex 23** | README: dados, protocolo, métricas, threshold e reprodutibilidade; gravar a sua parte do vídeo à noite | README: tabela final e análise da seção 33 incluindo E07 e E08; roteiro do vídeo | Revisão cruzada do README |
 | **sáb 24** | Rodar o Anexo B item por item | Gravar a sua parte do vídeo e editar o vídeo 1 | Auditoria do histórico (`git log --all --stat`), juntar `dev` na `main`, **entrega** |
@@ -106,7 +106,7 @@ Fechadas na reunião de domingo, cada uma registrada como ADR em `docs/decisions
 - Checagem de leakage: hash perceptual entre splits e garantia de que as augmentations só acontecem dentro do treino. Script e relatório.
 
 ### Dataset privado (juntas, execução local)
-- Protocolo de coleta: cerca de 5 a 10 adultos consentidos, 20 a 30 fotos cada, em 2 sessões em dias diferentes (variando iluminação, pose, distância, óculos e fundo). Minimização de dados.
+- Protocolo de coleta: cerca de 5 a 10 adultos consentidos, 20 a 30 fotos cada, em 2 sessões em cômodos ou com fundos diferentes, podendo ser no mesmo dia (variando iluminação, pose, distância, óculos e fundo). Minimização de dados.
 - Cada uma coleta as pessoas do seu lado e guarda os termos delas. Depois as fotos são juntadas numa só máquina de uma de nós (passadas por pendrive, nunca por nuvem ou mensageiro), e E07 e E08 rodam uma vez com o conjunto inteiro.
 - `data/README.md` com instruções para alguém criar o próprio dataset privado localmente.
 
@@ -172,7 +172,7 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 
 ## Caminho crítico e cuidados
 
-- **Coleta privada:** as sessões 1 e 2 precisam ser em dias diferentes para o split por sessão funcionar, então os termos têm que estar assinados até segunda (19/10).
+- **Coleta privada:** as sessões 1 e 2 podem ser no mesmo dia, desde que em cômodos ou com fundos diferentes, para o split por sessão funcionar. Os termos têm que estar assinados até segunda (19/10).
 - **Fluxo entre máquinas:** código pelo Git; cada máquina tem o próprio venv e baixa o LFW sozinha; rodar o `--smoke` no notebook antes de mandar o treino para a 5070; os resultados JSON e os gráficos agregados voltam pelo Git; checkpoints ficam fora do Git.
 - **LGPD:** as fotos privadas só são processadas nos computadores do grupo, e agentes de IA nunca recebem fotos reais. Se a 5070 não for de uma das integrantes, ela roda apenas E01 a E06 (dados públicos), e E07 e E08 rodam nos notebooks.
 

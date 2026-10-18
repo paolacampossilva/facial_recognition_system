@@ -50,7 +50,7 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 
 ## Dataset privado
 
-Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas diretamente pela dupla, sem scraping. Os termos ficam fora do repositório (papel ou pasta local criptografada).
+Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas pelos próprios participantes na hora, a partir do [guia para participantes](../docs/participant_photo_guide.pdf), e entregues diretamente à dupla, sem scraping nem fotos antigas. Os termos ficam fora do repositório (papel ou pasta local criptografada).
 
 Para montar o seu localmente:
 
@@ -66,7 +66,8 @@ data/private/
 ```
 
 - As pastas usam IDs anônimos (`P01`, `P02`, ...), nunca nomes. A relação entre ID e pessoa fica junto dos termos, fora do repositório.
-- São duas sessões em dias e ambientes diferentes, com 20 a 30 fotos por pessoa no total, variando iluminação, pose, distância, expressão, óculos e fundo. Coletar só o necessário (minimização de dados).
+- São duas sessões em cômodos ou com fundos diferentes (podem ser no mesmo dia), com 20 a 30 fotos por pessoa no total, variando iluminação, pose, distância, expressão, óculos e fundo. Coletar só o necessário (minimização de dados).
+- Cada participante envia as fotos pelo WhatsApp, na conversa particular com a integrante responsável pelo convite (nunca em grupo), indicando "Etapa 1" ou "Etapa 2" para separar as sessões. Assim que as fotos são salvas em `data/private/<ID>/`, a conversa é apagada.
 - As fotos são processadas só nos computadores da dupla e nunca são enviadas a serviços externos nem a agentes de IA.
 - Para excluir uma pessoa, apague `data/private/<ID>/` e os embeddings, checkpoints e resultados derivados dela.
 - Ao fim da disciplina, todo o conteúdo de `data/private/` e os arquivos derivados são apagados.
@@ -125,7 +126,7 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 
 ## Private dataset
 
-Photos of adults who signed the consent form (Annex A of the assignment), taken directly by the team, with no scraping. Consent forms are kept outside the repository (paper or an encrypted local folder).
+Photos of adults who signed the consent form (Annex A of the assignment), taken by the participants themselves on the spot, following the [participant guide](../docs/participant_photo_guide.pdf) (in Portuguese), and handed directly to the team, with no scraping and no old photos. Consent forms are kept outside the repository (paper or an encrypted local folder).
 
 To build your own locally:
 
@@ -141,7 +142,8 @@ data/private/
 ```
 
 - Folders use anonymous IDs (`P01`, `P02`, ...), never names. The mapping between ID and person is kept with the consent forms, outside the repository.
-- There are two sessions on different days and in different settings, with 20 to 30 photos per person in total, varying lighting, pose, distance, expression, glasses and background. Collect only what is needed (data minimization).
+- There are two sessions in different rooms or against different backgrounds (they may be on the same day), with 20 to 30 photos per person in total, varying lighting, pose, distance, expression, glasses and background. Collect only what is needed (data minimization).
+- Each participant sends the photos over WhatsApp, in a private chat with the team member responsible for the invitation (never in a group), labeling them "Etapa 1" or "Etapa 2" to separate the sessions. Once the photos are saved to `data/private/<ID>/`, the chat is deleted.
 - Photos are processed only on the team's computers and are never sent to external services or AI agents.
 - To delete a person, remove `data/private/<ID>/` and the embeddings, checkpoints and results derived from them.
 - At the end of the course, all of `data/private/` and its derived files are deleted.
