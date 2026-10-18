@@ -21,6 +21,9 @@ scikit-learn==1.9.1
 matplotlib==3.11.2
 PyYAML==6.0.3
 
+# Validação do manifesto de datasets (scripts/download_datasets.py)
+pydantic==2.14.1
+
 # Desenvolvimento
 pytest==9.1.1
 ruff==0.17.1
