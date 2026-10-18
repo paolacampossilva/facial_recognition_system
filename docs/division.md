@@ -100,7 +100,7 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 | Estrutura do repo (`src/`, `experiments/`, `configs/`, `tests/`, `scripts/`, `docs/specs/`, `docs/decisions/`, `data/README.md`), `pyproject.toml`, ruff, pytest com marcadores `unit`/`integration`/`e2e`/`gpu`, pre-commit | Paola |
 | `.gitignore` de privacidade (`data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `*.db`, `*.sqlite`, `consent/`, `*.pt`, `*.pth`, `*.onnx`) e hook de pre-commit que bloqueia imagens e checkpoints fora das pastas permitidas | Paola |
 | venv, `requirements.txt` com versões fixadas e `tests/test_environment.py` (CPU por padrão, GPU com `pytest -m gpu -s`), validados na 4060 | Valentina |
-| Adaptar o Termo de Consentimento (Anexo A), enviar e colher assinaturas; guardar fora do repo (pasta local criptografada ou papel) | Valentina |
+| Adaptar o Termo de Consentimento (Anexo A), com a cláusula de envio por mensageiro (ver "Dataset privado"), enviar e colher assinaturas; guardar fora do repo (pasta local criptografada ou papel) | Valentina |
 | Ler o enunciado inteiro e fechar as decisões D1 a D15 | Juntas |
 
 ## Parte 1, experimentação
@@ -113,7 +113,15 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 
 ### Dataset privado (juntas, execução local)
 - Protocolo de coleta: cerca de 5 a 10 adultos consentidos, 20 a 30 fotos cada, em 2 sessões em cômodos ou com fundos diferentes, podendo ser no mesmo dia (variando iluminação, pose, distância, óculos e fundo). Minimização de dados.
-- Cada uma coleta as pessoas do seu lado e guarda os termos delas. Depois as fotos são juntadas numa só máquina de uma de nós (passadas por pendrive, nunca por nuvem ou mensageiro), e E07 e E08 rodam uma vez com o conjunto inteiro.
+- Cada uma coleta as pessoas do seu lado e guarda os termos delas. As fotos ficam só no cofre VeraCrypt do notebook da 4060 (D10), e E07 e E08 rodam uma vez com o conjunto inteiro.
+- **Envio das fotos por mensageiro (WhatsApp).** A participante pode mandar as próprias fotos por mensageiro, desde que todas as regras abaixo sejam cumpridas. O mensageiro é um serviço de terceiros, então o envio só vale se estiver coberto pelo consentimento (seções 14 e 23):
+  - **Consentimento:** o termo traz uma cláusula específica autorizando o envio, por exemplo: "Autorizo o envio das minhas fotografias por mensagem privada no WhatsApp à integrante [nome], que as salvará apenas no computador do grupo e apagará a conversa e as mídias do celular em até 24 horas." Quem assinou um termo sem essa cláusula assina um aditivo ou entrega as fotos sem mensageiro (pendrive ou fotos tiradas por nós).
+  - **Canal:** só conversa individual com a integrante que fez o convite, com criptografia de ponta a ponta. Nunca grupos, e-mail, nuvem (Drive, iCloud, Google Fotos) ou link de compartilhamento.
+  - **Envio:** as fotos vão como foto, não como documento, para o aplicativo remover metadados como a localização (minimização de dados). A participante escreve só "Etapa 1" ou "Etapa 2", sem nome completo nem outros dados pessoais.
+  - **Antes de receber:** a integrante desativa o download automático de mídia e a opção de salvar na galeria, e confere que o backup de conversas em nuvem está desligado, para as fotos não irem para a galeria, o Google Fotos ou o iCloud.
+  - **Ao receber:** as fotos são salvas direto no cofre do notebook da 4060, em `data/private/<ID>/`, pelo WhatsApp Web aberto no notebook ou por cabo USB. Nunca passam pelo Mac da Paola nem por outro computador. Fotos recebidas no celular da Paola chegam ao notebook por cabo ou por pendrive dentro de um cofre VeraCrypt, nunca reencaminhadas por mensageiro.
+  - **Exclusão em até 24 horas:** depois de conferir que as fotos estão no cofre, a integrante apaga as mensagens com "Apagar para todos", limpa a conversa, remove as mídias do armazenamento do celular e esvazia a lixeira da galeria. A participante é avisada de que pode apagar a cópia dela.
+  - **Registro:** a planilha de controle, guardada junto aos termos e fora do repositório, anota para cada ID a data de recebimento e a data de exclusão da conversa. Isso serve de evidência no checklist do Anexo B.
 - `data/README.md` com instruções para alguém criar o próprio dataset privado localmente.
 
 ### Modelos e treinamento (Valentina)
@@ -180,7 +188,7 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 
 - **Coleta privada:** as sessões 1 e 2 podem ser no mesmo dia, desde que em cômodos ou com fundos diferentes, para o split por sessão funcionar. Os termos têm que estar assinados até segunda (19/10).
 - **Fluxo entre máquinas:** código pelo Git; cada máquina tem o próprio venv e baixa o LFW sozinha; rodar o `--smoke` antes do treino completo; os resultados JSON e os gráficos agregados voltam pelo Git; checkpoints ficam fora do Git.
-- **LGPD:** as fotos privadas só são processadas nos computadores do grupo, e agentes de IA nunca recebem fotos reais. As fotos privadas ficam só no notebook da 4060, num cofre VeraCrypt (D10).
+- **LGPD:** as fotos privadas só são processadas nos computadores do grupo, e agentes de IA nunca recebem fotos reais. As fotos privadas ficam só no notebook da 4060, num cofre VeraCrypt (D10). O envio por mensageiro só é aceito com a cláusula no termo, em conversa individual, e a conversa é apagada em até 24 horas (ver "Dataset privado").
 
 ## Fechamento de cada entrega (juntas)
 
