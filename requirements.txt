@@ -1,0 +1,29 @@
+# Python 3.11.4+ (3.11.0 a 3.11.3 não têm tarfile.extractall(filter=...))
+#
+# torch, torchvision e facenet-pytorch NÃO estão aqui e devem ser instalados
+# antes, nesta ordem (CUDA 12.8 é necessário para a RTX 5070, arquitetura Blackwell):
+#
+#   python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
+#   python -m pip install facenet-pytorch==2.6.0 --no-deps
+#   python -m pip install -r requirements.txt
+#
+# O facenet-pytorch 2.6.0 declara torch<2.3, que não suporta a RTX 5070;
+# por isso ele é instalado com --no-deps e suas dependências reais estão listadas abaixo.
+
+# Dependências do facenet-pytorch
+numpy==2.4.6
+pillow==13.0.0
+requests==2.34.2
+tqdm==4.70.1
+
+# Avaliação, gráficos e configuração dos experimentos
+scikit-learn==1.9.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+
+# Validação do manifesto de datasets (scripts/download_datasets.py)
+pydantic==2.14.1
+
+# Desenvolvimento
+pytest==9.1.1
+ruff==0.17.1

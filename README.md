@@ -15,6 +15,8 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 - [Visão geral](#visão-geral)
   - [Pipeline previsto](#pipeline-previsto)
 - [Tecnologias](#tecnologias)
+- [Instalação](#instalação)
+  - [Testes](#testes)
 - [Conjuntos de dados](#conjuntos-de-dados)
   - [Dataset público](#dataset-público)
   - [Dataset privado](#dataset-privado)
@@ -25,7 +27,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 
 ## Visão geral
 
-> **Status:** em desenvolvimento. Ainda não há código; instalação, execução, variáveis de ambiente e testes serão documentados quando existirem.
+> **Status:** em desenvolvimento. O ambiente e os testes estão documentados em [Instalação](#instalação); a execução dos experimentos e da aplicação será documentada quando existir.
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
@@ -60,10 +62,39 @@ Uma face com similaridade abaixo do threshold é classificada como **pessoa desc
 
 | Camada | Tecnologia |
 |---|---|
-| Linguagem | Python |
+| Linguagem | Python 3.11 |
 | Modelo de embedding facial | A definir na Parte 1 |
-| Framework de deep learning | A definir na Parte 1 |
+| Framework de deep learning | PyTorch 2.7.1 (CUDA 12.8) |
 | Interface da aplicação | A definir na Parte 2 |
+
+## Instalação
+
+Requisitos: **Python 3.11.4 ou mais recente na série 3.11** (o `tarfile.extractall(filter=...)` usado em [scripts/download_datasets.py](scripts/download_datasets.py) não existe no 3.11.0 a 3.11.3) e, para treinar, uma GPU NVIDIA com driver compatível com CUDA 12.8. Máquinas do projeto: RTX 4060 e RTX 5070.
+
+```bash
+python -m venv .venv
+.venv\Scriptsctivate          # Windows
+# source .venv/bin/activate     # Linux/macOS
+
+python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install facenet-pytorch==2.6.0 --no-deps
+python -m pip install -r requirements.txt
+```
+
+A ordem importa:
+
+- o **torch vem do índice cu128**, porque a RTX 5070 (arquitetura Blackwell) só é suportada a partir do CUDA 12.8;
+- o **facenet-pytorch é instalado com `--no-deps`**, porque a versão 2.6.0 declara `torch<2.3`. As dependências que ele realmente usa estão fixadas no [requirements.txt](requirements.txt);
+- o `pip` vai avisar que o facenet-pytorch pede outras versões de torch, numpy e Pillow. O aviso é esperado e os testes abaixo confirmam que o pipeline funciona.
+
+### Testes
+
+```bash
+pytest              # testes em CPU (padrão)
+pytest -m gpu -s    # testes de GPU; -s mostra qual placa e qual versão do CUDA foram usadas
+```
+
+Os testes marcados com `gpu` ficam fora da execução padrão e **falham** (não são pulados) se a GPU não conseguir rodar o modelo. Rode os dois comandos em toda máquina nova.
 
 ## Conjuntos de dados
 
@@ -130,6 +161,7 @@ facial_recognition_system/
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # configuração do ruff e do pytest
+├── requirements.txt              # versões fixadas (exceto torch e facenet-pytorch)
 └── README.md
 ```
 
@@ -165,6 +197,8 @@ facial_recognition_system/
 - [Overview](#overview)
   - [Planned pipeline](#planned-pipeline)
 - [Technologies](#technologies)
+- [Installation](#installation)
+  - [Tests](#tests)
 - [Data](#data)
   - [Public dataset](#public-dataset)
   - [Private dataset](#private-dataset)
@@ -175,7 +209,7 @@ facial_recognition_system/
 
 ## Overview
 
-> **Status:** in development. There is no code yet; installation, running, environment variables and tests will be documented once they exist.
+> **Status:** in development. The environment and tests are documented in [Installation](#installation); running the experiments and the application will be documented once they exist.
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
@@ -210,10 +244,39 @@ A face whose similarity falls below the threshold is classified as an **unknown 
 
 | Layer | Technology |
 |---|---|
-| Language | Python |
+| Language | Python 3.11 |
 | Face embedding model | To be defined in Part 1 |
-| Deep learning framework | To be defined in Part 1 |
+| Deep learning framework | PyTorch 2.7.1 (CUDA 12.8) |
 | Application interface | To be defined in Part 2 |
+
+## Installation
+
+Requirements: **Python 3.11.4 or newer in the 3.11 series** (the `tarfile.extractall(filter=...)` used in [scripts/download_datasets.py](scripts/download_datasets.py) does not exist in 3.11.0 to 3.11.3) and, for training, an NVIDIA GPU with a driver that supports CUDA 12.8. Project machines: RTX 4060 and RTX 5070.
+
+```bash
+python -m venv .venv
+.venv\Scriptsctivate          # Windows
+# source .venv/bin/activate     # Linux/macOS
+
+python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install facenet-pytorch==2.6.0 --no-deps
+python -m pip install -r requirements.txt
+```
+
+The order matters:
+
+- **torch comes from the cu128 index**, because the RTX 5070 (Blackwell architecture) is only supported from CUDA 12.8 onwards;
+- **facenet-pytorch is installed with `--no-deps`**, because version 2.6.0 declares `torch<2.3`. The dependencies it actually uses are pinned in [requirements.txt](requirements.txt);
+- `pip` will warn that facenet-pytorch asks for other versions of torch, numpy and Pillow. The warning is expected, and the tests below confirm the pipeline works.
+
+### Tests
+
+```bash
+pytest              # CPU tests (default)
+pytest -m gpu -s    # GPU tests; -s shows which card and CUDA version were used
+```
+
+Tests marked `gpu` are excluded from the default run and **fail** (they are not skipped) if the GPU cannot run the model. Run both commands on every new machine.
 
 ## Data
 
@@ -280,6 +343,7 @@ facial_recognition_system/
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # ruff and pytest configuration
+├── requirements.txt              # pinned versions (except torch and facenet-pytorch)
 └── README.md
 ```
 
