@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facial-recognition-system"
+version = "0.1.0"
+description = "Face recognition experiments and application for the UFMS Artificial Intelligence course"
+readme = "README.md"
+requires-python = "==3.11.*"
+authors = [
+    { name = "Paola Campos da Silva" },
+    { name = "Valentina Campos Soares" },
+]
+
+# Dependencies are pinned in requirements.txt (torch needs the cu128 index).
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "."]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = "--strict-markers"
+markers = [
+    "unit: fast tests with no network, GPU or real model",
+    "integration: tests that use real models or public data",
+    "e2e: full application flow",
+]
