@@ -29,9 +29,11 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "N"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "."]
-addopts = "--strict-markers"
+# GPU tests are excluded by default; run them explicitly with `pytest -m gpu -s`.
+addopts = "--strict-markers -m 'not gpu'"
 markers = [
     "unit: fast tests with no network, GPU or real model",
     "integration: tests that use real models or public data",
     "e2e: full application flow",
+    "gpu: requires an NVIDIA GPU with CUDA; fails (is not skipped) if the GPU cannot run the model",
 ]
