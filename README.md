@@ -73,7 +73,7 @@ Requisitos: **Python 3.11.4 ou mais recente na série 3.11** (o `tarfile.extract
 
 ```bash
 python -m venv .venv
-.venv\Scriptsctivate          # Windows
+.venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # Linux/macOS
 
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
@@ -255,7 +255,7 @@ Requirements: **Python 3.11.4 or newer in the 3.11 series** (the `tarfile.extrac
 
 ```bash
 python -m venv .venv
-.venv\Scriptsctivate          # Windows
+.venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # Linux/macOS
 
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
