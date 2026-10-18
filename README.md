@@ -16,6 +16,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
   - [Pipeline previsto](#pipeline-previsto)
 - [Tecnologias](#tecnologias)
 - [Instalação](#instalação)
+  - [Hook de privacidade](#hook-de-privacidade)
   - [Testes](#testes)
 - [Conjuntos de dados](#conjuntos-de-dados)
   - [Dataset público](#dataset-público)
@@ -79,6 +80,7 @@ python -m venv .venv
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
 python -m pip install facenet-pytorch==2.6.0 --no-deps
 python -m pip install -r requirements.txt
+pre-commit install
 ```
 
 A ordem importa:
@@ -86,6 +88,16 @@ A ordem importa:
 - o **torch vem do índice cu128**, porque a RTX 5070 (arquitetura Blackwell) só é suportada a partir do CUDA 12.8;
 - o **facenet-pytorch é instalado com `--no-deps`**, porque a versão 2.6.0 declara `torch<2.3`. As dependências que ele realmente usa estão fixadas no [requirements.txt](requirements.txt);
 - o `pip` vai avisar que o facenet-pytorch pede outras versões de torch, numpy e Pillow. O aviso é esperado e os testes abaixo confirmam que o pipeline funciona.
+
+### Hook de privacidade
+
+O `pre-commit install` ativa, neste clone, os hooks do [.pre-commit-config.yaml](.pre-commit-config.yaml), entre eles o [scripts/check_private_files.py](scripts/check_private_files.py), que bloqueia fotos, vídeos, embeddings, checkpoints e bancos em qualquer commit. É a segunda barreira depois do `.gitignore` e precisa ser rodado **uma vez em cada clone**, porque o Git não versiona os hooks. Para conferir se está ativo:
+
+```bash
+pre-commit run --all-files
+```
+
+Nunca use `git commit --no-verify`, que pula o hook.
 
 ### Testes
 
@@ -198,6 +210,7 @@ facial_recognition_system/
   - [Planned pipeline](#planned-pipeline)
 - [Technologies](#technologies)
 - [Installation](#installation)
+  - [Privacy hook](#privacy-hook)
   - [Tests](#tests)
 - [Data](#data)
   - [Public dataset](#public-dataset)
@@ -261,6 +274,7 @@ python -m venv .venv
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
 python -m pip install facenet-pytorch==2.6.0 --no-deps
 python -m pip install -r requirements.txt
+pre-commit install
 ```
 
 The order matters:
@@ -268,6 +282,16 @@ The order matters:
 - **torch comes from the cu128 index**, because the RTX 5070 (Blackwell architecture) is only supported from CUDA 12.8 onwards;
 - **facenet-pytorch is installed with `--no-deps`**, because version 2.6.0 declares `torch<2.3`. The dependencies it actually uses are pinned in [requirements.txt](requirements.txt);
 - `pip` will warn that facenet-pytorch asks for other versions of torch, numpy and Pillow. The warning is expected, and the tests below confirm the pipeline works.
+
+### Privacy hook
+
+`pre-commit install` enables, in this clone, the hooks in [.pre-commit-config.yaml](.pre-commit-config.yaml), including [scripts/check_private_files.py](scripts/check_private_files.py), which blocks photos, videos, embeddings, checkpoints and databases from any commit. It is the second barrier after `.gitignore` and must be run **once in every clone**, because Git does not version hooks. To check that it is active:
+
+```bash
+pre-commit run --all-files
+```
+
+Never use `git commit --no-verify`, which skips the hook.
 
 ### Tests
 
