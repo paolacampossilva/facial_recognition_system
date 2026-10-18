@@ -7,7 +7,8 @@ name = "facial-recognition-system"
 version = "0.1.0"
 description = "Face recognition experiments and application for the UFMS Artificial Intelligence course"
 readme = "README.md"
-requires-python = "==3.11.*"
+# 3.11.4+ for tarfile.extractall(filter=...)
+requires-python = ">=3.11.4,<3.12"
 authors = [
     { name = "Paola Campos da Silva" },
     { name = "Valentina Campos Soares" },

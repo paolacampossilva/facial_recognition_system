@@ -1,4 +1,4 @@
-# Python 3.11
+# Python 3.11.4+ (3.11.0 a 3.11.3 não têm tarfile.extractall(filter=...))
 #
 # torch, torchvision e facenet-pytorch NÃO estão aqui e devem ser instalados
 # antes, nesta ordem (CUDA 12.8 é necessário para a RTX 5070, arquitetura Blackwell):
