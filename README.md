@@ -100,7 +100,7 @@ Ficam **fora do GitHub** e são processados apenas localmente:
 - termos de consentimento;
 - logs e resultados individualizados.
 
-O [.gitignore](.gitignore) já ignora `data/private/`, `faces/`, `embeddings/`, `checkpoints/private/`, `consent/`, `*.db` e `*.sqlite`. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
+O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
 
 Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [docs/assignment.md](docs/assignment.md).
 
@@ -108,9 +108,28 @@ Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [do
 
 ```text
 facial_recognition_system/
+├── configs/                      # um YAML por experimento
+├── data/
+│   ├── README.md                 # origem, licença e como obter os dados
+│   └── splits/                   # listas de treino/validação/teste (só dados públicos)
 ├── docs/
-│   └── assignment.md   # enunciado do trabalho
+│   ├── assignment.md             # enunciado do trabalho
+│   ├── decisions/                # ADRs
+│   └── specs/                    # especificações com critérios de aceitação
+├── experiments/
+│   ├── figures/                  # gráficos agregados
+│   └── results/                  # um JSON de resultado por experimento
+├── scripts/
+│   └── check_private_files.py    # hook de pre-commit contra dados privados
+├── src/facial_recognition_system/
+│   ├── evaluation/               # métricas, threshold e gráficos
+│   ├── models/                   # wrappers dos modelos de embedding
+│   ├── preprocessing/            # detecção, alinhamento e recorte
+│   └── training/                 # loops de fine-tuning e cabeças de loss
+├── tests/
 ├── .gitignore
+├── .pre-commit-config.yaml
+├── pyproject.toml                # configuração do ruff e do pytest
 └── README.md
 ```
 
@@ -231,7 +250,7 @@ The following stays **out of GitHub** and is processed only locally:
 - consent forms;
 - logs and individual-level results.
 
-The [.gitignore](.gitignore) already ignores `data/private/`, `faces/`, `embeddings/`, `checkpoints/private/`, `consent/`, `*.db` and `*.sqlite`. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
+The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
 
 Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assignment.md](docs/assignment.md).
 
@@ -239,9 +258,28 @@ Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assign
 
 ```text
 facial_recognition_system/
+├── configs/                      # one YAML per experiment
+├── data/
+│   ├── README.md                 # data source, license and how to obtain it
+│   └── splits/                   # train/validation/test lists (public data only)
 ├── docs/
-│   └── assignment.md   # assignment description
+│   ├── assignment.md             # assignment description
+│   ├── decisions/                # ADRs
+│   └── specs/                    # specifications with acceptance criteria
+├── experiments/
+│   ├── figures/                  # aggregated plots
+│   └── results/                  # one result JSON per experiment
+├── scripts/
+│   └── check_private_files.py    # pre-commit hook against private data
+├── src/facial_recognition_system/
+│   ├── evaluation/               # metrics, threshold and plots
+│   ├── models/                   # embedding model wrappers
+│   ├── preprocessing/            # detection, alignment and cropping
+│   └── training/                 # fine-tuning loops and loss heads
+├── tests/
 ├── .gitignore
+├── .pre-commit-config.yaml
+├── pyproject.toml                # ruff and pytest configuration
 └── README.md
 ```
 
