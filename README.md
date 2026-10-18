@@ -69,7 +69,7 @@ Uma face com similaridade abaixo do threshold é classificada como **pessoa desc
 
 ## Instalação
 
-Requisitos: **Python 3.11.4 ou mais recente na série 3.11** (o `tarfile.extractall(filter=...)` usado em [scripts/download_datasets.py](scripts/download_datasets.py) não existe no 3.11.0 a 3.11.3) e, para treinar, uma GPU NVIDIA com driver compatível com CUDA 12.8. Máquina de treino do projeto: RTX 4060.
+Requisitos: **Python 3.11.4 ou mais recente na série 3.11** (o `tarfile.extractall(filter=...)` usado em [scripts/download_datasets.py](scripts/download_datasets.py) não existe no 3.11.0 a 3.11.3) e, para treinar, uma GPU NVIDIA com driver compatível com CUDA 12.8. Máquinas do projeto: notebook com RTX 4060 (experimentos e treino) e Mac com M5 (desenvolvimento, sem CUDA).
 
 ```bash
 python -m venv .venv
@@ -83,7 +83,7 @@ python -m pip install -r requirements.txt
 
 A ordem importa:
 
-- o **torch vem do índice cu128**, o build CUDA 12.8 do torch 2.7.1;
+- o **torch vem do índice cu128**, o build CUDA 12.8 do torch 2.7.1. No macOS, que não tem CUDA, instale sem o `--index-url` (`python -m pip install torch==2.7.1 torchvision==0.22.1`), e o resto é igual;
 - o **facenet-pytorch é instalado com `--no-deps`**, porque a versão 2.6.0 declara `torch<2.3`. As dependências que ele realmente usa estão fixadas no [requirements.txt](requirements.txt);
 - o `pip` vai avisar que o facenet-pytorch pede outras versões de torch, numpy e Pillow. O aviso é esperado e os testes abaixo confirmam que o pipeline funciona.
 
@@ -94,7 +94,7 @@ pytest              # testes em CPU (padrão)
 pytest -m gpu -s    # testes de GPU; -s mostra qual placa e qual versão do CUDA foram usadas
 ```
 
-Os testes marcados com `gpu` ficam fora da execução padrão e **falham** (não são pulados) se a GPU não conseguir rodar o modelo. Rode os dois comandos em toda máquina nova.
+Os testes marcados com `gpu` ficam fora da execução padrão e **falham** (não são pulados) se a GPU não conseguir rodar o modelo. Rode os dois comandos em toda máquina nova com GPU NVIDIA; no Mac, só o primeiro.
 
 ## Conjuntos de dados
 
@@ -251,7 +251,7 @@ A face whose similarity falls below the threshold is classified as an **unknown 
 
 ## Installation
 
-Requirements: **Python 3.11.4 or newer in the 3.11 series** (the `tarfile.extractall(filter=...)` used in [scripts/download_datasets.py](scripts/download_datasets.py) does not exist in 3.11.0 to 3.11.3) and, for training, an NVIDIA GPU with a driver that supports CUDA 12.8. Project training machine: RTX 4060.
+Requirements: **Python 3.11.4 or newer in the 3.11 series** (the `tarfile.extractall(filter=...)` used in [scripts/download_datasets.py](scripts/download_datasets.py) does not exist in 3.11.0 to 3.11.3) and, for training, an NVIDIA GPU with a driver that supports CUDA 12.8. Project machines: laptop with an RTX 4060 (experiments and training) and Mac with an M5 (development, no CUDA).
 
 ```bash
 python -m venv .venv
@@ -265,7 +265,7 @@ python -m pip install -r requirements.txt
 
 The order matters:
 
-- **torch comes from the cu128 index**, the CUDA 12.8 build of torch 2.7.1;
+- **torch comes from the cu128 index**, the CUDA 12.8 build of torch 2.7.1. On macOS, which has no CUDA, install it without `--index-url` (`python -m pip install torch==2.7.1 torchvision==0.22.1`); everything else is the same;
 - **facenet-pytorch is installed with `--no-deps`**, because version 2.6.0 declares `torch<2.3`. The dependencies it actually uses are pinned in [requirements.txt](requirements.txt);
 - `pip` will warn that facenet-pytorch asks for other versions of torch, numpy and Pillow. The warning is expected, and the tests below confirm the pipeline works.
 
@@ -276,7 +276,7 @@ pytest              # CPU tests (default)
 pytest -m gpu -s    # GPU tests; -s shows which card and CUDA version were used
 ```
 
-Tests marked `gpu` are excluded from the default run and **fail** (they are not skipped) if the GPU cannot run the model. Run both commands on every new machine.
+Tests marked `gpu` are excluded from the default run and **fail** (they are not skipped) if the GPU cannot run the model. Run both commands on every new machine with an NVIDIA GPU; on the Mac, only the first one.
 
 ## Data
 
