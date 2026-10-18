@@ -148,7 +148,9 @@ def main(argv: Sequence[str] | None = None, downloader: Downloader = download_fi
     Returns:
         0 on success, 1 when any dataset could not be prepared.
     """
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--force", action="store_true", help="download and extract again")
     args = parser.parse_args(argv)
