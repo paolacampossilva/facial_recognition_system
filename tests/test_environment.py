@@ -51,7 +51,7 @@ def test_detector_cpu(blank_image):
 @pytest.mark.gpu
 def test_embedding_gpu():
     # is_available() pode ser True mesmo quando o torch não tem kernels para a
-    # arquitetura da placa (ex.: RTX 5070 com torch < 2.7); por isso o modelo é executado.
+    # arquitetura da placa; por isso o modelo é executado.
     assert torch.cuda.is_available(), NO_CUDA_MSG
     print(
         f"\nGPU: {torch.cuda.get_device_name(0)} | torch {torch.__version__}"
