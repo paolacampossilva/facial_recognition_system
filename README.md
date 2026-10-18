@@ -69,11 +69,11 @@ Uma face com similaridade abaixo do threshold é classificada como **pessoa desc
 
 ### Dataset público
 
-Nenhuma cópia de dataset público é versionada. O repositório trará instruções para baixar cada um diretamente da fonte oficial.
+Nenhuma cópia de dataset público é versionada. O `python scripts/download_datasets.py` baixa cada um da fonte e confere o checksum. Detalhes, citação e instruções em [data/README.md](data/README.md).
 
 | Dataset | Fonte oficial | Finalidade | Licença / termos de uso | Como foi usado |
 |---|---|---|---|---|
-| A definir | | | | |
+| LFW (Labeled Faces in the Wild) | <http://vis-www.cs.umass.edu/lfw/> (fora do ar; baixado da cópia no figshare usada pelo scikit-learn) | benchmark de verificação e subconjunto para fine-tuning | sem licença formal, distribuído para pesquisa com pedido de citação; não redistribuído aqui | alinhado com MTCNN e dividido por identidade em treino, validação e teste |
 
 ### Dataset privado
 
@@ -219,11 +219,11 @@ A face whose similarity falls below the threshold is classified as an **unknown 
 
 ### Public dataset
 
-No copy of any public dataset is versioned. The repository will include instructions to download each one directly from its official source.
+No copy of any public dataset is versioned. `python scripts/download_datasets.py` downloads each one from the source and verifies its checksum. Details, citation and instructions in [data/README.md](data/README.md).
 
 | Dataset | Official source | Purpose | License / terms of use | How it was used |
 |---|---|---|---|---|
-| To be defined | | | | |
+| LFW (Labeled Faces in the Wild) | <http://vis-www.cs.umass.edu/lfw/> (offline; downloaded from the figshare copy used by scikit-learn) | verification benchmark and fine-tuning subset | no formal license, distributed for research with a citation request; not redistributed here | aligned with MTCNN and split by identity into train, validation and test |
 
 ### Private dataset
 
