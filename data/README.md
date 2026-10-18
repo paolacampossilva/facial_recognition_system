@@ -35,6 +35,19 @@ O script baixa cerca de 177 MB para `data/public/lfw.tgz`, confere o SHA-256 e e
 
 > **macOS:** se aparecer `CERTIFICATE_VERIFY_FAILED` com o Python instalado pelo python.org, rode o `Install Certificates.command` que fica na pasta do Python em `/Applications`.
 
+### Pré-processamento
+
+O MTCNN detecta o rosto, e o pipeline recorta e salva um PNG de 160×160 por foto, com a mesma estrutura de pastas:
+
+```bash
+python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data/public/lfw_crop160 --selection center
+```
+
+- `--selection center` fica com o rosto mais perto do centro quando a foto tem mais de um, porque as fotos do LFW são centradas na pessoa rotulada. No dataset privado e na aplicação, use o padrão `strict`, que rejeita fotos com mais de um rosto.
+- `--alignment crop` (padrão) recorta a caixa do rosto como o facenet-pytorch, que é a entrada com que o FaceNet pré-treinado foi treinado. `--alignment similarity` alinha os 5 pontos faciais ao template do ArcFace, corrigindo a inclinação da cabeça.
+- O `preprocessing_report.json` na pasta de saída guarda a configuração usada e cada foto em que nenhum rosto passou da probabilidade mínima (`--min-probability`, padrão 0.9).
+- Rodar de novo pula os recortes que já existem; `--force` refaz tudo.
+
 ## Dataset privado
 
 Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas diretamente pela dupla, sem scraping. Os termos ficam fora do repositório (papel ou pasta local criptografada).
@@ -96,6 +109,19 @@ python scripts/download_datasets.py
 The script downloads about 177 MB to `data/public/lfw.tgz`, verifies the SHA-256 and extracts it to `data/public/lfw/` (about 206 MB). Running it again does not download twice; `--force` downloads and extracts again.
 
 > **macOS:** if you get `CERTIFICATE_VERIFY_FAILED` with the python.org Python installer, run the `Install Certificates.command` found in the Python folder under `/Applications`.
+
+### Preprocessing
+
+MTCNN detects the face, and the pipeline crops and saves one 160×160 PNG per photo, keeping the same folder structure:
+
+```bash
+python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data/public/lfw_crop160 --selection center
+```
+
+- `--selection center` keeps the face closest to the center when a photo has more than one, because LFW photos are centered on the labeled person. For the private dataset and the application, use the default `strict`, which rejects photos with more than one face.
+- `--alignment crop` (default) crops the face box like facenet-pytorch, which is the input the pretrained FaceNet was trained on. `--alignment similarity` aligns the 5 facial landmarks to the ArcFace template, correcting head tilt.
+- The `preprocessing_report.json` in the output folder stores the configuration used and every photo where no face reached the minimum probability (`--min-probability`, default 0.9).
+- Running it again skips crops that already exist; `--force` redoes everything.
 
 ## Private dataset
 

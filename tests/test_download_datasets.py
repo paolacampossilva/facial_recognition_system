@@ -5,6 +5,7 @@ import tarfile
 from pathlib import Path
 
 import pytest
+from pydantic import HttpUrl
 
 from scripts.download_datasets import (
     ChecksumMismatchError,
@@ -40,7 +41,7 @@ def remote(tmp_path: Path) -> tuple[RemoteArchive, FakeDownloader]:
     sha256 = _build_archive(source, {"lfw/Ada_Lovelace/Ada_Lovelace_0001.jpg": b"fake image"})
     archive = RemoteArchive(
         name="fake LFW",
-        url="https://example.invalid/lfw.tgz",
+        url=HttpUrl("https://example.invalid/lfw.tgz"),
         filename="lfw.tgz",
         sha256=sha256,
         extracted_dir="lfw",
@@ -124,7 +125,7 @@ def test_archive_with_path_traversal_is_rejected(tmp_path: Path) -> None:
     sha256 = _build_archive(source, {"../outside.txt": b"escaped"})
     archive = RemoteArchive(
         name="evil",
-        url="https://example.invalid/evil.tgz",
+        url=HttpUrl("https://example.invalid/evil.tgz"),
         filename="evil.tgz",
         sha256=sha256,
         extracted_dir="lfw",
