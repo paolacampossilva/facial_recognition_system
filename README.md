@@ -80,6 +80,7 @@ python -m venv .venv
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
 python -m pip install facenet-pytorch==2.6.0 --no-deps
 python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
 pre-commit install
 ```
 
@@ -87,7 +88,8 @@ A ordem importa:
 
 - o **torch vem do índice cu128**, o build CUDA 12.8 do torch 2.7.1. No macOS, que não tem CUDA, instale sem o `--index-url` (`python -m pip install torch==2.7.1 torchvision==0.22.1`), e o resto é igual;
 - o **facenet-pytorch é instalado com `--no-deps`**, porque a versão 2.6.0 declara `torch<2.3`. As dependências que ele realmente usa estão fixadas no [requirements.txt](requirements.txt);
-- o `pip` vai avisar que o facenet-pytorch pede outras versões de torch, numpy e Pillow. O aviso é esperado e os testes abaixo confirmam que o pipeline funciona.
+- o `pip` vai avisar que o facenet-pytorch pede outras versões de torch, numpy e Pillow. O aviso é esperado e os testes abaixo confirmam que o pipeline funciona;
+- o **`pip install -e .`** instala o pacote do projeto (`src/facial_recognition_system`) em modo editável, para os scripts em `scripts/` conseguirem importá-lo. O `--no-deps` evita que o pip mexa nas versões já instaladas. Sem esse passo, o `pytest` funciona, mas os scripts falham com `ModuleNotFoundError: No module named 'facial_recognition_system'`.
 
 ### Hook de privacidade
 
@@ -277,6 +279,7 @@ python -m venv .venv
 python -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
 python -m pip install facenet-pytorch==2.6.0 --no-deps
 python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
 pre-commit install
 ```
 
@@ -284,7 +287,8 @@ The order matters:
 
 - **torch comes from the cu128 index**, the CUDA 12.8 build of torch 2.7.1. On macOS, which has no CUDA, install it without `--index-url` (`python -m pip install torch==2.7.1 torchvision==0.22.1`); everything else is the same;
 - **facenet-pytorch is installed with `--no-deps`**, because version 2.6.0 declares `torch<2.3`. The dependencies it actually uses are pinned in [requirements.txt](requirements.txt);
-- `pip` will warn that facenet-pytorch asks for other versions of torch, numpy and Pillow. The warning is expected, and the tests below confirm the pipeline works.
+- `pip` will warn that facenet-pytorch asks for other versions of torch, numpy and Pillow. The warning is expected, and the tests below confirm the pipeline works;
+- **`pip install -e .`** installs the project package (`src/facial_recognition_system`) in editable mode, so the scripts in `scripts/` can import it. `--no-deps` keeps pip from touching the versions already installed. Without this step `pytest` works, but the scripts fail with `ModuleNotFoundError: No module named 'facial_recognition_system'`.
 
 ### Privacy hook
 
