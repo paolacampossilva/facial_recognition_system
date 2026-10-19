@@ -1,0 +1,18 @@
+# E02: ResNet-50 ImageNet, sem fine-tuning (decisões D4 e D11).
+# python scripts/extract_embeddings.py --config configs/E02.yaml
+experiment: E02
+hypothesis: >-
+  O pré-treino genérico do ImageNet é ruim para rostos: a ResNet-50 sem
+  fine-tuning separa pior os pares do LFW do que o FaceNet de E01.
+strategy: pré-treinado no ImageNet, sem fine-tuning
+model:
+  backbone: resnet50
+  pretrained: true
+dataset:
+  name: lfw
+  crops_dir: data/public/lfw_crop160
+  splits_dir: data/splits
+  splits: [val, test]
+embedding:
+  batch_size: 128
+seed: 42
