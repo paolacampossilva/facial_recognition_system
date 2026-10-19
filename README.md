@@ -108,7 +108,7 @@ Nenhuma cópia de dataset público é versionada. O `python scripts/download_dat
 
 ### Dataset privado
 
-Fotos dos integrantes e de pessoas próximas, maiores de 18 anos, coletadas diretamente pela dupla e com Termo de Consentimento assinado. Esse dataset **nunca** é versionado nem enviado a serviços externos (ver [Privacidade e LGPD](#privacidade-e-lgpd)).
+Fotos dos integrantes e de pessoas próximas, maiores de 18 anos, coletadas diretamente pela dupla e com Termo de Consentimento assinado. Esse dataset **nunca** é versionado nem enviado a serviços externos; a única exceção é o envio das fotos pelo WhatsApp, só para quem autorizou no termo, com a conversa apagada em até 24 horas (ver [Privacidade e LGPD](#privacidade-e-lgpd) e [data/README.md](data/README.md)).
 
 ## Experimentos (Parte 1)
 
@@ -130,6 +130,8 @@ Ficam **fora do GitHub** e são processados apenas localmente:
 - checkpoints treinados ou fine-tunados com dados privados;
 - termos de consentimento;
 - logs e resultados individualizados.
+
+Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto por junções em `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` (decisão D10 em [docs/division.md](docs/division.md)).
 
 O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
 
@@ -290,7 +292,7 @@ No copy of any public dataset is versioned. `python scripts/download_datasets.py
 
 ### Private dataset
 
-Photos of the team members and people close to them, all over 18, collected directly by the team with a signed consent form. This dataset is **never** versioned or sent to external services (see [Privacy and LGPD](#privacy-and-lgpd)).
+Photos of the team members and people close to them, all over 18, collected directly by the team with a signed consent form. This dataset is **never** versioned or sent to external services; the only exception is sending the photos over WhatsApp, only for participants who authorized it in the consent form, with the chat deleted within 24 hours (see [Privacy and LGPD](#privacy-and-lgpd) and [data/README.md](data/README.md)).
 
 ## Experiments (Part 1)
 
@@ -312,6 +314,8 @@ The following stays **out of GitHub** and is processed only locally:
 - checkpoints trained or fine-tuned on private data;
 - consent forms;
 - logs and individual-level results.
+
+All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the project through junctions at `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` (decision D10 in [docs/division.md](docs/division.md)).
 
 The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
 

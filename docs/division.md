@@ -86,7 +86,7 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
   - `lfw_val_pairs.csv`, `lfw_test_pairs.csv`: colunas `path_a,path_b,same` (`same` = 1 ou 0);
   - `lfw_val_unknowns.txt`, `lfw_test_unknowns.txt`: as 200 fotos de desconhecidos extras do privado.
   - O split privado não é versionado: é gerado em tempo de execução a partir de `data/private/<ID>/session{1,2}/` com seed 42.
-- **Embeddings** (fora do Git, a pasta `embeddings/` e `*.npz` estão no `.gitignore`): `embeddings/<EXP>/<split>.npz` com `embeddings` (float32, N×D, L2-normalizados), `paths` e `labels` (strings), e `model_id`. D = 512 no FaceNet e 2048 na ResNet-50; a avaliação não assume a dimensão.
+- **Embeddings** (fora do Git, a pasta `embeddings/` e `*.npz` estão no `.gitignore`): `embeddings/<EXP>/<split>.npz` (no privado, `embeddings/private/<EXP>/<split>.npz`, dentro do cofre) com `embeddings` (float32, N×D, L2-normalizados), `paths` e `labels` (strings), e `model_id`. D = 512 no FaceNet e 2048 na ResNet-50; a avaliação não assume a dimensão.
 - **Resultados:** `experiments/results/<EXP>.json` com `experiment`, `hypothesis`, `model`, `strategy`, `dataset`, `seed`, `config` (cópia do YAML), `libraries` (Python, torch, torchvision, facenet-pytorch, scikit-learn, numpy), `hardware` (GPU, CUDA), `training` (épocas rodadas, melhor época, tempo) quando houver, `threshold` (`value`, `criterion`, `chosen_on: "val"`) e `metrics` (`val` e `test`, com os intervalos de confiança). Resultados do privado só agregados, sem nada por pessoa.
 - **Gráficos:** `experiments/figures/<EXP>_roc.png`, `<EXP>_hist.png` e, no privado, `<EXP>_confusion.png` com IDs anônimos.
 - Com isso, E01 e E02 rodam na segunda só gerando embeddings, e a avaliação roda depois em cima deles, quando as métricas estiverem prontas.
@@ -100,7 +100,7 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 | Estrutura do repo (`src/`, `experiments/`, `configs/`, `tests/`, `scripts/`, `docs/specs/`, `docs/decisions/`, `data/README.md`), `pyproject.toml`, ruff, pytest com marcadores `unit`/`integration`/`e2e`/`gpu`, pre-commit | Paola |
 | `.gitignore` de privacidade (`data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `*.db`, `*.sqlite`, `consent/`, `*.pt`, `*.pth`, `*.onnx`) e hook de pre-commit que bloqueia imagens e checkpoints fora das pastas permitidas | Paola |
 | venv, `requirements.txt` com versões fixadas e `tests/test_environment.py` (CPU por padrão, GPU com `pytest -m gpu -s`), validados na 4060 | Valentina |
-| Adaptar o Termo de Consentimento (Anexo A), com a cláusula de envio por mensageiro (ver "Dataset privado"), enviar e colher assinaturas; guardar fora do repo (pasta local criptografada ou papel) | Valentina |
+| Adaptar o Termo de Consentimento (Anexo A), com a cláusula de envio por mensageiro (ver "Dataset privado"), enviar e colher assinaturas; guardar no cofre do notebook da 4060 (ver "Termos e planilha de controle") | Valentina |
 | Ler o enunciado inteiro e fechar as decisões D1 a D15 | Juntas |
 
 ## Parte 1, experimentação
@@ -113,7 +113,7 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 
 ### Dataset privado (juntas, execução local)
 - Protocolo de coleta: cerca de 5 a 10 adultos consentidos, 20 a 30 fotos cada, em 2 sessões em cômodos ou com fundos diferentes, podendo ser no mesmo dia (variando iluminação, pose, distância, óculos e fundo). Minimização de dados.
-- Cada uma coleta as pessoas do seu lado e guarda os termos delas. As fotos ficam só no cofre VeraCrypt do notebook da 4060 (D10), e E07 e E08 rodam uma vez com o conjunto inteiro.
+- Cada uma convida as pessoas do seu lado e colhe os termos delas. As fotos e os termos ficam só no cofre VeraCrypt do notebook da 4060 (D10), e E07 e E08 rodam uma vez com o conjunto inteiro.
 - **Envio das fotos por mensageiro (WhatsApp).** A participante pode mandar as próprias fotos por mensageiro, desde que todas as regras abaixo sejam cumpridas. O mensageiro é um serviço de terceiros, então o envio só vale se estiver coberto pelo consentimento (seções 14 e 23):
   - **Consentimento:** o termo traz uma cláusula específica autorizando o envio, por exemplo: "Autorizo o envio das minhas fotografias por mensagem privada no WhatsApp à integrante [nome], que as salvará apenas no computador do grupo e apagará a conversa e as mídias do celular em até 24 horas." Quem assinou um termo sem essa cláusula assina um aditivo ou entrega as fotos sem mensageiro (pendrive ou fotos tiradas por nós).
   - **Canal:** só conversa individual com a integrante que fez o convite, com criptografia de ponta a ponta. Nunca grupos, e-mail, nuvem (Drive, iCloud, Google Fotos) ou link de compartilhamento.
@@ -122,12 +122,25 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
   - **Ao receber:** as fotos são salvas direto no cofre do notebook da 4060, em `data/private/<ID>/`, pelo WhatsApp Web aberto no notebook ou por cabo USB. Nunca passam pelo Mac da Paola nem por outro computador. Fotos recebidas no celular da Paola chegam ao notebook por cabo ou por pendrive dentro de um cofre VeraCrypt, nunca reencaminhadas por mensageiro.
   - **Exclusão em até 24 horas:** depois de conferir que as fotos estão no cofre, a integrante apaga as mensagens com "Apagar para todos", limpa a conversa, remove as mídias do armazenamento do celular e esvazia a lixeira da galeria. A participante é avisada de que pode apagar a cópia dela.
   - **Registro:** a planilha de controle, guardada junto aos termos e fora do repositório, anota para cada ID a data de recebimento e a data de exclusão da conversa. Isso serve de evidência no checklist do Anexo B.
+- **Termos e planilha de controle.** Os termos têm nome e assinatura (dado pessoal, não biométrico) e terminam todos no cofre da 4060, em `V:\termos` (seção 15 e Anexo B):
+  - **Planilha:** cada uma preenche a própria cópia, com as pessoas que convidou, em faixas de ID separadas (Valentina P01 a P10, Paola P11 a P20; se acabarem, combinar uma nova faixa). O nome da participante só aparece na planilha e no termo.
+  - **Drive, só temporário:** enquanto as assinaturas são colhidas, os termos podem ficar numa pasta do Google Drive compartilhada só entre as duas, com acesso "Restrito". Links de assinatura enviados a participantes são individuais e revogados depois da assinatura. O prazo para tirar tudo do Drive é a sessão 2 (qua 21/10).
+  - **Termos da Paola para o cofre:** a Paola manda os termos dela à Valentina como documento (PDF), na conversa individual do WhatsApp, com o backup de conversas desligado nos dois celulares. A Valentina salva direto em `V:\termos` pelo WhatsApp Web no notebook da 4060 e confere cada arquivo. Em até 24 horas, as duas apagam as mensagens com "Apagar para todos", limpam a conversa e removem os arquivos dos celulares. Só termos passam por essa conversa: fotos recebidas pela Paola nunca são reencaminhadas, vão por cabo ou pendrive com cofre.
+  - **Limpeza:** depois de tudo no cofre, apagar os termos do Drive e esvaziar a lixeira do Drive, conferir a pasta sincronizada do Google Drive para computador, se houver, e apagar cópias em Downloads, Área de Trabalho e anexos de e-mail, esvaziando as lixeiras. A cópia da planilha da Paola também vai para o cofre. O modelo em branco do termo pode continuar no Drive.
+  - **Registro:** as datas de envio, recebimento e exclusão (WhatsApp e Drive) vão na planilha, e o uso temporário do Drive e do WhatsApp entre as duas é descrito em `docs/privacy.md`.
+- **Cofre.** Um contêiner VeraCrypt no notebook da 4060 (fora de pastas sincronizadas com nuvem), montado como `V:` só durante o uso. Tudo que vem do dataset privado fica dentro dele, ligado ao projeto por junções do Windows (`New-Item -ItemType Junction`), cujas pastas de origem já estão no `.gitignore` e no hook:
+  - `data/private/` → `V:\private` (fotos originais);
+  - `faces/private/` → `V:\faces` (recortes do MTCNN);
+  - `embeddings/private/` → `V:\embeddings` (embeddings de E07 e E08);
+  - `checkpoints/private/` → `V:\checkpoints` (checkpoints e classificadores ajustados com dados privados);
+  - `V:\termos` (termos e planilhas, sem junção, fora do projeto).
+  Com o cofre desmontado, as junções ficam vazias e nenhum script consegue gravar dado privado fora dele. Resultados por pessoa só existem no cofre; em `experiments/` vão apenas os agregados.
 - `data/README.md` com instruções para alguém criar o próprio dataset privado localmente.
 
 ### Modelos e treinamento (Valentina)
 - `src/models/`: wrappers dos backbones A e B devolvendo embedding L2-normalizado de 512 dimensões.
 - `src/training/`: loop de treino com cabeça ArcFace e Triplet Loss, congelamento parcial configurável, early stopping na validação, seed fixa, modo `--smoke`.
-- Checkpoints de experimentos com dados privados ficam em `checkpoints/private/`, fora do Git.
+- Checkpoints de experimentos com dados privados ficam em `checkpoints/private/`, que é uma junção para o cofre (ver "Cofre"), fora do Git.
 
 Cada experimento tem hipótese, configuração, resultado e interpretação (seção 27):
 
@@ -188,7 +201,7 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 
 - **Coleta privada:** as sessões 1 e 2 podem ser no mesmo dia, desde que em cômodos ou com fundos diferentes, para o split por sessão funcionar. Os termos têm que estar assinados até segunda (19/10).
 - **Fluxo entre máquinas:** código pelo Git; cada máquina tem o próprio venv e baixa o LFW sozinha; rodar o `--smoke` antes do treino completo; os resultados JSON e os gráficos agregados voltam pelo Git; checkpoints ficam fora do Git.
-- **LGPD:** as fotos privadas só são processadas nos computadores do grupo, e agentes de IA nunca recebem fotos reais. As fotos privadas ficam só no notebook da 4060, num cofre VeraCrypt (D10). O envio por mensageiro só é aceito com a cláusula no termo, em conversa individual, e a conversa é apagada em até 24 horas (ver "Dataset privado").
+- **LGPD:** as fotos privadas só são processadas no notebook da 4060, e agentes de IA nunca recebem fotos reais nem termos assinados. As fotos, tudo que deriva delas, os termos e as planilhas ficam num cofre VeraCrypt nesse notebook (D10 e "Cofre"). O Drive só guarda termos temporariamente, até qua 21/10. O envio por mensageiro só é aceito com a cláusula no termo, em conversa individual, e a conversa é apagada em até 24 horas (ver "Dataset privado").
 
 ## Fechamento de cada entrega (juntas)
 

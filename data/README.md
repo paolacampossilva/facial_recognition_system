@@ -47,10 +47,11 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 - `--alignment crop` (padrão) recorta a caixa do rosto como o facenet-pytorch, que é a entrada com que o FaceNet pré-treinado foi treinado. `--alignment similarity` alinha os 5 pontos faciais ao template do ArcFace, corrigindo a inclinação da cabeça.
 - O `preprocessing_report.json` na pasta de saída guarda a configuração usada e cada foto em que nenhum rosto passou da probabilidade mínima (`--min-probability`, padrão 0.9).
 - Rodar de novo pula os recortes que já existem; `--force` refaz tudo.
+- No dataset privado, os recortes também ficam no cofre: `python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`, com `faces/private/` ligada ao cofre (ver "Dataset privado").
 
 ## Dataset privado
 
-Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas pelos próprios participantes na hora, a partir do [guia para participantes](../docs/participant_photo_guide.pdf), e entregues diretamente à dupla, sem scraping nem fotos antigas. Os termos ficam fora do repositório (papel ou pasta local criptografada).
+Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas pelos próprios participantes na hora, a partir do [guia para participantes](../docs/participant_photo_guide.pdf), e entregues diretamente à dupla, sem scraping nem fotos antigas. Os termos ficam fora do repositório, no mesmo cofre criptografado das fotos (ver [docs/division.md](../docs/division.md), "Termos e planilha de controle").
 
 Para montar o seu localmente:
 
@@ -72,7 +73,7 @@ data/private/
 - Antes de receber, a integrante desativa o download automático de mídia, a opção de salvar na galeria e o backup de conversas em nuvem.
 - As fotos são salvas direto em `data/private/<ID>/`, dentro de um cofre VeraCrypt no notebook da RTX 4060 (decisão D10), pelo WhatsApp Web aberto nesse notebook ou por cabo USB. Fotos recebidas no celular da outra integrante chegam por cabo ou por pendrive dentro de um cofre VeraCrypt, nunca reencaminhadas por mensageiro.
 - Em até 24 horas depois de salvas, a integrante apaga as mensagens com "Apagar para todos", limpa a conversa, remove as mídias do celular e esvazia a lixeira da galeria. A data de recebimento e a data de exclusão ficam registradas na planilha de controle, guardada junto aos termos e fora do repositório.
-- As fotos e tudo que deriva delas (recortes, embeddings, checkpoints, resultados por pessoa) ficam só nesse cofre e nunca são enviados a serviços externos nem a agentes de IA.
+- As fotos e tudo que deriva delas (recortes, embeddings, checkpoints, resultados por pessoa) ficam só nesse cofre e nunca são enviados a serviços externos nem a agentes de IA. No projeto, `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` são junções para o cofre, então nada é gravado fora dele.
 - Para excluir uma pessoa, apague `data/private/<ID>/` e os embeddings, checkpoints e resultados derivados dela.
 - Ao fim da disciplina, todo o conteúdo de `data/private/` e os arquivos derivados são apagados.
 
@@ -127,10 +128,11 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 - `--alignment crop` (default) crops the face box like facenet-pytorch, which is the input the pretrained FaceNet was trained on. `--alignment similarity` aligns the 5 facial landmarks to the ArcFace template, correcting head tilt.
 - The `preprocessing_report.json` in the output folder stores the configuration used and every photo where no face reached the minimum probability (`--min-probability`, default 0.9).
 - Running it again skips crops that already exist; `--force` redoes everything.
+- For the private dataset, the crops also stay in the vault: `python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`, with `faces/private/` linked to the vault (see "Private dataset").
 
 ## Private dataset
 
-Photos of adults who signed the consent form (Annex A of the assignment), taken by the participants themselves on the spot, following the [participant guide](../docs/participant_photo_guide.pdf) (in Portuguese), and handed directly to the team, with no scraping and no old photos. Consent forms are kept outside the repository (paper or an encrypted local folder).
+Photos of adults who signed the consent form (Annex A of the assignment), taken by the participants themselves on the spot, following the [participant guide](../docs/participant_photo_guide.pdf) (in Portuguese), and handed directly to the team, with no scraping and no old photos. Consent forms are kept outside the repository, in the same encrypted vault as the photos (see [docs/division.md](../docs/division.md), "Termos e planilha de controle").
 
 To build your own locally:
 
@@ -152,7 +154,7 @@ data/private/
 - Before receiving them, the team member turns off automatic media download, saving to the gallery and cloud chat backup.
 - Photos are saved directly to `data/private/<ID>/`, inside a VeraCrypt vault on the RTX 4060 notebook (decision D10), through WhatsApp Web opened on that notebook or over a USB cable. Photos received on the other team member's phone arrive over a USB cable or on a USB drive inside a VeraCrypt vault, never forwarded through a messaging app.
 - Within 24 hours of being saved, the team member deletes the messages with "Delete for everyone", clears the chat, removes the media from the phone and empties the gallery trash. The date received and the date deleted are recorded in the control spreadsheet, kept with the consent forms and outside the repository.
-- Photos and everything derived from them (crops, embeddings, checkpoints, per-person results) stay only in that vault and are never sent to external services or AI agents.
+- Photos and everything derived from them (crops, embeddings, checkpoints, per-person results) stay only in that vault and are never sent to external services or AI agents. In the project, `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` are junctions to the vault, so nothing is written outside it.
 - To delete a person, remove `data/private/<ID>/` and the embeddings, checkpoints and results derived from them.
 - At the end of the course, all of `data/private/` and its derived files are deleted.
 
