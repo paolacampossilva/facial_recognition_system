@@ -137,8 +137,8 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 - `data/README.md` com instruções para alguém criar o próprio dataset privado localmente.
 
 ### Modelos e treinamento (Valentina)
-- `src/models/`: wrappers dos backbones A e B devolvendo embedding L2-normalizado de 512 dimensões.
-- `src/training/`: loop de treino com cabeça ArcFace e Triplet Loss, congelamento parcial configurável, early stopping na validação, seed fixa, modo `--smoke`.
+- `src/facial_recognition_system/models/`: wrappers dos backbones A e B devolvendo embedding L2-normalizado, de 512 dimensões no FaceNet e 2048 na ResNet-50 (D4).
+- `src/facial_recognition_system/training/`: loop de treino com cabeça ArcFace e Triplet Loss, congelamento parcial configurável, early stopping na validação, seed fixa, modo `--smoke`.
 - Checkpoints de experimentos com dados privados ficam em `checkpoints/private/`, que é uma junção para o cofre (ver "Cofre"), fora do Git.
 
 Cada experimento tem hipótese, configuração, resultado e interpretação (seção 27):
