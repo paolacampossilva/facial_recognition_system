@@ -941,7 +941,6 @@ Emily_Robison/Emily_Robison_0002.png
 Emily_Stevens/Emily_Stevens_0001.png
 Eminem/Eminem_0001.png
 Emmanuelle_Jagodsinski/Emmanuelle_Jagodsinski_0001.png
-Emmy_Rossum/Emmy_Rossum_0001.png
 Emyr_Jones_Parry/Emyr_Jones_Parry_0001.png
 Enola_Rice/Enola_Rice_0001.png
 Enrik_Vendt/Enrik_Vendt_0001.png

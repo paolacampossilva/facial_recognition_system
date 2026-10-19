@@ -1001,7 +1001,6 @@ GL_Peiris/GL_Peiris_0004.png
 Gabriel_Batistuta/Gabriel_Batistuta_0001.png
 Gabriel_Batistuta/Gabriel_Batistuta_0002.png
 Gabriella_Bo/Gabriella_Bo_0001.png
-Gabrielle_Rose/Gabrielle_Rose_0001.png
 Gabrielle_Union/Gabrielle_Union_0001.png
 Gala_Leon_Garcia/Gala_Leon_Garcia_0001.png
 Garry_Alejano/Garry_Alejano_0001.png
