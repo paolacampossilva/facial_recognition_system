@@ -18,7 +18,7 @@ Cada uma é dona de uma fatia vertical (escreve a spec/ADR, implementa, testa e 
 - Repositório com 2 commits: enunciado (`main`) e README inicial (`dev`, que só entra na `main` na entrega).
 - O `.gitignore` de privacidade já existe, mas ainda falta ignorar `*.pt`, `*.pth`, `*.onnx` e `data/public/`.
 - Ainda não existem `src/`, `configs/`, specs, ADRs nem `requirements.txt`.
-- Hardware: o código é escrito e testado nos notebooks (RTX 4060, 8 GB) e o treino completo roda na **RTX 5070 (8 GB)**.
+- Hardware: todos os experimentos rodam no **notebook da Valentina (RTX 4060, 8 GB)**, que só ela acessa (D10). A Paola desenvolve no Mac (M5), sem CUDA.
 - Ambiente igual nas máquinas: Python 3.11.4+ (série 3.11), `torch==2.7.1` e `torchvision==0.22.1` com CUDA 12.8 (cu128), `facenet-pytorch==2.6.0` instalado com `--no-deps`.
 
 ---
@@ -27,10 +27,10 @@ Cada uma é dona de uma fatia vertical (escreve a spec/ADR, implementa, testa e 
 
 | Dia | Paola | Valentina | Juntas |
 |---|---|---|---|
-| **dom 18** | Criar a estrutura do repo (branch `chore/repo-setup` saindo da `dev`), `pyproject`, `ruff`/`pytest`, completar o `.gitignore` e o hook de pre-commit | Enviar o termo de consentimento (Anexo A) às participantes; montar o venv, o `requirements.txt` e o teste de ambiente `tests/test_environment.py`; validar o ambiente na 4060 e na 5070 com `pytest` e `pytest -m gpu -s` | Reunião de 45 min: fechar D1 a D15 aceitando as recomendações, o protocolo de avaliação, o split do privado e o contrato entre as fatias (seções abaixo) |
+| **dom 18** | Criar a estrutura do repo (branch `chore/repo-setup` saindo da `dev`), `pyproject`, `ruff`/`pytest`, completar o `.gitignore` e o hook de pre-commit | Enviar o termo de consentimento (Anexo A) às participantes; montar o venv, o `requirements.txt` e o teste de ambiente `tests/test_environment.py`; validar o ambiente na 4060 com `pytest` e `pytest -m gpu -s` | Reunião de 45 min: fechar D1 a D15 aceitando as recomendações, o protocolo de avaliação, o split do privado e o contrato entre as fatias (seções abaixo) |
 | **seg 19** | Download do LFW, pré-processamento com MTCNN, splits por identidade e pares de teste comuns; `data/README.md` com origem, licença e uso do LFW | Wrappers dos modelos; **E01** (baseline FaceNet) e **E02** (ResNet-50 sem fine-tuning) salvando embeddings no formato combinado | **Sessão 1** da coleta privada, com os termos assinados |
-| **ter 20** | Métricas, escolha do threshold na validação, checagem de leakage; ADRs de D1 a D3 e D6 a D9 | Loop de treino com cabeça ArcFace, congelamento parcial e modo `--smoke`; **E04** na 5070 (early stopping por val loss); ADRs de D4, D5, D10 e D11 | |
-| **qua 21** | Avaliação de E01, E02 e E04, gráficos agregados; ADR de D12 | **E06** (Triplet Loss) na 5070; `docs/privacy.md`; ADR de D13 | **Sessão 2** da coleta (outro cômodo ou outro fundo, pode ser no mesmo dia da sessão 1); juntar as fotos privadas na máquina escolhida, por pendrive; ADRs de D14 e D15 |
+| **ter 20** | Métricas, escolha do threshold na validação, checagem de leakage; ADRs de D1 a D3 e D6 a D9 | Loop de treino com cabeça ArcFace, congelamento parcial e modo `--smoke`; **E04** na 4060 (early stopping pelo EER de validação); ADRs de D4, D5, D10 e D11 | |
+| **qua 21** | Avaliação de E01, E02 e E04, gráficos agregados; ADR de D12 | **E06** (Triplet Loss) na 4060; `docs/privacy.md`; ADR de D13 | **Sessão 2** da coleta (outro cômodo ou outro fundo, pode ser no mesmo dia da sessão 1); juntar as fotos privadas no notebook da 4060, por pendrive dentro de um cofre VeraCrypt; ADRs de D14 e D15 |
 | **qui 22** | Avaliação de E06; MTCNN nas fotos privadas; **E07 e E08** com todas as participantes, localmente | Tabela de experimentos e análise de E01 a E06 (seção 33); acompanhar E07 e E08 para saber explicar | ADR "modelo escolhido" |
 | **sex 23** | README: dados, protocolo, métricas, threshold e reprodutibilidade; gravar a sua parte do vídeo à noite | README: tabela final e análise da seção 33 incluindo E07 e E08; roteiro do vídeo | Revisão cruzada do README |
 | **sáb 24** | Rodar o Anexo B item por item | Gravar a sua parte do vídeo e editar o vídeo 1 | Auditoria do histórico (`git log --all --stat`), juntar `dev` na `main`, **entrega** |
@@ -51,38 +51,44 @@ Nada impede adiantar as specs da Parte 2 durante a Parte 1 se sobrar tempo.
 
 ## Decisões (D1 a D15)
 
-Fechadas na reunião de domingo, cada uma registrada como ADR em `docs/decisions/`. Dona = quem escreve o ADR.
+Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `docs/decisions/`. Dona = quem escreve o ADR. Os valores numéricos são o ponto de partida; se um deles mudar durante a implementação, a mudança vai no ADR com o motivo.
 
 | # | Decisão | Escolha | Dona |
 |---|---|---|---|
-| D1 | Dataset público de benchmark | **LFW** (licença de pesquisa, baixado pelo script da fonte oficial) | Paola |
-| D2 | Dataset público para fine-tuning | **Subconjunto do LFW** com split por identidade, identidades com pelo menos N imagens. O CelebA ficou de fora por falta de tempo para baixar e preparar; registrar no README como limitação | Paola |
-| D3 | Detector e alinhamento | **MTCNN** (`facenet-pytorch`): detecta, devolve landmarks e recorta 160×160, tudo em PyTorch | Paola |
-| D4 | Backbones comparados | **A:** FaceNet InceptionResnetV1 pré-treinado em VGGFace2 (`facenet-pytorch`, fácil de fine-tunar). **B:** ResNet-50 ImageNet (genérico, sem pré-treino facial), para medir o valor do pré-treino específico | Valentina |
-| D5 | Funções de perda | ArcFace Loss vs Triplet Loss | Valentina |
-| D6 | Estratégia de comparação | Similaridade de cosseno vs protótipo por pessoa (média dos embeddings) vs k-NN vs SVM | Paola |
-| D7 | Métricas | Verificação: ROC-AUC, EER, TAR@FAR=1%, distribuição mesma pessoa vs diferentes. Identificação open-set: accuracy, F1 macro, FAR, FRR, matriz de confusão | Paola |
-| D8 | Escolha do threshold | Escolhido **só na validação**, por EER ou FAR alvo; reportado no teste sem reajuste | Paola |
-| D9 | Protocolo de split | Ver "Protocolo de avaliação" abaixo. Dedupe por hash perceptual | Paola |
-| D10 | Hardware | Código e `--smoke` nos notebooks (4060), treino completo na **5070**. **Dados privados só nos computadores do grupo** (seção 23) | Valentina |
-| D11 | Registro de experimentos | Config YAML por experimento em `configs/` e resultado JSON em `experiments/results/` (seed, bibliotecas, hiperparâmetros, hardware). Sem MLflow, para manter simples | Valentina |
-| D12 | Armazenamento de embeddings | SQLite (pessoa, metadados) com embeddings como BLOB numpy, tudo em `data/private/` (no `.gitignore`). Exclusão em cascata | Paola |
-| D13 | Interface | **Streamlit** (`st.camera_input` e upload), tudo em Python, uma tela para cadastro, reconhecimento e exclusão | Valentina |
-| D14 | Repositório | Público no GitHub. `dev` é a branch de integração: cada tarefa ou spec sai da `dev` numa branch própria e volta por PR revisado pela outra. A `dev` entra na `main` só nas entregas (24/10 e 14/11), então a `main` é sempre "o que foi entregue" | Juntas |
-| D15 | Quem aparece no vídeo | Só Paola e Valentina (evita depender da autorização de vídeo de terceiros) | Juntas |
+| D1 | Dataset público de benchmark | **LFW**, versão original (sem alinhamento), baixada pelo `scripts/download_datasets.py` da cópia no figshare (a mesma do scikit-learn), conferida por SHA-256, porque o site oficial saiu do ar. Nada é redistribuído | Paola |
+| D2 | Dataset público para fine-tuning | **Identidades do split de treino do LFW com pelo menos 4 fotos** (N = 4), no máximo 40 fotos por identidade para o George W. Bush e afins não dominarem. ArcFace e Triplet treinam exatamente no mesmo conjunto, para a comparação ser controlada. O CelebA ficou de fora por falta de tempo para baixar e preparar; registrar no README como limitação | Paola |
+| D3 | Detector e alinhamento | **MTCNN** (`facenet-pytorch`), recorte 160×160 com `--alignment crop` e margem 0 (a entrada com que o FaceNet pré-treinado foi treinado), probabilidade mínima 0.9. LFW com `--selection center`; privado e aplicação com `strict`. Fotos sem rosto ficam fora dos splits e listadas no `preprocessing_report.json`. O alinhamento por similaridade fica disponível, mas não entra nos experimentos | Paola |
+| D4 | Backbones comparados | **A:** FaceNet InceptionResnetV1 pré-treinado em VGGFace2 (`facenet-pytorch`), embedding de 512 dimensões, entrada com `fixed_image_standardization`. **B:** ResNet-50 do torchvision com pesos `IMAGENET1K_V2`, sem a camada `fc`, embedding de 2048 dimensões (saída do pooling global, sem projeção aleatória), entrada redimensionada para 224×224 com média e desvio do ImageNet. B mede o valor do pré-treino facial. Limitação a registrar: o VGGFace2 pode conter celebridades que também estão no LFW, o que favorece E01 | Valentina |
+| D5 | Funções de perda | **ArcFace** (s = 32, m = 0.5) vs **Triplet** (margem 0.2, *batch-hard mining*, amostragem P×K com P = 32 identidades e K = 4 fotos). Configuração comum às duas: só `block8`, `last_linear` e `last_bn` do FaceNet treinam (o resto congelado), AdamW com lr 1e-4 no backbone e 1e-3 na cabeça ArcFace, weight decay 5e-4, batch 128, até 30 épocas, **early stopping pelo EER nos pares de validação** com paciência 5, flip horizontal e color jitter leve só no treino. O early stopping não usa a val loss porque as identidades da validação não existem na cabeça ArcFace (split por identidade), e a mesma métrica para as duas losses deixa a comparação justa | Valentina |
+| D6 | Estratégia de comparação | Na galeria privada (E07): **cosseno com o vizinho mais próximo** (maior similaridade entre todas as fotos da galeria), **protótipo** (média dos embeddings da pessoa, renormalizada), **k-NN** (k = 3, cosseno, ponderado pela similaridade) e **SVM linear** (C escolhido na validação entre 0.1, 1 e 10, probabilidades por calibração de Platt). O escore de rejeição é a similaridade no cosseno e no protótipo, a similaridade média dos k vizinhos da classe vencedora no k-NN e a probabilidade máxima no SVM. A distância euclidiana não entra separada porque, com embeddings L2-normalizados, d² = 2 − 2·cos e as duas ordenam igual | Paola |
+| D7 | Métricas | **Verificação** (pares do LFW): ROC-AUC, EER, TAR@FAR=1%, e accuracy e F1 no threshold da validação (para a tabela da seção 35), histogramas de similaridade mesma pessoa vs diferentes, intervalo de confiança de 95% por bootstrap (1000 reamostragens dos pares). **Identificação open-set** (privado): accuracy e F1 macro tratando "desconhecido" como uma classe, FAR (tentativas de desconhecidos aceitas como alguém), FRR (tentativas de conhecidos rejeitadas), taxa de identificação errada (conhecido atribuído à pessoa errada, que FAR e FRR não capturam) e matriz de confusão agregada com IDs anônimos | Paola |
+| D8 | Escolha do threshold | Sempre **só na validação** e reportado no teste sem reajuste. **Público:** threshold do EER nos pares de validação. **Privado e aplicação (E08):** o menor threshold com FAR ≤ 1% na validação, reportando o FRR; se o FRR de validação passar de 20%, usar o threshold do EER e justificar no ADR. Os desconhecidos extras do LFW existem para a validação ter tentativas suficientes (cerca de 200) para medir FAR de 1% | Paola |
+| D9 | Protocolo de split | Ver "Protocolo de avaliação" abaixo. Dedupe por **dHash de 64 bits** nos recortes 160×160, implementado com Pillow (sem dependência nova): distância de Hamming ≤ 4 conta como quase-duplicata. Entre splits do LFW, a cópia em validação/teste sai; no privado, a mesma checagem roda entre sessão 1 e sessão 2 (participante pode mandar a mesma foto nas duas etapas). Augmentations só no dataloader de treino | Paola |
+| D10 | Hardware | **O notebook da Valentina com RTX 4060 roda tudo**: `--smoke`, E01 a E06 e, com as fotos privadas, E07 e E08. O fine-tuning da D5 é leve (só o último bloco do FaceNet treina, em algumas centenas de identidades a 160×160) e cabe nos 8 GB. Concentrar tudo numa máquina deixa um ambiente só, tempos de treino comparáveis entre os experimentos (seção 33) e os dados privados num único computador que só a Valentina acessa (seção 22). As fotos privadas e tudo que deriva delas (recortes, embeddings, resultados por pessoa) ficam num cofre VeraCrypt aberto apenas durante o uso. O Mac da Paola (M5, sem CUDA) serve para desenvolver e testar com dados sintéticos ou do LFW | Valentina |
+| D11 | Registro de experimentos | Config YAML por experimento em `configs/` (`E01.yaml` ...) e resultado JSON em `experiments/results/` (formato no contrato abaixo). Seed 42 em Python, NumPy e PyTorch. Uma seed por treino, por falta de tempo; a variação é medida pelo bootstrap de D7. Sem MLflow, para manter simples | Valentina |
+| D12 | Armazenamento de embeddings | SQLite em `data/private/app.db` (no `.gitignore`): tabela `persons` (id, nome, data) e tabela `embeddings` (id, `person_id` com `ON DELETE CASCADE`, vetor float32 como BLOB, `model_id`, data). `PRAGMA foreign_keys = ON` em toda conexão, senão o SQLite ignora o cascade. **A aplicação não guarda fotos**, só embeddings (minimização de dados), então a exclusão apaga a linha da pessoa e o cascade leva os embeddings | Paola |
+| D13 | Interface | **Streamlit**, uma tela com abas Cadastro, Reconhecimento e Pessoas cadastradas. Entrada por `st.camera_input` (foto da webcam, não vídeo contínuo) e `st.file_uploader`, o que cobre "imagem ou vídeo" da seção 38. Vídeo ao vivo (`streamlit-webrtc`) fica fora do escopo | Valentina |
+| D14 | Repositório | Público no GitHub. `dev` é a branch de integração: cada tarefa ou spec sai da `dev` numa branch própria e volta por PR revisado pela outra. A `dev` entra na `main` só nas entregas (24/10 e 14/11), então a `main` é sempre "o que foi entregue". Commits no formato `tipo(escopo): descrição` | Juntas |
+| D15 | Quem aparece no vídeo | Só Paola e Valentina. Na demonstração da Parte 2, uma se cadastra e a outra aparece antes de se cadastrar como a pessoa desconhecida, sem precisar de terceiros nem de foto de celebridade | Juntas |
 
 ## Protocolo de avaliação
 
-- **Público:** o LFW é dividido por identidade em treino, validação e teste (nenhuma pessoa aparece em mais de um split). E01, E02, E04 e E06 são avaliados **nos mesmos pares de teste**, montados só com identidades do split de teste. Os pares padrão do LFW (View 2) não são usados, porque contêm identidades que entram no treino do fine-tuning.
-- **Privado:** a sessão 1 é a galeria (cadastro e treino do k-NN/SVM). As fotos da sessão 2 são divididas por pessoa, metade para validação e metade para teste. Pelo menos 2 participantes ficam fora da galeria como desconhecidas, uma na validação e outra no teste, complementadas por identidades do teste do LFW como desconhecidos extras.
-- O threshold é escolhido só na validação e reportado no teste sem reajuste.
-- Se o número de participantes ficar muito pequeno, registrar no README como limitação.
+- **Público:** as 1.680 identidades do LFW com 2 fotos ou mais são divididas **por identidade** em treino, validação e teste (70/15/15, seed 42, estratificado por faixa de número de fotos: 2–4, 5–9, 10+), e nenhuma pessoa aparece em mais de um split. As 4.069 identidades com uma foto só vão metade para a validação e metade para o teste, como impostoras nos pares negativos e como desconhecidas extras do privado.
+- **Pares:** validação e teste têm 3.000 pares positivos e 3.000 negativos cada (o tamanho do View 2), sorteados com seed 42, no máximo 20 pares positivos por identidade. E01, E02, E04 e E06 são avaliados **nos mesmos pares de teste**. Os pares padrão do LFW (View 2) não são usados, porque contêm identidades que entram no treino do fine-tuning.
+- **Escolha do modelo:** o "melhor de E01 a E06" que segue para E07 é escolhido pelo EER **da validação**, nunca do teste (seção 29). O teste é rodado uma vez por experimento, depois que tudo está fixado.
+- **Privado:** a sessão 1 é a galeria (cadastro e treino do k-NN/SVM). As fotos da sessão 2 de cada pessoa da galeria são divididas metade para validação e metade para teste. **2 participantes ficam fora da galeria** como desconhecidas, uma na validação e outra no teste (todas as fotos delas, das duas sessões), complementadas por 200 rostos de identidades com uma foto do LFW em cada split. A estratégia de comparação (E07) e o threshold (E08) são escolhidos na validação privada e reportados no teste privado.
+- Com menos de 5 participantes, a galeria fica pequena demais: registrar no README como limitação e, se der tempo, repetir E08 rodando qual participante fica de fora.
 
 ## Contrato entre as fatias
 
-- **Splits:** listas de caminhos relativos em `data/splits/` (só dados públicos são versionados, nunca caminhos do privado).
-- **Embeddings:** um arquivo por experimento e split, com os embeddings L2-normalizados de 512 dimensões e os rótulos de identidade, fora do Git.
-- **Resultados:** um JSON por experimento em `experiments/results/`, com seed, versões das bibliotecas, hiperparâmetros, hardware e métricas.
+- **Splits** (versionados, só dados públicos) em `data/splits/`, com caminhos relativos a `data/public/lfw_crop160/`, a identidade sendo a pasta (`George_W_Bush/George_W_Bush_0001.png`):
+  - `lfw_train.txt`, `lfw_val.txt`, `lfw_test.txt`: uma foto por linha;
+  - `lfw_val_pairs.csv`, `lfw_test_pairs.csv`: colunas `path_a,path_b,same` (`same` = 1 ou 0);
+  - `lfw_val_unknowns.txt`, `lfw_test_unknowns.txt`: as 200 fotos de desconhecidos extras do privado.
+  - O split privado não é versionado: é gerado em tempo de execução a partir de `data/private/<ID>/session{1,2}/` com seed 42.
+- **Embeddings** (fora do Git, a pasta `embeddings/` e `*.npz` estão no `.gitignore`): `embeddings/<EXP>/<split>.npz` (no privado, `embeddings/private/<EXP>/<split>.npz`, dentro do cofre) com `embeddings` (float32, N×D, L2-normalizados), `paths` e `labels` (strings), e `model_id`. D = 512 no FaceNet e 2048 na ResNet-50; a avaliação não assume a dimensão.
+- **Resultados:** `experiments/results/<EXP>.json` com `experiment`, `hypothesis`, `model`, `strategy`, `dataset`, `seed`, `config` (cópia do YAML), `libraries` (Python, torch, torchvision, facenet-pytorch, scikit-learn, numpy), `hardware` (GPU, CUDA), `training` (épocas rodadas, melhor época, tempo) quando houver, `threshold` (`value`, `criterion`, `chosen_on: "val"`) e `metrics` (`val` e `test`, com os intervalos de confiança). Resultados do privado só agregados, sem nada por pessoa.
+- **Gráficos:** `experiments/figures/<EXP>_roc.png`, `<EXP>_hist.png` e, no privado, `<EXP>_confusion.png` com IDs anônimos.
 - Com isso, E01 e E02 rodam na segunda só gerando embeddings, e a avaliação roda depois em cima deles, quando as métricas estiverem prontas.
 
 ---
@@ -93,8 +99,8 @@ Fechadas na reunião de domingo, cada uma registrada como ADR em `docs/decisions
 |---|---|
 | Estrutura do repo (`src/`, `experiments/`, `configs/`, `tests/`, `scripts/`, `docs/specs/`, `docs/decisions/`, `data/README.md`), `pyproject.toml`, ruff, pytest com marcadores `unit`/`integration`/`e2e`/`gpu`, pre-commit | Paola |
 | `.gitignore` de privacidade (`data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `*.db`, `*.sqlite`, `consent/`, `*.pt`, `*.pth`, `*.onnx`) e hook de pre-commit que bloqueia imagens e checkpoints fora das pastas permitidas | Paola |
-| venv, `requirements.txt` com versões fixadas e `tests/test_environment.py` (CPU por padrão, GPU com `pytest -m gpu -s`), validados na 4060 e na 5070 | Valentina |
-| Adaptar o Termo de Consentimento (Anexo A), enviar e colher assinaturas; guardar fora do repo (pasta local criptografada ou papel) | Valentina |
+| venv, `requirements.txt` com versões fixadas e `tests/test_environment.py` (CPU por padrão, GPU com `pytest -m gpu -s`), validados na 4060 | Valentina |
+| Adaptar o Termo de Consentimento (Anexo A), com a cláusula de envio por mensageiro (ver "Dataset privado"), enviar e colher assinaturas; guardar no cofre do notebook da 4060 (ver "Termos e planilha de controle") | Valentina |
 | Ler o enunciado inteiro e fechar as decisões D1 a D15 | Juntas |
 
 ## Parte 1, experimentação
@@ -107,13 +113,33 @@ Fechadas na reunião de domingo, cada uma registrada como ADR em `docs/decisions
 
 ### Dataset privado (juntas, execução local)
 - Protocolo de coleta: cerca de 5 a 10 adultos consentidos, 20 a 30 fotos cada, em 2 sessões em cômodos ou com fundos diferentes, podendo ser no mesmo dia (variando iluminação, pose, distância, óculos e fundo). Minimização de dados.
-- Cada uma coleta as pessoas do seu lado e guarda os termos delas. Depois as fotos são juntadas numa só máquina de uma de nós (passadas por pendrive, nunca por nuvem ou mensageiro), e E07 e E08 rodam uma vez com o conjunto inteiro.
+- Cada uma convida as pessoas do seu lado e colhe os termos delas. As fotos e os termos ficam só no cofre VeraCrypt do notebook da 4060 (D10), e E07 e E08 rodam uma vez com o conjunto inteiro.
+- **Envio das fotos por mensageiro (WhatsApp).** A participante pode mandar as próprias fotos por mensageiro, desde que todas as regras abaixo sejam cumpridas. O mensageiro é um serviço de terceiros, então o envio só vale se estiver coberto pelo consentimento (seções 14 e 23):
+  - **Consentimento:** o termo traz uma cláusula específica autorizando o envio, por exemplo: "Autorizo o envio das minhas fotografias por mensagem privada no WhatsApp à integrante [nome], que as salvará apenas no computador do grupo e apagará a conversa e as mídias do celular em até 24 horas." Quem assinou um termo sem essa cláusula assina um aditivo ou entrega as fotos sem mensageiro (pendrive ou fotos tiradas por nós).
+  - **Canal:** só conversa individual com a integrante que fez o convite, com criptografia de ponta a ponta. Nunca grupos, e-mail, nuvem (iCloud, Google Fotos e afins) ou link de compartilhamento.
+  - **Envio:** as fotos vão como foto, não como documento, para o aplicativo remover metadados como a localização (minimização de dados). A participante escreve só "Etapa 1" ou "Etapa 2", sem nome completo nem outros dados pessoais.
+  - **Antes de receber:** a integrante desativa o download automático de mídia e a opção de salvar na galeria, e confere que o backup de conversas em nuvem está desligado, para as fotos não irem para a galeria, o Google Fotos ou o iCloud.
+  - **Ao receber:** as fotos são salvas direto no cofre do notebook da 4060, em `data/private/<ID>/`, pelo WhatsApp Web aberto no notebook ou por cabo USB. Nunca passam pelo Mac da Paola nem por outro computador. Fotos recebidas no celular da Paola chegam ao notebook por cabo ou por pendrive dentro de um cofre VeraCrypt, nunca reencaminhadas por mensageiro.
+  - **Exclusão em até 24 horas:** depois de conferir que as fotos estão no cofre, a integrante apaga as mensagens com "Apagar para todos", limpa a conversa, remove as mídias do armazenamento do celular e esvazia a lixeira da galeria. A participante é avisada de que pode apagar a cópia dela.
+  - **Registro:** a planilha de controle, guardada junto aos termos e fora do repositório, anota para cada ID a data de recebimento e a data de exclusão da conversa. Isso serve de evidência no checklist do Anexo B.
+- **Termos e planilha de controle.** Os termos têm nome e assinatura (dado pessoal, não biométrico) e ficam todos no cofre da 4060, em `V:\termos` (seção 15 e Anexo B):
+  - **Planilha:** cada uma preenche a própria cópia, com as pessoas que convidou, em faixas de ID separadas (Valentina P01 a P10, Paola P11 a P20; se acabarem, combinar uma nova faixa). O nome da participante só aparece na planilha e no termo.
+  - **Termos da Paola para o cofre:** a Paola manda os termos dela à Valentina como documento (PDF), na conversa individual do WhatsApp, com o backup de conversas desligado nos dois celulares. A Valentina salva direto em `V:\termos` pelo WhatsApp Web no notebook da 4060 e confere cada arquivo. Em até 24 horas, as duas apagam as mensagens com "Apagar para todos", limpam a conversa e removem os arquivos dos celulares. Só termos passam por essa conversa: fotos recebidas pela Paola nunca são reencaminhadas, vão por cabo ou pendrive com cofre.
+  - **Limpeza:** depois de salvar no cofre, apagar as cópias que tenham ficado em Downloads, Área de Trabalho, anexos de e-mail ou no celular, e esvaziar as lixeiras. A cópia da planilha da Paola também vai para o cofre ao fim da coleta.
+  - **Registro:** as datas de envio, recebimento e exclusão das conversas vão na planilha, e o envio dos termos pelo WhatsApp entre as duas é descrito em `docs/privacy.md`.
+- **Cofre.** Um contêiner VeraCrypt no notebook da 4060 (fora de pastas sincronizadas com nuvem), montado como `V:` só durante o uso. Tudo que vem do dataset privado fica dentro dele, ligado ao projeto por junções do Windows (`New-Item -ItemType Junction`), cujas pastas de origem já estão no `.gitignore` e no hook:
+  - `data/private/` → `V:\private` (fotos originais);
+  - `faces/private/` → `V:\faces` (recortes do MTCNN);
+  - `embeddings/private/` → `V:\embeddings` (embeddings de E07 e E08);
+  - `checkpoints/private/` → `V:\checkpoints` (checkpoints e classificadores ajustados com dados privados);
+  - `V:\termos` (termos e planilhas, sem junção, fora do projeto).
+  Com o cofre desmontado, as junções ficam vazias e nenhum script consegue gravar dado privado fora dele. Resultados por pessoa só existem no cofre; em `experiments/` vão apenas os agregados.
 - `data/README.md` com instruções para alguém criar o próprio dataset privado localmente.
 
 ### Modelos e treinamento (Valentina)
 - `src/models/`: wrappers dos backbones A e B devolvendo embedding L2-normalizado de 512 dimensões.
 - `src/training/`: loop de treino com cabeça ArcFace e Triplet Loss, congelamento parcial configurável, early stopping na validação, seed fixa, modo `--smoke`.
-- Checkpoints de experimentos com dados privados ficam em `checkpoints/private/`, fora do Git.
+- Checkpoints de experimentos com dados privados ficam em `checkpoints/private/`, que é uma junção para o cofre (ver "Cofre"), fora do Git.
 
 Cada experimento tem hipótese, configuração, resultado e interpretação (seção 27):
 
@@ -173,8 +199,8 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 ## Caminho crítico e cuidados
 
 - **Coleta privada:** as sessões 1 e 2 podem ser no mesmo dia, desde que em cômodos ou com fundos diferentes, para o split por sessão funcionar. Os termos têm que estar assinados até segunda (19/10).
-- **Fluxo entre máquinas:** código pelo Git; cada máquina tem o próprio venv e baixa o LFW sozinha; rodar o `--smoke` no notebook antes de mandar o treino para a 5070; os resultados JSON e os gráficos agregados voltam pelo Git; checkpoints ficam fora do Git.
-- **LGPD:** as fotos privadas só são processadas nos computadores do grupo, e agentes de IA nunca recebem fotos reais. Se a 5070 não for de uma das integrantes, ela roda apenas E01 a E06 (dados públicos), e E07 e E08 rodam nos notebooks.
+- **Fluxo entre máquinas:** código pelo Git; cada máquina tem o próprio venv e baixa o LFW sozinha; rodar o `--smoke` antes do treino completo; os resultados JSON e os gráficos agregados voltam pelo Git; checkpoints ficam fora do Git.
+- **LGPD:** as fotos privadas só são processadas no notebook da 4060, e agentes de IA nunca recebem fotos reais nem termos assinados. As fotos, tudo que deriva delas, os termos e as planilhas ficam num cofre VeraCrypt nesse notebook (D10 e "Cofre"). O envio por mensageiro só é aceito com a cláusula no termo, em conversa individual, e a conversa é apagada em até 24 horas (ver "Dataset privado").
 
 ## Fechamento de cada entrega (juntas)
 
@@ -202,7 +228,3 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 | Parte 1 | dataset, pré-processamento, splits, leakage, métricas, threshold, E07 e E08, README de dados e reprodutibilidade | modelos, treino, E01 a E06, análise, README de resultados, vídeo 1 |
 | Parte 2 | specs 001 a 004 e 006, núcleo, storage, exclusão, testes, README | specs 005 e 007, interface, config e logs, integração, e2e, vídeo 2 |
 | Juntas | decisões e ADRs, coleta privada, revisão cruzada de PRs, checklist LGPD, ensaio | |
-
-## Ponto em aberto
-
-- De quem é a 5070 (define se ela pode processar as fotos privadas).
