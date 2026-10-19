@@ -167,6 +167,7 @@ facial_recognition_system/
 ├── scripts/
 │   └── check_private_files.py    # hook de pre-commit contra dados privados
 ├── src/facial_recognition_system/
+│   ├── data/                     # splits por identidade e pares de verificação
 │   ├── evaluation/               # métricas, threshold e gráficos
 │   ├── models/                   # wrappers dos modelos de embedding
 │   ├── preprocessing/            # detecção, alinhamento e recorte
@@ -363,6 +364,7 @@ facial_recognition_system/
 ├── scripts/
 │   └── check_private_files.py    # pre-commit hook against private data
 ├── src/facial_recognition_system/
+│   ├── data/                     # identity splits and verification pairs
 │   ├── evaluation/               # metrics, threshold and plots
 │   ├── models/                   # embedding model wrappers
 │   ├── preprocessing/            # detection, alignment and cropping
