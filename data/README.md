@@ -53,23 +53,25 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 Os splits são gerados a partir dos recortes, então as fotos em que o MTCNN não achou rosto já ficam de fora:
 
 ```bash
-python scripts/make_splits.py --crops-dir data/public/lfw_crop160 --output-dir data/splits
+python scripts/make_splits.py --originals-dir data/public/lfw --crops-dir data/public/lfw_crop160 --output-dir data/splits
 ```
 
 - As identidades com 2 fotos ou mais são divididas **por identidade** em treino, validação e teste (70/15/15, seed 42), separadamente em cada faixa de número de fotos (2–4, 5–9 e 10+). Nenhuma pessoa aparece em mais de um split.
 - As identidades com uma foto só vão metade para a validação e metade para o teste, onde servem de impostoras nos pares negativos e de desconhecidas extras do dataset privado.
 - Pares positivos: todas as combinações de duas fotos da mesma pessoa, com no máximo 20 por identidade (sorteadas quando passam disso). Pares negativos: o mesmo número, sorteando primeiro duas identidades diferentes e depois uma foto de cada, para quem tem muitas fotos não dominar.
 - Desconhecidos extras: 200 fotos de identidades com uma foto só, em cada split.
+- **Leakage (seção 30, D9):** depois do sorteio, o script procura a mesma foto em splits diferentes, em duas etapas: dHash de 64 bits nas fotos originais (distância de Hamming ≤ 4) para achar candidatas, confirmadas por dHash de 256 bits nos recortes (≤ 48). Um dHash pequeno só nos recortes não serve, porque todo rosto alinhado vira quase o mesmo hash. A cópia no split posterior (treino, depois validação, depois teste) sai das listas, junto com os pares que a usam. Foram 2 casos, a mesma foto rotulada com duas pessoas: `Emmy_Rossum_0001` (cópia de `Eva_Amurri_0001`) e `Gabrielle_Rose_0001` (cópia de `Martha_Bowen_0002`).
 
 | Arquivo | Conteúdo | Tamanho |
 |---|---|---|
 | `lfw_train.txt` | fotos do treino, uma por linha | 1.176 identidades, 6.439 fotos |
-| `lfw_val.txt` | fotos da validação | 2.287 identidades, 3.490 fotos |
-| `lfw_test.txt` | fotos do teste | 2.286 identidades, 3.303 fotos |
-| `lfw_val_pairs.csv`, `lfw_test_pairs.csv` | colunas `path_a,path_b,same` (`same` = 1 ou 0) | 1.447 + 1.447 e 1.445 + 1.445 pares |
+| `lfw_val.txt` | fotos da validação | 2.286 identidades, 3.489 fotos |
+| `lfw_test.txt` | fotos do teste | 2.285 identidades, 3.302 fotos |
+| `lfw_val_pairs.csv`, `lfw_test_pairs.csv` | colunas `path_a,path_b,same` (`same` = 1 ou 0) | 1.447 + 1.447 e 1.445 + 1.443 pares |
 | `lfw_val_unknowns.txt`, `lfw_test_unknowns.txt` | desconhecidos extras | 200 fotos cada |
+| `lfw_leakage_report.json` | configuração da checagem, duplicatas encontradas e fotos removidas | 2 duplicatas |
 
-Os caminhos são relativos a `data/public/lfw_crop160/`, com a identidade como pasta (`George_W_Bush/George_W_Bush_0001.png`). Com os mesmos recortes e a mesma seed, o script gera sempre os mesmos arquivos.
+Os caminhos são relativos a `data/public/lfw_crop160/`, com a identidade como pasta (`George_W_Bush/George_W_Bush_0001.png`). Com os mesmos recortes e a mesma seed, o script gera sempre os mesmos arquivos. Para auditar os arquivos versionados, `python scripts/check_leakage.py` refaz os hashes e falha se alguma foto aparecer em dois splits.
 - No dataset privado, os recortes também ficam no cofre: `python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`, com `faces/private/` ligada ao cofre (ver "Dataset privado").
 
 ## Dataset privado
@@ -157,23 +159,25 @@ python scripts/preprocess_faces.py --input-dir data/public/lfw --output-dir data
 The splits are built from the crops, so photos where MTCNN found no face are already left out:
 
 ```bash
-python scripts/make_splits.py --crops-dir data/public/lfw_crop160 --output-dir data/splits
+python scripts/make_splits.py --originals-dir data/public/lfw --crops-dir data/public/lfw_crop160 --output-dir data/splits
 ```
 
 - Identities with 2 or more photos are split **by identity** into train, validation and test (70/15/15, seed 42), separately within each photo-count range (2–4, 5–9 and 10+). No person appears in more than one split.
 - Single-photo identities go half to validation and half to test, where they act as impostors in negative pairs and as extra unknowns for the private dataset.
 - Positive pairs: every combination of two photos of the same person, at most 20 per identity (sampled when there are more). Negative pairs: the same number, drawing two different identities first and one photo of each second, so people with many photos do not dominate.
 - Extra unknowns: 200 photos of single-photo identities in each split.
+- **Leakage (section 30, D9):** after sampling, the script looks for the same photo in different splits, in two stages: a 64-bit dHash of the original photos (Hamming distance ≤ 4) finds candidates, confirmed by a 256-bit dHash of the crops (≤ 48). A small dHash of the crops alone does not work, because every aligned face shrinks to almost the same hash. The copy in the later split (train, then validation, then test) leaves the lists, along with the pairs that use it. There were 2 cases, the same photo labeled with two people: `Emmy_Rossum_0001` (copy of `Eva_Amurri_0001`) and `Gabrielle_Rose_0001` (copy of `Martha_Bowen_0002`).
 
 | File | Contents | Size |
 |---|---|---|
 | `lfw_train.txt` | training photos, one per line | 1,176 identities, 6,439 photos |
-| `lfw_val.txt` | validation photos | 2,287 identities, 3,490 photos |
-| `lfw_test.txt` | test photos | 2,286 identities, 3,303 photos |
-| `lfw_val_pairs.csv`, `lfw_test_pairs.csv` | columns `path_a,path_b,same` (`same` = 1 or 0) | 1,447 + 1,447 and 1,445 + 1,445 pairs |
+| `lfw_val.txt` | validation photos | 2,286 identities, 3,489 photos |
+| `lfw_test.txt` | test photos | 2,285 identities, 3,302 photos |
+| `lfw_val_pairs.csv`, `lfw_test_pairs.csv` | columns `path_a,path_b,same` (`same` = 1 or 0) | 1,447 + 1,447 and 1,445 + 1,443 pairs |
 | `lfw_val_unknowns.txt`, `lfw_test_unknowns.txt` | extra unknowns | 200 photos each |
+| `lfw_leakage_report.json` | check configuration, duplicates found and photos removed | 2 duplicates |
 
-Paths are relative to `data/public/lfw_crop160/`, with the identity as the folder (`George_W_Bush/George_W_Bush_0001.png`). With the same crops and seed, the script always writes the same files.
+Paths are relative to `data/public/lfw_crop160/`, with the identity as the folder (`George_W_Bush/George_W_Bush_0001.png`). With the same crops and seed, the script always writes the same files. To audit the versioned files, `python scripts/check_leakage.py` recomputes the hashes and fails if any photo appears in two splits.
 - For the private dataset, the crops also stay in the vault: `python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`, with `faces/private/` linked to the vault (see "Private dataset").
 
 ## Private dataset
