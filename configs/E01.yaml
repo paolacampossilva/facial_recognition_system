@@ -1,0 +1,18 @@
+# E01: baseline FaceNet pré-treinado, sem fine-tuning (decisões D4 e D11).
+# python scripts/extract_embeddings.py --config configs/E01.yaml
+experiment: E01
+hypothesis: >-
+  O FaceNet pré-treinado em VGGFace2, sem fine-tuning, já é um baseline forte
+  na verificação de pares do LFW.
+strategy: pré-treinado, sem fine-tuning
+model:
+  backbone: facenet
+  pretrained: true
+dataset:
+  name: lfw
+  crops_dir: data/public/lfw_crop160
+  splits_dir: data/splits
+  splits: [val, test]
+embedding:
+  batch_size: 128
+seed: 42
