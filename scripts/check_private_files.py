@@ -52,6 +52,9 @@ FIGURE_DIRS: tuple[PurePosixPath, ...] = (
     PurePosixPath("docs"),
     PurePosixPath("experiments/figures"),
 )
+# Signed consent forms and the control spreadsheet use these formats, so only docs/ may hold them.
+DOCUMENT_SUFFIXES: frozenset[str] = frozenset({".pdf", ".docx", ".xlsx"})
+DOCUMENT_DIR: PurePosixPath = PurePosixPath("docs")
 PRIVATE_DIR_NAMES: frozenset[str] = frozenset({"faces", "embeddings", "checkpoints", "consent"})
 DATA_DIR: PurePosixPath = PurePosixPath("data")
 ALLOWED_DATA_PATHS: tuple[PurePosixPath, ...] = (
@@ -89,6 +92,9 @@ def find_violation(path: str) -> str | None:
 
     if suffix in FIGURE_SUFFIXES and not _is_under(file_path, FIGURE_DIRS):
         return "PNG files are only allowed in docs/ and experiments/figures/"
+
+    if suffix in DOCUMENT_SUFFIXES and not file_path.is_relative_to(DOCUMENT_DIR):
+        return "PDF, Word and Excel files are only allowed in docs/"
 
     return None
 
