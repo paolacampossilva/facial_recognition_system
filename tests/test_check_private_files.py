@@ -15,6 +15,8 @@ from scripts.check_private_files import find_violation, main
         "docs/decisions/ADR-001-face-model.md",
         "docs/architecture.png",
         "docs/pipeline.svg",
+        "docs/participant_photo_guide.pdf",
+        "docs/report/final_report.docx",
         "data/README.md",
         "data/splits/lfw_test_pairs.csv",
     ],
@@ -43,10 +45,19 @@ def test_allowed_files_pass(path: str) -> None:
         "app.sqlite",
         "demo/recording.mp4",
         "src/screenshot.png",
+        "termo_P11.pdf",
+        "notes/consent_addendum.docx",
+        "planilha_controle.xlsx",
+        "experiments/results/Report.PDF",
     ],
 )
 def test_private_or_biometric_files_are_blocked(path: str) -> None:
     assert find_violation(path) is not None
+
+
+@pytest.mark.unit
+def test_document_outside_docs_reports_reason() -> None:
+    assert find_violation("termo_P11.pdf") == "PDF, Word and Excel files are only allowed in docs/"
 
 
 @pytest.mark.unit
