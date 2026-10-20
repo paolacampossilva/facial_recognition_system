@@ -11,84 +11,16 @@ Usage:
 """
 
 import argparse
-import json
 import sys
-import time
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
 
 import torch
 from pydantic import ValidationError
 
-from facial_recognition_system.experiments import (
-    ExperimentConfig,
-    embed_crops,
-    hardware_info,
-    library_versions,
-    load_experiment_config,
-    read_split,
-    save_embeddings,
-    seed_everything,
-)
+from facial_recognition_system.experiments import load_experiment_config, run_extraction
 from facial_recognition_system.models import FaceEmbedder, build_embedder
 from facial_recognition_system.preprocessing import InvalidImageError
-
-
-def run_extraction(
-    config: ExperimentConfig,
-    raw_config: dict[str, Any],
-    embedder: FaceEmbedder,
-    device: torch.device,
-    embeddings_dir: Path,
-    results_dir: Path,
-) -> dict[str, Any]:
-    """Embeds every split of ``config`` and writes the results JSON.
-
-    Returns:
-        The results record, also written to ``results_dir / <EXP>.json``.
-    """
-    seed_everything(config.seed)
-    embedder = embedder.to(device).eval()
-
-    splits: dict[str, Any] = {}
-    for split in config.dataset.splits:
-        paths = read_split(config.dataset.split_file(split))
-        start = time.perf_counter()
-        embedding_set = embed_crops(
-            embedder, config.dataset.crops_dir, paths, config.embedding.batch_size, device
-        )
-        seconds = time.perf_counter() - start
-
-        output_path = embeddings_dir / config.experiment / f"{split}.npz"
-        save_embeddings(embedding_set, output_path)
-        splits[split] = {
-            "file": output_path.as_posix(),
-            "photos": len(embedding_set.paths),
-            "identities": len(set(embedding_set.labels)),
-            "dimension": int(embedding_set.embeddings.shape[1]),
-            "seconds": round(seconds, 2),
-        }
-
-    record = {
-        "experiment": config.experiment,
-        "hypothesis": config.hypothesis,
-        "model": embedder.model_id,
-        "strategy": config.strategy,
-        "dataset": config.dataset.name,
-        "seed": config.seed,
-        "config": raw_config,
-        "libraries": library_versions(),
-        "hardware": hardware_info(device),
-        "embeddings": splits,
-        "training": None,
-        "threshold": None,
-        "metrics": None,
-    }
-    results_dir.mkdir(parents=True, exist_ok=True)
-    results_path = results_dir / f"{config.experiment}.json"
-    results_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", "utf-8")
-    return record
 
 
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:

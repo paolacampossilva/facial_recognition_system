@@ -1,5 +1,7 @@
 """Experiment configuration read from ``configs/<EXP>.yaml`` (decision D11)."""
 
+import math
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -29,11 +31,65 @@ class DatasetConfig(BaseModel):
     def split_file(self, split: str) -> Path:
         return self.splits_dir / f"{self.name}_{split}.txt"
 
+    def pairs_file(self, split: str) -> Path:
+        return self.splits_dir / f"{self.name}_{split}_pairs.csv"
+
 
 class EmbeddingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     batch_size: int = Field(default=128, ge=1)
+
+
+class Loss(StrEnum):
+    ARCFACE = "arcface"
+
+
+class SubsetConfig(BaseModel):
+    """Fine-tuning subset of the train split (decision D2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min_photos: int = Field(default=4, ge=1)
+    max_photos: int = Field(default=40, ge=1)
+
+
+class AugmentationConfig(BaseModel):
+    """Light augmentation applied only to the training photos (decision D5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    horizontal_flip: bool = True
+    brightness: float = Field(default=0.2, ge=0)
+    contrast: float = Field(default=0.2, ge=0)
+    saturation: float = Field(default=0.2, ge=0)
+
+
+class ArcFaceConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scale: float = Field(default=32.0, gt=0)
+    margin: float = Field(default=0.5, ge=0, lt=math.pi / 2)
+
+
+class TrainingConfig(BaseModel):
+    """Partial fine-tuning of decision D5, early stopped on the validation EER."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    loss: Loss = Loss.ARCFACE
+    # Top-level children of the backbone network that train; everything else is frozen.
+    trainable: list[str] = Field(default=["block8", "last_linear", "last_bn"], min_length=1)
+    subset: SubsetConfig = SubsetConfig()
+    augmentation: AugmentationConfig = AugmentationConfig()
+    arcface: ArcFaceConfig = ArcFaceConfig()
+    batch_size: int = Field(default=128, ge=2)
+    max_epochs: int = Field(default=30, ge=1)
+    patience: int = Field(default=5, ge=1)
+    backbone_lr: float = Field(default=1e-4, gt=0)
+    head_lr: float = Field(default=1e-3, gt=0)
+    weight_decay: float = Field(default=5e-4, ge=0)
+    num_workers: int = Field(default=0, ge=0)
 
 
 class ExperimentConfig(BaseModel):
@@ -47,6 +103,8 @@ class ExperimentConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetConfig = DatasetConfig()
     embedding: EmbeddingConfig = EmbeddingConfig()
+    # Absent in experiments without fine-tuning (E01, E02).
+    training: TrainingConfig | None = None
     seed: int = 42
 
 
