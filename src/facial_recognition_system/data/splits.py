@@ -10,7 +10,7 @@ parent folder (``George_W_Bush/George_W_Bush_0001.png``).
 
 import itertools
 import random
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Self
 
 from pydantic import BaseModel, Field, model_validator
@@ -102,6 +102,45 @@ def build_lfw_splits(
         test_pairs=_make_pairs("test", test_ids, photos, config, rng),
         val_unknowns=_sample_unknowns("val", val_singletons, photos, config, rng),
         test_unknowns=_sample_unknowns("test", test_singletons, photos, config, rng),
+    )
+
+
+def exclude_photos(splits: LfwSplits, excluded: Collection[str]) -> LfwSplits:
+    """Removes photos from every list, with every pair and unknown that uses them.
+
+    Applied after the split, so the rest of the sampling stays the same and the
+    embeddings of the remaining photos keep valid; the pairs lose their balance
+    only by the pairs removed.
+
+    Args:
+        splits: Splits as built by ``build_lfw_splits``.
+        excluded: Relative paths to remove, such as near-duplicates across splits.
+
+    Returns:
+        A copy of ``splits`` without the excluded photos.
+    """
+    excluded_set = set(excluded)
+
+    def keep_photos(paths: list[str]) -> list[str]:
+        return [path for path in paths if path not in excluded_set]
+
+    def keep_pairs(pairs: list[ImagePair]) -> list[ImagePair]:
+        return [
+            pair
+            for pair in pairs
+            if pair.path_a not in excluded_set and pair.path_b not in excluded_set
+        ]
+
+    return splits.model_copy(
+        update={
+            "train": keep_photos(splits.train),
+            "val": keep_photos(splits.val),
+            "test": keep_photos(splits.test),
+            "val_pairs": keep_pairs(splits.val_pairs),
+            "test_pairs": keep_pairs(splits.test_pairs),
+            "val_unknowns": keep_photos(splits.val_unknowns),
+            "test_unknowns": keep_photos(splits.test_unknowns),
+        }
     )
 
 

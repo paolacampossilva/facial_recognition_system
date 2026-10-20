@@ -7,6 +7,7 @@ from facial_recognition_system.data import (
     NotEnoughUnknownsError,
     SplitConfig,
     build_lfw_splits,
+    exclude_photos,
 )
 
 CONFIG = SplitConfig(unknowns_per_split=10)
@@ -139,6 +140,27 @@ def test_same_seed_gives_same_splits_and_another_seed_changes_them(
 
     assert build_lfw_splits(shuffled_input, CONFIG) == splits
     assert build_lfw_splits(photos, other_seed).test != splits.test
+
+
+@pytest.mark.unit
+def test_excluded_photos_leave_every_list_pair_and_unknown(splits: LfwSplits) -> None:
+    in_pair = splits.test_pairs[0].path_a
+    unknown = splits.val_unknowns[0]
+
+    filtered = exclude_photos(splits, {in_pair, unknown})
+
+    kept_paths = filtered.train + filtered.val + filtered.test
+    kept_paths += filtered.val_unknowns + filtered.test_unknowns
+    kept_pairs = filtered.val_pairs + filtered.test_pairs
+    assert in_pair not in kept_paths and unknown not in kept_paths
+    assert all(in_pair not in (pair.path_a, pair.path_b) for pair in kept_pairs)
+    assert len(filtered.test) == len(splits.test) - 1
+    assert len(filtered.val_unknowns) == len(splits.val_unknowns) - 1
+
+
+@pytest.mark.unit
+def test_excluding_nothing_keeps_the_splits(splits: LfwSplits) -> None:
+    assert exclude_photos(splits, set()) == splits
 
 
 @pytest.mark.unit

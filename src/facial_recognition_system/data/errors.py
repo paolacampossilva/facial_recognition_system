@@ -18,6 +18,14 @@ class NotEnoughUnknownsError(SplitError):
         self.required = required
 
 
+class UnknownSplitError(SplitError):
+    """Photos refer to splits that the split order does not list."""
+
+    def __init__(self, splits: list[str]) -> None:
+        super().__init__(f"splits missing from the split order: {splits}")
+        self.splits = splits
+
+
 class NotEnoughNegativePairsError(SplitError):
     """A split cannot form as many distinct negative pairs as positive ones."""
 
