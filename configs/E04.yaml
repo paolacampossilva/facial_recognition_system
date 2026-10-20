@@ -1,0 +1,40 @@
+# E04: FaceNet com fine-tuning parcial e cabeça ArcFace (decisões D2, D4, D5 e D11).
+# python scripts/train.py --config configs/E04.yaml --smoke
+# python scripts/train.py --config configs/E04.yaml
+experiment: E04
+hypothesis: >-
+  O fine-tuning parcial do FaceNet com ArcFace no subconjunto de treino do LFW
+  melhora a verificação em relação ao E01, sem overfitting.
+strategy: fine-tuning parcial com ArcFace
+model:
+  backbone: facenet
+  pretrained: true
+dataset:
+  name: lfw
+  crops_dir: data/public/lfw_crop160
+  splits_dir: data/splits
+  splits: [val, test]
+embedding:
+  batch_size: 128
+training:
+  loss: arcface
+  trainable: [block8, last_linear, last_bn]
+  subset:
+    min_photos: 4
+    max_photos: 40
+  augmentation:
+    horizontal_flip: true
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+  arcface:
+    scale: 32
+    margin: 0.5
+  batch_size: 128
+  max_epochs: 30
+  patience: 5
+  backbone_lr: 0.0001
+  head_lr: 0.001
+  weight_decay: 0.0005
+  num_workers: 0
+seed: 42

@@ -166,7 +166,7 @@ def test_embeddings_round_trip(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("config", ["E01.yaml", "E02.yaml"])
+@pytest.mark.parametrize("config", ["E01.yaml", "E02.yaml", "E04.yaml"])
 def test_versioned_configs_are_valid(config: str) -> None:
     experiment, raw = load_experiment_config(Path("configs") / config)
 
