@@ -128,6 +128,17 @@ Fotos dos integrantes e de pessoas próximas, maiores de 18 anos, coletadas dire
 
 Resultados envolvendo o dataset privado aparecem apenas de forma agregada, sem identificar participantes.
 
+Cada experimento tem um YAML em [configs/](configs/) e grava o resultado em `experiments/results/<EXP>.json`. Os embeddings (`embeddings/`) e os checkpoints (`checkpoints/`) ficam fora do Git.
+
+```bash
+# sem fine-tuning (E01, E02): só extrai os embeddings da validação e do teste
+python scripts/extract_embeddings.py --config configs/E01.yaml
+
+# com fine-tuning (E04, E06): rode o --smoke antes (2 épocas curtas, alguns segundos)
+python scripts/train.py --config configs/E04.yaml --smoke
+python scripts/train.py --config configs/E04.yaml
+```
+
 | Experimento | Modelo | Estratégia | Dataset | Accuracy | F1 | Observação |
 |---|---|---|---|---|---|---|
 | A preencher | | | | | | |
@@ -326,6 +337,17 @@ Photos of the team members and people close to them, all over 18, collected dire
 ## Experiments (Part 1)
 
 Results involving the private dataset are reported only in aggregate, without identifying participants.
+
+Each experiment has a YAML in [configs/](configs/) and writes its result to `experiments/results/<EXP>.json`. Embeddings (`embeddings/`) and checkpoints (`checkpoints/`) stay outside Git.
+
+```bash
+# no fine-tuning (E01, E02): only extracts the validation and test embeddings
+python scripts/extract_embeddings.py --config configs/E01.yaml
+
+# with fine-tuning (E04, E06): run --smoke first (2 short epochs, a few seconds)
+python scripts/train.py --config configs/E04.yaml --smoke
+python scripts/train.py --config configs/E04.yaml
+```
 
 | Experiment | Model | Strategy | Dataset | Accuracy | F1 | Notes |
 |---|---|---|---|---|---|---|
