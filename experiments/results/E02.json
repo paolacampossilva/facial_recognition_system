@@ -45,17 +45,17 @@
   "embeddings": {
     "val": {
       "file": "embeddings/E02/val.npz",
-      "photos": 3490,
-      "identities": 2287,
+      "photos": 3489,
+      "identities": 2286,
       "dimension": 2048,
-      "seconds": 13.57
+      "seconds": 13.46
     },
     "test": {
       "file": "embeddings/E02/test.npz",
-      "photos": 3303,
-      "identities": 2286,
+      "photos": 3302,
+      "identities": 2285,
       "dimension": 2048,
-      "seconds": 12.43
+      "seconds": 21.5
     }
   },
   "training": null,
