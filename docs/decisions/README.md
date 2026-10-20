@@ -33,14 +33,14 @@ Se um valor mudar durante a implementação, o ADR é atualizado com o motivo, e
 | D1 | Dataset público de benchmark | Paola | [D01-benchmark-dataset.md](D01-benchmark-dataset.md) |
 | D2 | Dataset público para fine-tuning | Paola | [D02-fine-tuning-dataset.md](D02-fine-tuning-dataset.md) |
 | D3 | Detector e alinhamento | Paola | [D03-face-detection-alignment.md](D03-face-detection-alignment.md) |
-| D4 | Backbones comparados | Valentina | a escrever |
-| D5 | Funções de perda | Valentina | a escrever |
+| D4 | Backbones comparados | Valentina | [D04-backbones.md](D04-backbones.md) |
+| D5 | Funções de perda | Valentina | [D05-loss-functions.md](D05-loss-functions.md) |
 | D6 | Estratégia de comparação | Paola | [D06-comparison-strategy.md](D06-comparison-strategy.md) |
 | D7 | Métricas | Paola | [D07-metrics.md](D07-metrics.md) |
 | D8 | Escolha do threshold | Paola | [D08-threshold-selection.md](D08-threshold-selection.md) |
 | D9 | Protocolo de split | Paola | [D09-split-protocol.md](D09-split-protocol.md) |
-| D10 | Hardware | Valentina | a escrever |
-| D11 | Registro de experimentos | Valentina | a escrever |
+| D10 | Hardware | Valentina | [D10-hardware.md](D10-hardware.md) |
+| D11 | Registro de experimentos | Valentina | [D11-experiment-tracking.md](D11-experiment-tracking.md) |
 | D12 | Armazenamento de embeddings | Paola | a escrever |
 | D13 | Interface | Valentina | a escrever |
 | D14 | Repositório | Juntas | a escrever |
