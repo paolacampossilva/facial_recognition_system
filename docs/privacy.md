@@ -29,7 +29,7 @@ O que **não** é dado privado: o LFW (dataset público, D1), os splits e pares 
 ## Coleta e minimização
 
 - Cerca de 5 a 10 participantes, 20 a 30 fotos por pessoa, em duas sessões em cômodos ou com fundos diferentes. É o mínimo para medir reconhecimento com sessões distintas (D9).
-- Cada participante recebe um **ID anônimo** (`P01` a `P10` para as convidadas da Valentina, `P11` a `P20` para as da Paola). O nome aparece **só** no termo e na planilha. Pastas, arquivos, logs e resultados usam o ID.
+- Cada participante recebe um **ID anônimo** a partir de `P00`: pares (`P00`, `P02`, ...) para as convidadas da Valentina e ímpares (`P01`, `P03`, ...) para as da Paola, para as duas numerarem em paralelo sem repetir. O nome aparece **só** no termo e na planilha. Pastas, arquivos, logs e resultados usam o ID.
 - Quem tira as fotos é a própria participante, a partir do [guia de fotos](participant_photo_guide.pdf). Nada vem de scraping, de redes sociais ou de fotos antigas (seção 11).
 - A aplicação da Parte 2 **não guarda fotos**: só o embedding de cada cadastro (D12).
 
