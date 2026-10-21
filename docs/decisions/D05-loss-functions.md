@@ -42,10 +42,22 @@ A seção 28 pede para investigar o fine-tuning parcial e funções de perda de 
 - **E06 (Triplet), primeira leitura:** o mesmo padrão do E04.
   - o early stopping parou na época 6 e ficou com a **época 1**;
   - o EER de validação caiu de 0,76% para 0,41%;
-  - **no teste, empatou com o E01**: EER de 1,04% (IC 0,69–1,42) contra 1,11%. A diferença equivale a cerca de um par (cada par vale 0,07%).
+  - **no teste, ficou equivalente ao E01**: EER de 1,04% (IC 0,69–1,42) contra 1,11%, com uma leve tendência a favor do E06 (ver abaixo).
 
   A perda começa baixa (0,023): o FaceNet pré-treinado já separa quase todos os trios por mais de 0,2, então só os casos mais difíceis do lote geram gradiente.
-- **ArcFace × Triplet:** no teste, E01, E04 e E06 empatam, com intervalos de confiança sobrepostos. Com 433 identidades, nenhuma das duas perdas melhora o FaceNet pré-treinado no LFW. As duas treinam em cerca de 2 minutos, com pico de cerca de 660 MB na GPU.
+- **O treino mudou o modelo, mas pouco.** As camadas congeladas ficaram idênticas. Os pesos das treináveis mudaram de 2% a 12% (norma relativa), e as estatísticas das BatchNorm treináveis se ajustaram ao LFW. O embedding da mesma foto antes e depois do treino tem cosseno médio de 0,93 no E04 e de 0,97 no E06.
+- **Comparação pareada com o E01 no teste** (os mesmos pares para os dois modelos, threshold escolhido na validação):
+
+  | | Erros em 2.888 pares | Corrige / cria em relação ao E01 | Diferença de EER (IC 95%, bootstrap pareado, 1.000 reamostragens) | Melhor que o E01 em |
+  |---|---|---|---|---|
+  | E01 | 36 (11 FA + 25 FR) | – | – | – |
+  | E04 ArcFace | 38 (8 FA + 30 FR) | 13 / 15 | +0,02 p.p. (−0,35 a +0,42) | 42% das reamostragens |
+  | E06 Triplet | 33 (8 FA + 25 FR) | 10 / 7 | −0,12 p.p. (−0,45 a +0,21) | 72% das reamostragens |
+
+  **Nenhum dos dois traz melhora estatisticamente significativa**: os dois intervalos incluem o zero. O E06 tem uma leve tendência a favor (3 erros a menos), e o E04 fica equivalente. De 23 a 26 dos erros são os mesmos nos três modelos: são os pares difíceis do LFW, que nenhum dos treinos resolve.
+- **Por que o ganho é pequeno:** o E01 já acerta 98,75% dos pares do teste, então sobra pouco para melhorar. O FaceNet foi pré-treinado em cerca de 9 mil pessoas do VGGFace2, que pode ter celebridades em comum com o LFW (D4), e 433 identidades ensinam pouco de novo. A melhor época foi sempre a 1: depois dela, o modelo passa a decorar as identidades de treino.
+- **Limite da conclusão:** vale para a configuração desta decisão (uma learning rate, uma seed, as duas perdas). Não houve busca de hiperparâmetros; uma learning rate menor, por exemplo, poderia dar um ganho mais estável. O efeito no domínio real, com fotos de celular de pessoas que o FaceNet nunca viu, só aparece no E07.
+- As duas perdas treinam em cerca de 2 minutos, com pico de cerca de 660 MB na GPU (D10).
 - **Para a escolha do modelo (#29):** pelo protocolo, o modelo que segue para o E07 é o de menor EER **de validação**, que seria o E06 (0,41%). Só que, nos modelos com fine-tuning, a mesma validação já foi usada para escolher a melhor época, e isso deixa o EER deles otimista. A decisão e a justificativa ficam no ADR "modelo escolhido".
 - **Limitação:** uma seed por treino (D11), então diferenças pequenas entre E01, E04 e E06 precisam ser lidas junto com os intervalos de confiança da D7.
 - Implementado em [src/facial_recognition_system/training/](../../src/facial_recognition_system/training/) (PR #74): `arcface.py`, `freezing.py`, `data.py` e `loop.py`, além de [scripts/train.py](../../scripts/train.py). A Triplet e o amostrador P×K estão em `triplet.py` e `data.py`. Configs em [configs/E04.yaml](../../configs/E04.yaml) e [configs/E06.yaml](../../configs/E06.yaml).
