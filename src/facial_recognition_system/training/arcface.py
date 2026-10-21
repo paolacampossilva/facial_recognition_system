@@ -4,7 +4,7 @@ import math
 
 import torch
 from torch import nn
-from torch.nn.functional import linear, normalize
+from torch.nn.functional import cross_entropy, linear, normalize
 
 
 class ArcFaceHead(nn.Module):
@@ -41,3 +41,16 @@ class ArcFaceHead(nn.Module):
             target > self._threshold, with_margin, target - self._linear_penalty
         )
         return self.scale * cosine.scatter(1, labels.unsqueeze(1), with_margin)
+
+
+class ArcFaceLoss(nn.Module):
+    """Cross-entropy over the ArcFace logits: ``loss(embeddings, labels)``, like ``TripletLoss``."""
+
+    def __init__(
+        self, embedding_dim: int, num_classes: int, scale: float = 32.0, margin: float = 0.5
+    ) -> None:
+        super().__init__()
+        self.head = ArcFaceHead(embedding_dim, num_classes, scale, margin)
+
+    def forward(self, embeddings: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        return cross_entropy(self.head(embeddings, labels), labels)

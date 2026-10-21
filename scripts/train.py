@@ -1,11 +1,12 @@
 """Fine-tunes the backbone of an experiment and extracts the embeddings of the best epoch.
 
 Partial fine-tuning of decision D5 on the subset of decision D2: only the
-``trainable`` children of the network learn, through a classification head
-over the training identities, and the epoch with the lowest validation EER
-is kept (``checkpoints/<EXP>/best.pt``, outside Git). The best epoch then
-embeds the validation and test splits, and ``experiments/results/<EXP>.json``
-gets a ``training`` summary, as in scripts/extract_embeddings.py.
+``trainable`` children of the network learn, through an ArcFace head over the
+training identities (shuffled batches) or a batch-hard triplet loss (P x K
+batches), and the epoch with the lowest validation EER is kept
+(``checkpoints/<EXP>/best.pt``, outside Git). The best epoch then embeds the
+validation and test splits, and ``experiments/results/<EXP>.json`` gets a
+``training`` summary, as in scripts/extract_embeddings.py.
 
 ``--smoke`` runs 2 epochs of 2 batches, validated on 100 pairs, to catch
 errors in seconds before the real run. It saves its checkpoint under
@@ -14,6 +15,7 @@ errors in seconds before the real run. It saves its checkpoint under
 Usage:
     python scripts/train.py --config configs/E04.yaml --smoke
     python scripts/train.py --config configs/E04.yaml
+    python scripts/train.py --config configs/E06.yaml
 """
 
 import argparse
@@ -24,14 +26,17 @@ from typing import Any
 
 import torch
 from pydantic import ValidationError
+from torch import nn
 from torch.utils.data import DataLoader
 
 from facial_recognition_system.data import ImagePair
 from facial_recognition_system.evaluation import equal_error_rate
 from facial_recognition_system.experiments import (
     ExperimentConfig,
+    Loss,
     TrainingConfig,
     embed_crops,
+    identity_of,
     load_experiment_config,
     pair_paths,
     pair_scores,
@@ -43,9 +48,11 @@ from facial_recognition_system.experiments import (
 from facial_recognition_system.models import FaceEmbedder, build_embedder
 from facial_recognition_system.preprocessing import InvalidImageError
 from facial_recognition_system.training import (
-    ArcFaceHead,
+    ArcFaceLoss,
     FaceDataset,
+    IdentityBatchSampler,
     TrainingHistory,
+    TripletLoss,
     build_augmentation,
     fit,
     freeze_except,
@@ -64,6 +71,41 @@ def smoke_pairs(pairs: Sequence[ImagePair]) -> list[ImagePair]:
     positives = [pair for pair in pairs if pair.same][:SMOKE_PAIRS_PER_CLASS]
     negatives = [pair for pair in pairs if not pair.same][:SMOKE_PAIRS_PER_CLASS]
     return positives + negatives
+
+
+def build_loader(
+    dataset: FaceDataset, training: TrainingConfig, device: torch.device, seed: int
+) -> DataLoader:
+    """Shuffled batches for ArcFace, P x K batches for the triplet loss."""
+    common: dict[str, Any] = {
+        "num_workers": training.num_workers,
+        "persistent_workers": training.num_workers > 0,
+        "pin_memory": device.type == "cuda",
+    }
+    if training.loss is Loss.TRIPLET:
+        sampler = IdentityBatchSampler(
+            [dataset.labels[identity_of(path)] for path in dataset.paths],
+            training.triplet.identities_per_batch,
+            training.triplet.photos_per_identity,
+            seed,
+        )
+        return DataLoader(dataset, batch_sampler=sampler, **common)
+    return DataLoader(
+        dataset,
+        batch_size=training.batch_size,
+        shuffle=True,
+        # last_bn is a batch norm: a final batch of one photo would fail, and a
+        # tiny one would give noisy statistics.
+        drop_last=True,
+        generator=torch.Generator().manual_seed(seed),
+        **common,
+    )
+
+
+def build_criterion(training: TrainingConfig, embedding_dim: int, num_classes: int) -> nn.Module:
+    if training.loss is Loss.TRIPLET:
+        return TripletLoss(training.triplet.margin)
+    return ArcFaceLoss(embedding_dim, num_classes, training.arcface.scale, training.arcface.margin)
 
 
 def train_experiment(
@@ -89,24 +131,14 @@ def train_experiment(
         config.seed,
     )
     labels = label_indices(train_paths)
-    loader = DataLoader(
-        FaceDataset(
-            dataset_config.crops_dir,
-            train_paths,
-            labels,
-            embedder.preprocess,
-            build_augmentation(training.augmentation),
-        ),
-        batch_size=training.batch_size,
-        shuffle=True,
-        # last_bn is a batch norm: a final batch of one photo would fail, and a
-        # tiny one would give noisy statistics.
-        drop_last=True,
-        num_workers=training.num_workers,
-        persistent_workers=training.num_workers > 0,
-        pin_memory=device.type == "cuda",
-        generator=torch.Generator().manual_seed(config.seed),
+    dataset = FaceDataset(
+        dataset_config.crops_dir,
+        train_paths,
+        labels,
+        embedder.preprocess,
+        build_augmentation(training.augmentation),
     )
+    loader = build_loader(dataset, training, device, config.seed)
 
     val_pairs = read_pairs(dataset_config.pairs_file("val"))
     if smoke:
@@ -121,22 +153,17 @@ def train_experiment(
 
     embedder = embedder.to(device)
     backbone_parameters = freeze_except(embedder.network, training.trainable)
-    head = ArcFaceHead(
-        embedder.embedding_dim, len(labels), training.arcface.scale, training.arcface.margin
-    ).to(device)
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": backbone_parameters, "lr": training.backbone_lr},
-            {"params": head.parameters(), "lr": training.head_lr},
-        ],
-        weight_decay=training.weight_decay,
-    )
+    criterion = build_criterion(training, embedder.embedding_dim, len(labels)).to(device)
+    parameter_groups = [{"params": backbone_parameters, "lr": training.backbone_lr}]
+    if any(True for _ in criterion.parameters()):
+        parameter_groups.append({"params": list(criterion.parameters()), "lr": training.head_lr})
+    optimizer = torch.optim.AdamW(parameter_groups, weight_decay=training.weight_decay)
 
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
     history = fit(
         embedder,
-        head,
+        criterion,
         loader,
         validate,
         optimizer,

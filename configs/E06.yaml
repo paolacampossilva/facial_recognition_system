@@ -1,0 +1,43 @@
+# E06: FaceNet com fine-tuning parcial e Triplet Loss (decisões D2, D4, D5 e D11).
+# Igual ao E04 em tudo, menos na perda e na forma de montar os lotes.
+# python scripts/train.py --config configs/E06.yaml --smoke
+# python scripts/train.py --config configs/E06.yaml
+experiment: E06
+hypothesis: >-
+  Com o mesmo fine-tuning parcial e os mesmos dados do E04, a Triplet Loss com
+  batch-hard mining gera embeddings tão bons ou melhores que o ArcFace, porque
+  otimiza diretamente as distâncias entre rostos em vez de classificar as
+  identidades de treino.
+strategy: fine-tuning parcial com Triplet Loss
+model:
+  backbone: facenet
+  pretrained: true
+dataset:
+  name: lfw
+  crops_dir: data/public/lfw_crop160
+  splits_dir: data/splits
+  splits: [val, test]
+embedding:
+  batch_size: 128
+training:
+  loss: triplet
+  trainable: [block8, last_linear, last_bn]
+  subset:
+    min_photos: 4
+    max_photos: 40
+  augmentation:
+    horizontal_flip: true
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+  triplet:
+    margin: 0.2
+    identities_per_batch: 32
+    photos_per_identity: 4
+  batch_size: 128
+  max_epochs: 30
+  patience: 5
+  backbone_lr: 0.0001
+  weight_decay: 0.0005
+  num_workers: 0
+seed: 42

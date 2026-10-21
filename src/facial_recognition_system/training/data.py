@@ -2,12 +2,12 @@
 
 import random
 from collections import defaultdict
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 from torchvision import transforms
 
 from facial_recognition_system.experiments import AugmentationConfig, identity_of
@@ -93,3 +93,64 @@ class FaceDataset(Dataset[tuple[torch.Tensor, int]]):
         if self.augmentation is not None:
             face = self.augmentation(face)
         return self.preprocess(face), self.labels[identity_of(path)]
+
+
+class IdentityBatchSampler(Sampler[list[int]]):
+    """P x K batches for the triplet loss: P different people with K photos each.
+
+    Every epoch, each identity's photos are shuffled and cut into groups of K
+    (the leftover photos wait for a later epoch). Each batch then takes one
+    group from P different identities, chosen at random with a weight equal to
+    how many groups they still have, so people with many photos are spread over
+    the epoch instead of piling up at the end. An epoch ends when fewer than P
+    identities have groups left, which covers almost every photo: about as many
+    batches as the shuffled loader of the ArcFace run.
+
+    Args:
+        labels: Class index of each photo of the dataset, in dataset order.
+        identities_per_batch: P.
+        photos_per_identity: K; identities with fewer photos never appear.
+        seed: Seed of the shuffling; each epoch continues the same generator.
+    """
+
+    def __init__(
+        self,
+        labels: Sequence[int],
+        identities_per_batch: int,
+        photos_per_identity: int,
+        seed: int,
+    ) -> None:
+        self.identities_per_batch = identities_per_batch
+        self.photos_per_identity = photos_per_identity
+        self._rng = random.Random(seed)
+        indices_by_label: defaultdict[int, list[int]] = defaultdict(list)
+        for index, label in enumerate(labels):
+            indices_by_label[label].append(index)
+        self._indices_by_label = {
+            label: indices
+            for label, indices in sorted(indices_by_label.items())
+            if len(indices) >= photos_per_identity
+        }
+        if len(self._indices_by_label) < identities_per_batch:
+            raise ValueError(
+                f"{len(self._indices_by_label)} identities with at least "
+                f"{photos_per_identity} photos, fewer than the {identities_per_batch} per batch"
+            )
+
+    def __iter__(self) -> Iterator[list[int]]:
+        k = self.photos_per_identity
+        groups: dict[int, list[list[int]]] = {}
+        for label, indices in self._indices_by_label.items():
+            shuffled = self._rng.sample(indices, len(indices))
+            groups[label] = [shuffled[i : i + k] for i in range(0, len(shuffled) - k + 1, k)]
+
+        while len(groups) >= self.identities_per_batch:
+            # Weighted sampling without replacement (Efraimidis and Spirakis).
+            keys = {label: self._rng.random() ** (1 / len(left)) for label, left in groups.items()}
+            chosen = sorted(groups, key=keys.__getitem__, reverse=True)[: self.identities_per_batch]
+            batch: list[int] = []
+            for label in chosen:
+                batch.extend(groups[label].pop())
+                if not groups[label]:
+                    del groups[label]
+            yield batch

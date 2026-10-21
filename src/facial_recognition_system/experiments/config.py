@@ -3,10 +3,10 @@
 import math
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from facial_recognition_system.models import Backbone
 
@@ -43,6 +43,7 @@ class EmbeddingConfig(BaseModel):
 
 class Loss(StrEnum):
     ARCFACE = "arcface"
+    TRIPLET = "triplet"
 
 
 class SubsetConfig(BaseModel):
@@ -72,6 +73,16 @@ class ArcFaceConfig(BaseModel):
     margin: float = Field(default=0.5, ge=0, lt=math.pi / 2)
 
 
+class TripletConfig(BaseModel):
+    """Batch-hard triplet loss over P x K batches (decision D5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    margin: float = Field(default=0.2, gt=0)
+    identities_per_batch: int = Field(default=32, ge=2)
+    photos_per_identity: int = Field(default=4, ge=2)
+
+
 class TrainingConfig(BaseModel):
     """Partial fine-tuning of decision D5, early stopped on the validation EER."""
 
@@ -83,6 +94,7 @@ class TrainingConfig(BaseModel):
     subset: SubsetConfig = SubsetConfig()
     augmentation: AugmentationConfig = AugmentationConfig()
     arcface: ArcFaceConfig = ArcFaceConfig()
+    triplet: TripletConfig = TripletConfig()
     batch_size: int = Field(default=128, ge=2)
     max_epochs: int = Field(default=30, ge=1)
     patience: int = Field(default=5, ge=1)
@@ -90,6 +102,20 @@ class TrainingConfig(BaseModel):
     head_lr: float = Field(default=1e-3, gt=0)
     weight_decay: float = Field(default=5e-4, ge=0)
     num_workers: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _check_triplet_batches(self) -> Self:
+        if self.loss is not Loss.TRIPLET:
+            return self
+        identities, photos = self.triplet.identities_per_batch, self.triplet.photos_per_identity
+        if self.batch_size != identities * photos:
+            raise ValueError(
+                f"triplet batches have {identities} x {photos} photos, "
+                f"so batch_size must be {identities * photos}"
+            )
+        if self.subset.min_photos < photos:
+            raise ValueError("subset.min_photos must be at least triplet.photos_per_identity")
+        return self
 
 
 class ExperimentConfig(BaseModel):
