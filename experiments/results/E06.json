@@ -1,0 +1,153 @@
+{
+  "experiment": "E06",
+  "hypothesis": "Com o mesmo fine-tuning parcial e os mesmos dados do E04, a Triplet Loss com batch-hard mining gera embeddings tão bons ou melhores que o ArcFace, porque otimiza diretamente as distâncias entre rostos em vez de classificar as identidades de treino.",
+  "model": "facenet-vggface2-triplet-E06",
+  "strategy": "fine-tuning parcial com Triplet Loss",
+  "dataset": "lfw",
+  "seed": 42,
+  "config": {
+    "experiment": "E06",
+    "hypothesis": "Com o mesmo fine-tuning parcial e os mesmos dados do E04, a Triplet Loss com batch-hard mining gera embeddings tão bons ou melhores que o ArcFace, porque otimiza diretamente as distâncias entre rostos em vez de classificar as identidades de treino.",
+    "strategy": "fine-tuning parcial com Triplet Loss",
+    "model": {
+      "backbone": "facenet",
+      "pretrained": true
+    },
+    "dataset": {
+      "name": "lfw",
+      "crops_dir": "data/public/lfw_crop160",
+      "splits_dir": "data/splits",
+      "splits": [
+        "val",
+        "test"
+      ]
+    },
+    "embedding": {
+      "batch_size": 128
+    },
+    "training": {
+      "loss": "triplet",
+      "trainable": [
+        "block8",
+        "last_linear",
+        "last_bn"
+      ],
+      "subset": {
+        "min_photos": 4,
+        "max_photos": 40
+      },
+      "augmentation": {
+        "horizontal_flip": true,
+        "brightness": 0.2,
+        "contrast": 0.2,
+        "saturation": 0.2
+      },
+      "triplet": {
+        "margin": 0.2,
+        "identities_per_batch": 32,
+        "photos_per_identity": 4
+      },
+      "batch_size": 128,
+      "max_epochs": 30,
+      "patience": 5,
+      "backbone_lr": 0.0001,
+      "weight_decay": 0.0005,
+      "num_workers": 0
+    },
+    "seed": 42
+  },
+  "libraries": {
+    "python": "3.11.9",
+    "torch": "2.7.1+cu128",
+    "torchvision": "0.22.1+cu128",
+    "facenet-pytorch": "2.6.0",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.4.6"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "cuda": "12.8",
+    "os": "Windows-10",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"
+  },
+  "embeddings": {
+    "val": {
+      "file": "embeddings/E06/val.npz",
+      "photos": 3489,
+      "identities": 2286,
+      "dimension": 512,
+      "seconds": 8.18
+    },
+    "test": {
+      "file": "embeddings/E06/test.npz",
+      "photos": 3302,
+      "identities": 2285,
+      "dimension": 512,
+      "seconds": 7.67
+    }
+  },
+  "training": {
+    "loss": "triplet",
+    "subset": {
+      "identities": 433,
+      "photos": 3961
+    },
+    "trainable_parameters": 2519296,
+    "total_parameters": 27910327,
+    "epochs_run": 6,
+    "best_epoch": 1,
+    "initial_val_eer": 0.0076019350380096655,
+    "best_val_eer": 0.0041465100207325346,
+    "stopped_early": true,
+    "seconds": 109.65,
+    "peak_gpu_memory_mb": 657,
+    "checkpoint": "checkpoints/E06/best.pt",
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": null,
+        "val_eer": 0.0076019350380096655,
+        "seconds": 0.0
+      },
+      {
+        "epoch": 1,
+        "train_loss": 0.023305482972689247,
+        "val_eer": 0.0041465100207325346,
+        "seconds": 17.31
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.01452084316406399,
+        "val_eer": 0.004837595024187994,
+        "seconds": 18.32
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.011147692139881352,
+        "val_eer": 0.0041465100207325346,
+        "seconds": 16.82
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.008354307561940342,
+        "val_eer": 0.004837595024187994,
+        "seconds": 14.61
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.006052039796486497,
+        "val_eer": 0.004837595024187994,
+        "seconds": 16.52
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.006079167386309968,
+        "val_eer": 0.005528680027643397,
+        "seconds": 18.43
+      }
+    ]
+  },
+  "threshold": null,
+  "metrics": null
+}
