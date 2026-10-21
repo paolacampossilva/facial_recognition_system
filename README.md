@@ -160,7 +160,7 @@ Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto po
 
 O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para que termos assinados e a planilha de controle não entrem por engano. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
 
-Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [docs/assignment.md](docs/assignment.md).
+Como cada dado é coletado, guardado, excluído e eliminado, e o mapa do checklist do Anexo B, estão em [docs/privacy.md](docs/privacy.md). Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [docs/assignment.md](docs/assignment.md).
 
 ## Estrutura de pastas
 
@@ -370,7 +370,7 @@ All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the pro
 
 The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files in `docs/`, so signed consent forms and the control spreadsheet are not committed by mistake. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
 
-Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assignment.md](docs/assignment.md).
+How each piece of data is collected, stored, deleted and destroyed, and the Annex B checklist map, are in [docs/privacy.md](docs/privacy.md) (in Portuguese). Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assignment.md](docs/assignment.md).
 
 ## Folder structure
 
