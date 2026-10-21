@@ -10,6 +10,7 @@ from facial_recognition_system.experiments.config import (
     ModelConfig,
     SubsetConfig,
     TrainingConfig,
+    TripletConfig,
     load_experiment_config,
 )
 from facial_recognition_system.experiments.embeddings import (
@@ -39,6 +40,7 @@ __all__ = [
     "ModelConfig",
     "SubsetConfig",
     "TrainingConfig",
+    "TripletConfig",
     "embed_crops",
     "hardware_info",
     "identity_of",
