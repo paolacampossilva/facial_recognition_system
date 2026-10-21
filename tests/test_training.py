@@ -5,12 +5,14 @@ from pathlib import Path
 import pytest
 import torch
 from PIL import Image
+from pydantic import ValidationError
 from torch import nn
 
 from facial_recognition_system.data import ImagePair
 from facial_recognition_system.experiments import (
     AugmentationConfig,
     EmbeddingSet,
+    TrainingConfig,
     pair_paths,
     pair_scores,
     read_pairs,
@@ -19,7 +21,9 @@ from facial_recognition_system.models import FaceEmbedder
 from facial_recognition_system.preprocessing import Normalization
 from facial_recognition_system.training import (
     ArcFaceHead,
+    ArcFaceLoss,
     FaceDataset,
+    IdentityBatchSampler,
     build_augmentation,
     fit,
     freeze_except,
@@ -27,6 +31,7 @@ from facial_recognition_system.training import (
     select_training_subset,
     set_train_mode,
 )
+from facial_recognition_system.training.triplet import batch_hard_triplet_loss
 from scripts.train import main
 
 TRAINABLE = ["last_linear", "last_bn"]
@@ -79,10 +84,10 @@ def random_batches(count: int, batch_size: int = 4, classes: int = 3):
 def make_fit_parts(tmp_path: Path):
     torch.manual_seed(0)
     embedder = TinyEmbedder()
-    head = ArcFaceHead(embedding_dim=8, num_classes=3)
+    criterion = ArcFaceLoss(embedding_dim=8, num_classes=3)
     parameters = freeze_except(embedder.network, TRAINABLE)
-    optimizer = torch.optim.AdamW([*parameters, *head.parameters()], lr=1e-2)
-    return embedder, head, optimizer, tmp_path / "checkpoints" / "best.pt"
+    optimizer = torch.optim.AdamW([*parameters, *criterion.parameters()], lr=1e-2)
+    return embedder, criterion, optimizer, tmp_path / "checkpoints" / "best.pt"
 
 
 # ArcFace head
@@ -236,7 +241,7 @@ def test_face_dataset_without_augmentation_returns_the_same_tensor_every_time(
 
 @pytest.mark.unit
 def test_fit_stops_after_patience_epochs_without_improvement(tmp_path: Path) -> None:
-    embedder, head, optimizer, checkpoint_path = make_fit_parts(tmp_path)
+    embedder, criterion, optimizer, checkpoint_path = make_fit_parts(tmp_path)
     eers = iter([0.10, 0.08, 0.05, 0.06, 0.07, 0.01])
     saved_states = []
 
@@ -246,7 +251,7 @@ def test_fit_stops_after_patience_epochs_without_improvement(tmp_path: Path) -> 
 
     history = fit(
         embedder,
-        head,
+        criterion,
         random_batches(3),
         validate,
         optimizer,
@@ -272,12 +277,12 @@ def test_fit_stops_after_patience_epochs_without_improvement(tmp_path: Path) -> 
 def test_fit_keeps_a_trained_epoch_even_when_the_pretrained_model_was_better(
     tmp_path: Path,
 ) -> None:
-    embedder, head, optimizer, checkpoint_path = make_fit_parts(tmp_path)
+    embedder, criterion, optimizer, checkpoint_path = make_fit_parts(tmp_path)
     eers = iter([0.01, 0.05, 0.04])
 
     history = fit(
         embedder,
-        head,
+        criterion,
         random_batches(2),
         lambda: next(eers),
         optimizer,
@@ -295,7 +300,7 @@ def test_fit_keeps_a_trained_epoch_even_when_the_pretrained_model_was_better(
 
 @pytest.mark.unit
 def test_fit_trains_only_the_trainable_layers_and_respects_max_steps(tmp_path: Path) -> None:
-    embedder, head, optimizer, checkpoint_path = make_fit_parts(tmp_path)
+    embedder, criterion, optimizer, checkpoint_path = make_fit_parts(tmp_path)
     before = copy.deepcopy(embedder.network.state_dict())
     batches = random_batches(5)
     seen = []
@@ -311,7 +316,7 @@ def test_fit_trains_only_the_trainable_layers_and_respects_max_steps(tmp_path: P
 
     history = fit(
         embedder,
-        head,
+        criterion,
         Batches(),
         lambda: 0.1,
         optimizer,
@@ -455,3 +460,120 @@ def test_config_without_training_section_fails(training_root: Path, tmp_path: Pa
     config.write_text(config.read_text(encoding="utf-8").split("training:")[0], encoding="utf-8")
 
     assert run_training(training_root) == 1
+
+
+# Triplet loss and P x K batches
+
+
+@pytest.mark.unit
+def test_arcface_loss_is_cross_entropy_over_the_head_logits() -> None:
+    criterion = ArcFaceLoss(embedding_dim=8, num_classes=3)
+    embeddings = torch.randn(5, 8)
+    labels = torch.tensor([0, 1, 2, 0, 1])
+
+    expected = nn.functional.cross_entropy(criterion.head(embeddings, labels), labels)
+
+    assert torch.allclose(criterion(embeddings, labels), expected)
+
+
+@pytest.mark.unit
+def test_batch_hard_triplet_loss_uses_the_farthest_positive_and_closest_negative() -> None:
+    # Unit vectors at known angles: squared distance = 2 - 2 cos.
+    embeddings = torch.tensor([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [0.6, 0.8]])
+    labels = torch.tensor([0, 0, 1, 1])
+
+    loss = batch_hard_triplet_loss(embeddings, labels, margin=0.2)
+
+    # Anchor 0: positive 1 at d = 2, closest negative 3 at d = 0.8 -> 1.4.
+    # Anchor 1: positive 0 at d = 2, closest negative 3 at d = 0.4 -> 1.8.
+    # Anchor 2: positive 3 at d = 3.2, closest negative 1 at d = 2 -> 1.4.
+    # Anchor 3: positive 2 at d = 3.2, closest negative 1 at d = 0.4 -> 3.0.
+    assert loss.item() == pytest.approx((1.4 + 1.8 + 1.4 + 3.0) / 4, abs=1e-5)
+
+
+@pytest.mark.unit
+def test_batch_hard_triplet_loss_is_zero_when_people_are_far_apart() -> None:
+    embeddings = torch.tensor([[1.0, 0.0], [0.99, 0.14], [-1.0, 0.0], [-0.99, -0.14]])
+    labels = torch.tensor([0, 0, 1, 1])
+
+    assert batch_hard_triplet_loss(embeddings, labels, margin=0.2).item() == 0.0
+
+
+@pytest.mark.unit
+def test_batch_hard_triplet_loss_skips_anchors_without_positive_and_keeps_gradients() -> None:
+    embeddings = torch.randn(3, 4, requires_grad=True)
+
+    loss = batch_hard_triplet_loss(embeddings, torch.tensor([0, 1, 2]))
+    loss.backward()
+
+    assert loss.item() == 0.0
+    assert embeddings.grad is not None
+
+
+@pytest.mark.unit
+def test_identity_batch_sampler_builds_p_by_k_batches_without_repeating_photos() -> None:
+    # 6 identities with 4 to 9 photos each.
+    labels = [label for label, count in enumerate([4, 5, 6, 7, 8, 9]) for _ in range(count)]
+    sampler = IdentityBatchSampler(labels, identities_per_batch=3, photos_per_identity=2, seed=42)
+
+    batches = list(sampler)
+
+    seen = [index for batch in batches for index in batch]
+    assert len(seen) == len(set(seen))
+    for batch in batches:
+        batch_labels = [labels[index] for index in batch]
+        assert len(batch) == 6
+        assert sorted(set(batch_labels)) == sorted(batch_labels[::2])
+        assert all(batch_labels.count(label) == 2 for label in set(batch_labels))
+    # 39 photos make 18 groups of 2; most of them fit in batches of 3 identities.
+    assert len(batches) >= 5
+
+
+@pytest.mark.unit
+def test_identity_batch_sampler_is_reproducible_and_reshuffles_every_epoch() -> None:
+    labels = [label for label in range(8) for _ in range(4)]
+
+    first = IdentityBatchSampler(labels, 4, 2, seed=42)
+    second = IdentityBatchSampler(labels, 4, 2, seed=42)
+
+    first_epoch = list(first)
+    assert first_epoch == list(second)
+    assert list(first) != first_epoch
+
+
+@pytest.mark.unit
+def test_identity_batch_sampler_needs_p_identities_with_k_photos() -> None:
+    with pytest.raises(ValueError, match="fewer than the 3 per batch"):
+        IdentityBatchSampler([0, 0, 1, 1, 2], identities_per_batch=3, photos_per_identity=2, seed=0)
+
+
+@pytest.mark.unit
+def test_triplet_config_requires_batch_size_of_p_times_k() -> None:
+    TrainingConfig(loss="triplet", batch_size=128)
+
+    with pytest.raises(ValidationError, match="batch_size must be 128"):
+        TrainingConfig(loss="triplet", batch_size=64)
+    with pytest.raises(ValidationError, match="min_photos"):
+        TrainingConfig(loss="triplet", subset={"min_photos": 2})
+
+
+@pytest.mark.unit
+def test_full_triplet_run_trains_without_a_head(training_root: Path) -> None:
+    config = training_root / "E99.yaml"
+    config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            "training:\n",
+            "training:\n  loss: triplet\n  triplet:\n"
+            "    identities_per_batch: 2\n    photos_per_identity: 2\n",
+        ),
+        encoding="utf-8",
+    )
+
+    assert run_training(training_root) == 0
+
+    record = json.loads((training_root / "results" / "E99.json").read_text(encoding="utf-8"))
+    assert record["model"] == "tiny-triplet-E99"
+    assert record["training"]["loss"] == "triplet"
+    assert record["training"]["history"][1]["train_loss"] is not None
+    checkpoint = torch.load(training_root / "checkpoints" / "E99" / "best.pt", weights_only=True)
+    assert checkpoint["criterion"] == {}
