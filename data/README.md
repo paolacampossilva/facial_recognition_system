@@ -76,7 +76,7 @@ Os caminhos são relativos a `data/public/lfw_crop160/`, com a identidade como p
 
 ## Dataset privado
 
-Fotos de adultos que assinaram o Termo de Consentimento (Anexo A do enunciado), tiradas pelos próprios participantes na hora, a partir do [guia para participantes](../docs/participant_photo_guide.pdf), e entregues diretamente à dupla, sem scraping nem fotos antigas. Os termos ficam fora do repositório, no mesmo cofre criptografado das fotos (ver [docs/division.md](../docs/division.md), "Termos e planilha de controle").
+Fotos de adultos que assinaram o Termo de Consentimento (adaptado do Anexo A do enunciado, [modelo em branco](../docs/consent_form.md)), tiradas pelos próprios participantes na hora, a partir do [guia para participantes](../docs/participant_photo_guide.pdf), e entregues diretamente à dupla, sem scraping nem fotos antigas. Os termos ficam fora do repositório, no mesmo cofre criptografado das fotos (ver [docs/division.md](../docs/division.md), "Termos e planilha de controle").
 
 Para montar o seu localmente:
 
@@ -182,7 +182,7 @@ Paths are relative to `data/public/lfw_crop160/`, with the identity as the folde
 
 ## Private dataset
 
-Photos of adults who signed the consent form (Annex A of the assignment), taken by the participants themselves on the spot, following the [participant guide](../docs/participant_photo_guide.pdf) (in Portuguese), and handed directly to the team, with no scraping and no old photos. Consent forms are kept outside the repository, in the same encrypted vault as the photos (see [docs/division.md](../docs/division.md), "Termos e planilha de controle").
+Photos of adults who signed the consent form (adapted from Annex A of the assignment, [blank template](../docs/consent_form.md) in Portuguese), taken by the participants themselves on the spot, following the [participant guide](../docs/participant_photo_guide.pdf) (in Portuguese), and handed directly to the team, with no scraping and no old photos. Consent forms are kept outside the repository, in the same encrypted vault as the photos (see [docs/division.md](../docs/division.md), "Termos e planilha de controle").
 
 To build your own locally:
 
