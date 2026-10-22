@@ -1,7 +1,10 @@
-"""Public dataset splits and verification pairs."""
+"""Public and private dataset splits and verification pairs."""
 
 from facial_recognition_system.data.errors import (
+    IncompleteParticipantError,
+    NonAnonymousFolderError,
     NotEnoughNegativePairsError,
+    NotEnoughParticipantsError,
     NotEnoughUnknownsError,
     SplitError,
     UnknownSplitError,
@@ -17,6 +20,15 @@ from facial_recognition_system.data.leakage import (
     hamming_distance,
     hash_photos,
 )
+from facial_recognition_system.data.private_split import (
+    PRIVATE_SPLIT_ORDER,
+    LabeledPhoto,
+    PrivateSplit,
+    PrivateSplitConfig,
+    build_private_split,
+    exclude_private_photos,
+    find_private_crops,
+)
 from facial_recognition_system.data.splits import (
     ImagePair,
     LfwSplits,
@@ -27,23 +39,33 @@ from facial_recognition_system.data.splits import (
 )
 
 __all__ = [
+    "PRIVATE_SPLIT_ORDER",
     "HashedPhoto",
     "ImagePair",
+    "IncompleteParticipantError",
+    "LabeledPhoto",
     "LeakageConfig",
     "LeakageReport",
     "LfwSplits",
     "NearDuplicate",
+    "NonAnonymousFolderError",
     "NotEnoughNegativePairsError",
+    "NotEnoughParticipantsError",
     "NotEnoughUnknownsError",
     "PhotosByIdentity",
+    "PrivateSplit",
+    "PrivateSplitConfig",
     "SplitConfig",
     "SplitError",
     "UnknownSplitError",
     "build_lfw_splits",
+    "build_private_split",
     "check_leakage",
     "dhash",
     "exclude_photos",
+    "exclude_private_photos",
     "find_cross_split_duplicates",
+    "find_private_crops",
     "hamming_distance",
     "hash_photos",
 ]
