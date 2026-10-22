@@ -143,6 +143,9 @@ python scripts/extract_embeddings.py --config configs/E01.yaml
 python scripts/train.py --config configs/E04.yaml --smoke
 python scripts/train.py --config configs/E04.yaml
 
+# avaliação: threshold do EER na validação, métricas com IC de 95% no JSON e gráficos em experiments/figures/
+python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml
+
 # privado (E07 e E08): só no notebook da 4060, com o cofre aberto; grava só resultados agregados
 python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private
 python scripts/run_open_set.py --config configs/E07_E08.yaml
@@ -446,6 +449,9 @@ python scripts/extract_embeddings.py --config configs/E01.yaml
 # with fine-tuning (E04, E06): run --smoke first (2 short epochs, a few seconds)
 python scripts/train.py --config configs/E04.yaml --smoke
 python scripts/train.py --config configs/E04.yaml
+
+# evaluation: EER threshold on validation, metrics with 95% CI in the JSON and plots in experiments/figures/
+python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml
 
 # private (E07 and E08): only on the RTX 4060 laptop, with the vault open; writes only aggregated results
 python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private
