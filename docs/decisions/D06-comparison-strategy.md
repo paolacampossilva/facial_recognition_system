@@ -1,6 +1,6 @@
 # D6: estratégia de comparação
 
-- **Status:** Aceita
+- **Status:** Aceita, com o critério de escolha do E07 e a calibração do SVM definidos na implementação (ver Decisão e Consequências)
 - **Data:** 2026-10-18
 - **Dona:** Paola
 
@@ -21,14 +21,19 @@ Quatro estratégias, comparadas no E07 com o melhor modelo de E01 a E06:
 
 A sessão 1 é a galeria (cadastro e treino do k-NN e do SVM). A estratégia é escolhida na validação privada e reportada no teste privado (D9).
 
+**Critério do E07:** cada estratégia (e cada valor de C do SVM) recebe o próprio threshold da D8 na validação, e vence a de maior **F1 macro na validação** nesse threshold, com "desconhecido" contado como classe. Em caso de empate, vence a mais simples, na ordem da tabela.
+
 ## Alternativas consideradas
 
 - **Distância euclidiana separada:** com embeddings L2-normalizados, d² = 2 − 2·cos, então ela ordena igual ao cosseno e daria o mesmo resultado.
 - **k = 1:** é o mesmo que o vizinho mais próximo.
 - **Outros classificadores** (regressão logística, MLP): ficam fora do escopo pelo prazo. O SVM já representa a família dos classificadores treinados.
+- **Escolher a estratégia pelo EER do escore de rejeição:** não depende de threshold, mas ignora as identificações erradas entre pessoas da galeria, que o F1 macro conta.
+- **Escolher pela accuracy no threshold da D8:** os cerca de 200 desconhecidos do LFW dominariam a conta, e uma estratégia que só rejeita bem pareceria boa.
 
 ## Consequências
 
 - Os escores de rejeição não estão na mesma escala (similaridade nas três primeiras, probabilidade no SVM), então cada estratégia tem o próprio threshold, escolhido na validação pela D8.
 - Com cerca de 10 fotos por pessoa na galeria, a calibração de Platt do SVM pode ser instável. Se for, isso entra na análise do E07.
-- As métricas de open-set e a escolha do threshold já existem em `src/facial_recognition_system/evaluation/` (D7 e D8). As estratégias entram com o E07 (#27).
+- A calibração de Platt usa `CalibratedClassifierCV(SVC(kernel="linear"), method="sigmoid", ensemble=False)`, porque `SVC(probability=True)` está obsoleto no scikit-learn 1.9. O número de folds da calibração é 5, ou o número de fotos da pessoa com menos fotos na galeria, se for menor (mínimo de 2).
+- Implementado em [src/facial_recognition_system/recognition/strategies.py](../../src/facial_recognition_system/recognition/strategies.py), com a mesma interface (`fit` na galeria, `predict` devolvendo identidade e escore) que a aplicação vai usar na Parte 2. O E07 e o E08 rodam com [scripts/run_open_set.py](../../scripts/run_open_set.py) e [configs/E07_E08.yaml](../../configs/E07_E08.yaml), e o critério de escolha fica em [src/facial_recognition_system/experiments/open_set.py](../../src/facial_recognition_system/experiments/open_set.py) (#27).
