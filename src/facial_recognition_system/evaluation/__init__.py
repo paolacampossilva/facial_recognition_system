@@ -1,5 +1,10 @@
 """Metrics, threshold selection and plots."""
 
+from facial_recognition_system.evaluation.experiment import (
+    ExperimentEvaluation,
+    SplitMetrics,
+    evaluate_experiment,
+)
 from facial_recognition_system.evaluation.open_set import (
     UNKNOWN_LABEL,
     ConfusionMatrix,
@@ -7,6 +12,7 @@ from facial_recognition_system.evaluation.open_set import (
     OpenSetMetrics,
     open_set_metrics,
 )
+from facial_recognition_system.evaluation.plots import plot_roc, plot_similarity_histogram
 from facial_recognition_system.evaluation.scores import (
     VerificationScores,
     false_accept_rate,
@@ -35,10 +41,12 @@ __all__ = [
     "UNKNOWN_LABEL",
     "ConfusionMatrix",
     "EqualErrorRate",
+    "ExperimentEvaluation",
     "MetricInterval",
     "OpenSetAttempts",
     "OpenSetMetrics",
     "SimilarityDistributions",
+    "SplitMetrics",
     "ThresholdChoice",
     "ThresholdCriterion",
     "VerificationMetrics",
@@ -47,10 +55,13 @@ __all__ = [
     "choose_eer_threshold",
     "choose_far_threshold",
     "equal_error_rate",
+    "evaluate_experiment",
     "evaluate_verification",
     "false_accept_rate",
     "false_reject_rate",
     "open_set_metrics",
+    "plot_roc",
+    "plot_similarity_histogram",
     "similarity_distributions",
     "tar_at_far",
     "verification_metrics",

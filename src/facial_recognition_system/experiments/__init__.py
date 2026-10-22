@@ -26,6 +26,14 @@ from facial_recognition_system.experiments.environment import (
     library_versions,
     seed_everything,
 )
+from facial_recognition_system.experiments.errors import ExperimentError, MissingEmbeddingsError
+from facial_recognition_system.experiments.evaluation import (
+    EvaluatedExperiment,
+    ExperimentScores,
+    load_experiment_scores,
+    run_evaluation,
+    save_figures,
+)
 from facial_recognition_system.experiments.extraction import run_extraction
 from facial_recognition_system.experiments.pairs import pair_paths, pair_scores, read_pairs
 
@@ -35,8 +43,12 @@ __all__ = [
     "DatasetConfig",
     "EmbeddingConfig",
     "EmbeddingSet",
+    "EvaluatedExperiment",
     "ExperimentConfig",
+    "ExperimentError",
+    "ExperimentScores",
     "Loss",
+    "MissingEmbeddingsError",
     "ModelConfig",
     "SubsetConfig",
     "TrainingConfig",
@@ -47,11 +59,14 @@ __all__ = [
     "library_versions",
     "load_embeddings",
     "load_experiment_config",
+    "load_experiment_scores",
     "pair_paths",
     "pair_scores",
     "read_pairs",
     "read_split",
+    "run_evaluation",
     "run_extraction",
+    "save_figures",
     "save_embeddings",
     "seed_everything",
 ]
