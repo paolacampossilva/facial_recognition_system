@@ -137,6 +137,9 @@ python scripts/extract_embeddings.py --config configs/E01.yaml
 # com fine-tuning (E04, E06): rode o --smoke antes (2 épocas curtas, alguns segundos)
 python scripts/train.py --config configs/E04.yaml --smoke
 python scripts/train.py --config configs/E04.yaml
+
+# avaliação: threshold do EER na validação, métricas com IC de 95% no JSON e gráficos em experiments/figures/
+python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml
 ```
 
 | Experimento | Modelo | Estratégia | Dataset | Accuracy | F1 | Observação |
@@ -347,6 +350,9 @@ python scripts/extract_embeddings.py --config configs/E01.yaml
 # with fine-tuning (E04, E06): run --smoke first (2 short epochs, a few seconds)
 python scripts/train.py --config configs/E04.yaml --smoke
 python scripts/train.py --config configs/E04.yaml
+
+# evaluation: EER threshold on validation, metrics with 95% CI in the JSON and plots in experiments/figures/
+python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml
 ```
 
 | Experiment | Model | Strategy | Dataset | Accuracy | F1 | Notes |
