@@ -11,14 +11,13 @@ threshold_experiment: E08
 threshold_hypothesis: >-
   O menor threshold com FAR <= 1% na validação mantém o FRR abaixo de 20% e
   reconhece as pessoas cadastradas sem aceitar desconhecidos, também no teste.
-# Melhor de E01 a E06 pelo EER da validação (ADR "modelo escolhido", #29).
-# Trocar quando os números saírem: para E04 ou E06, usar o checkpoint da melhor época,
-# por exemplo checkpoint: checkpoints/E04/best.pt.
-source_experiment: E01
+# Melhor de E01 a E06 pelo EER da validação (ADR "modelo escolhido", #29): E06 (0,41%,
+# contra 0,48% do E04 e 0,76% do E01), com o checkpoint da melhor época.
+source_experiment: E06
 model:
   backbone: facenet
   pretrained: true
-  checkpoint: null
+  checkpoint: checkpoints/E06/best.pt
 private:
   crops_dir: faces/private
   originals_dir: data/private
