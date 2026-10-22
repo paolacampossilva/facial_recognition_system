@@ -34,7 +34,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 
 ## Visão geral
 
-> **Status:** em desenvolvimento. O ambiente e os testes estão documentados em [Instalação](#instalação); a execução dos experimentos e da aplicação será documentada quando existir.
+> **Status:** Parte 1 (experimentação) concluída: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1). A aplicação (Parte 2) será documentada quando existir.
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
@@ -220,8 +220,8 @@ Uma face é aceita quando `similaridade >= threshold`, e o threshold é sempre e
 
 | Onde | Critério | Valor |
 |---|---|---|
-| Público (E01 a E06) | threshold do EER nos pares de validação, onde FAR = FRR. É o critério neutro para comparar modelos | _a preencher_ |
-| Privado e aplicação (E08) | menor threshold com **FAR ≤ 1%** na validação. Se o FRR de validação passar de 20%, usa-se o do EER | _a preencher_ |
+| Público (E01 a E06) | threshold do EER nos pares de validação, onde FAR = FRR. É o critério neutro para comparar modelos | E01: 0,450 · E02: 0,833 · E04: 0,443 · E06: 0,445 |
+| Privado e aplicação (E08) | menor threshold com **FAR ≤ 1%** na validação. Se o FRR de validação passar de 20%, usa-se o do EER | 0,766 (FAR de validação 0,9%, FRR 7,9%; sem fallback) |
 
 A falsa aceitação pesa mais que a falsa rejeição: reconhecer um estranho como alguém cadastrado é pior do que pedir para a pessoa tentar de novo. Com cerca de 200 tentativas de desconhecidos por split, o FAR do privado tem resolução de 0,5% (1 aceitação em 200), por isso a meta é 1% e não 0,1%. No E07, cada estratégia de comparação tem o próprio threshold, porque os escores não estão na mesma escala (similaridade no cosseno, no protótipo e no k-NN, probabilidade no SVM).
 
@@ -396,7 +396,7 @@ facial_recognition_system/
 
 ## Overview
 
-> **Status:** in development. The environment and tests are documented in [Installation](#installation); running the experiments and the application will be documented once they exist.
+> **Status:** Part 1 (experimentation) done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1). The application (Part 2) will be documented once it exists.
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
@@ -582,8 +582,8 @@ A face is accepted when `similarity >= threshold`, and the threshold is always c
 
 | Where | Criterion | Value |
 |---|---|---|
-| Public (E01 to E06) | EER threshold on the validation pairs, where FAR = FRR. The neutral criterion to compare models | _to be filled_ |
-| Private and application (E08) | smallest threshold with **FAR ≤ 1%** on validation. If the validation FRR goes above 20%, the EER threshold is used | _to be filled_ |
+| Public (E01 to E06) | EER threshold on the validation pairs, where FAR = FRR. The neutral criterion to compare models | E01: 0.450 · E02: 0.833 · E04: 0.443 · E06: 0.445 |
+| Private and application (E08) | smallest threshold with **FAR ≤ 1%** on validation. If the validation FRR goes above 20%, the EER threshold is used | 0.766 (validation FAR 0.9%, FRR 7.9%; no fallback) |
 
 A false accept weighs more than a false reject: recognizing a stranger as an enrolled person is worse than asking someone to try again. With about 200 unknown attempts per split, the private FAR has a 0.5% resolution (1 acceptance in 200), which is why the target is 1% and not 0.1%. In E07, each comparison strategy has its own threshold, because the scores are not on the same scale (similarity for cosine, prototype and k-NN, probability for the SVM).
 
