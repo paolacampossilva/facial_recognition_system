@@ -41,7 +41,7 @@ Se um valor mudar durante a implementação, o ADR é atualizado com o motivo, e
 | D9 | Protocolo de split | Paola | [D09-split-protocol.md](D09-split-protocol.md) |
 | D10 | Hardware | Valentina | [D10-hardware.md](D10-hardware.md) |
 | D11 | Registro de experimentos | Valentina | [D11-experiment-tracking.md](D11-experiment-tracking.md) |
-| D12 | Armazenamento de embeddings | Paola | a escrever |
+| D12 | Armazenamento de embeddings | Paola | [D12-embedding-storage.md](D12-embedding-storage.md) |
 | D13 | Interface | Valentina | [D13-interface.md](D13-interface.md) |
 | D14 | Repositório | Juntas | [D14-repository.md](D14-repository.md) |
 | D15 | Quem aparece no vídeo | Juntas | [D15-video-participants.md](D15-video-participants.md) |
