@@ -86,7 +86,7 @@ def hash_photos(
     paths_by_split: Mapping[str, Sequence[str]],
     originals_dir: Path,
     crops_dir: Path,
-    original_suffix: str,
+    original_suffix: str | Sequence[str],
     config: LeakageConfig,
 ) -> list[HashedPhoto]:
     """Hashes the original photo and the face crop of every listed path.
@@ -95,16 +95,18 @@ def hash_photos(
         paths_by_split: Crop paths of each split, relative to ``crops_dir``.
         originals_dir: Folder of the original photos, with the same layout.
         crops_dir: Folder of the face crops.
-        original_suffix: Extension of the original photos (``.jpg`` in LFW).
+        original_suffix: Extension of the original photos (``.jpg`` in LFW), or several
+            tried in order when they vary (phone photos of the private dataset).
         config: Hash sizes of both stages.
 
     Returns:
         One hashed photo per path, in split order.
     """
+    suffixes = [original_suffix] if isinstance(original_suffix, str) else list(original_suffix)
     photos: list[HashedPhoto] = []
     for split, paths in paths_by_split.items():
         for path in tqdm(paths, desc=f"hashes {split}", unit="img"):
-            original = _open(originals_dir / Path(path).with_suffix(original_suffix))
+            original = _open(_find_original(originals_dir / path, suffixes))
             crop = _open(crops_dir / path)
             photos.append(
                 HashedPhoto(
@@ -115,6 +117,19 @@ def hash_photos(
                 )
             )
     return photos
+
+
+def _find_original(crop_path: Path, suffixes: Sequence[str]) -> Path:
+    """The original of a crop: same path, with the first suffix that exists.
+
+    Raises:
+        FileNotFoundError: No original exists with any of the suffixes.
+    """
+    for suffix in suffixes:
+        candidate = crop_path.with_suffix(suffix)
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"no original of {crop_path} with suffixes {list(suffixes)}")
 
 
 def _open(path: Path) -> Image.Image:

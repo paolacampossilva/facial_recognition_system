@@ -36,3 +36,41 @@ class NotEnoughNegativePairsError(SplitError):
         self.split = split
         self.available = available
         self.required = required
+
+
+class NotEnoughParticipantsError(SplitError):
+    """The private dataset has too few participants for a gallery plus the unknowns."""
+
+    def __init__(self, available: int, required: int) -> None:
+        super().__init__(
+            f"private dataset has {available} participants, at least {required} are needed"
+        )
+        self.available = available
+        self.required = required
+
+
+class IncompleteParticipantError(SplitError):
+    """A participant lacks the photos of a session.
+
+    The message only carries the anonymous ID, never a name.
+    """
+
+    def __init__(self, participant: str, session: str, photos: int, required: int) -> None:
+        super().__init__(
+            f"{participant} has {photos} photo(s) in {session}, at least {required} are needed"
+        )
+        self.participant = participant
+        self.session = session
+        self.photos = photos
+        self.required = required
+
+
+class NonAnonymousFolderError(SplitError):
+    """Folders of the private dataset are not anonymous IDs like ``P01``.
+
+    Only the count goes to the message, so a name never reaches the logs.
+    """
+
+    def __init__(self, count: int) -> None:
+        super().__init__(f"{count} private folder(s) are not anonymous IDs like 'P01'")
+        self.count = count

@@ -27,6 +27,17 @@ from facial_recognition_system.experiments.environment import (
     seed_everything,
 )
 from facial_recognition_system.experiments.extraction import run_extraction
+from facial_recognition_system.experiments.open_set import (
+    LabeledEmbeddings,
+    OpenSetConfig,
+    StrategySelection,
+    ThresholdStudy,
+    build_strategies,
+    load_open_set_config,
+    select_strategy,
+    study_threshold,
+)
+from facial_recognition_system.experiments.open_set_run import OpenSetRun, run_open_set
 from facial_recognition_system.experiments.pairs import pair_paths, pair_scores, read_pairs
 
 __all__ = [
@@ -36,22 +47,32 @@ __all__ = [
     "EmbeddingConfig",
     "EmbeddingSet",
     "ExperimentConfig",
+    "LabeledEmbeddings",
     "Loss",
     "ModelConfig",
+    "OpenSetConfig",
+    "OpenSetRun",
+    "StrategySelection",
     "SubsetConfig",
+    "ThresholdStudy",
     "TrainingConfig",
     "TripletConfig",
+    "build_strategies",
     "embed_crops",
     "hardware_info",
     "identity_of",
     "library_versions",
     "load_embeddings",
     "load_experiment_config",
+    "load_open_set_config",
     "pair_paths",
     "pair_scores",
     "read_pairs",
     "read_split",
     "run_extraction",
+    "run_open_set",
     "save_embeddings",
     "seed_everything",
+    "select_strategy",
+    "study_threshold",
 ]
