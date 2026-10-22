@@ -7,6 +7,10 @@ from facial_recognition_system.evaluation.open_set import (
     OpenSetMetrics,
     open_set_metrics,
 )
+from facial_recognition_system.evaluation.open_set_plots import (
+    plot_confusion_matrix,
+    plot_far_frr,
+)
 from facial_recognition_system.evaluation.scores import (
     VerificationScores,
     false_accept_rate,
@@ -51,6 +55,8 @@ __all__ = [
     "false_accept_rate",
     "false_reject_rate",
     "open_set_metrics",
+    "plot_confusion_matrix",
+    "plot_far_frr",
     "similarity_distributions",
     "tar_at_far",
     "verification_metrics",
