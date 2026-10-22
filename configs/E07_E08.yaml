@@ -1,0 +1,37 @@
+# E07 e E08: estratégia de comparação e threshold open-set no dataset privado (D6, D8 e D9).
+# Rodar só no notebook da 4060, com o cofre aberto (D10):
+# python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private
+# python scripts/run_open_set.py --config configs/E07_E08.yaml
+selection_experiment: E07
+selection_hypothesis: >-
+  Na galeria privada, com poucas fotos por pessoa, uma estratégia sem treino
+  (vizinho mais próximo ou protótipo) identifica tão bem quanto o k-NN e o SVM,
+  que precisam de mais exemplos por pessoa para generalizar.
+threshold_experiment: E08
+threshold_hypothesis: >-
+  O menor threshold com FAR <= 1% na validação mantém o FRR abaixo de 20% e
+  reconhece as pessoas cadastradas sem aceitar desconhecidos, também no teste.
+# Melhor de E01 a E06 pelo EER da validação (ADR "modelo escolhido", #29).
+# Trocar quando os números saírem: para E04 ou E06, usar o checkpoint da melhor época,
+# por exemplo checkpoint: checkpoints/E04/best.pt.
+source_experiment: E01
+model:
+  backbone: facenet
+  pretrained: true
+  checkpoint: null
+private:
+  crops_dir: faces/private
+  originals_dir: data/private
+dataset:
+  name: lfw
+  crops_dir: data/public/lfw_crop160
+  splits_dir: data/splits
+embedding:
+  batch_size: 128
+strategies:
+  knn_k: 3
+  svm_c: [0.1, 1.0, 10.0]
+threshold:
+  max_far: 0.01
+  max_frr: 0.20
+seed: 42
