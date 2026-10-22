@@ -270,13 +270,14 @@ O E01 já acerta 98,75%, e de 23 a 26 dos erros são os mesmos nos três modelos
 
 **Impacto do threshold.** O threshold do LFW (0,445) não serve para a aplicação: no privado, o da D8 é 0,766. Os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas e se parecem mais com elas. Com 0,766, nenhum desconhecido entrou e 9,2% das fotos de pessoas cadastradas foram rejeitadas. O threshold do EER da validação (0,744) teria rejeitado menos (7,7%), mas a D8 prioriza não aceitar estranhos.
 
-**Erros encontrados.** No LFW, a maior parte dos erros são falsas rejeições (25 de 36 no E01): fotos da mesma pessoa em condições muito diferentes. No privado, os 6 erros do teste são todos rejeições de pessoas cadastradas, espalhadas por 4 participantes; não houve confusão entre pessoas. No pré-processamento, o MTCNN rejeitou 3 das 284 fotos privadas por terem mais de um rosto (modo `strict`, D3) e 1 das 13.233 do LFW por não achar rosto.
+**Erros encontrados.** No LFW, a maior parte dos erros são falsas rejeições (25 de 36 no E01): fotos da mesma pessoa em condições muito diferentes. No privado, os 6 erros do teste são todos rejeições de pessoas cadastradas, espalhadas por 4 participantes; não houve confusão entre pessoas. No pré-processamento, o MTCNN rejeitou 3 das 284 fotos privadas por "mais de um rosto" (modo `strict`, D3), mas a conferência manual mostrou que todas tinham uma pessoa só: foram falsos positivos do detector. No LFW, 1 das 13.233 fotos ficou de fora por não ter rosto acima de 0,9.
 
 **Limitações.**
 - O LFW está perto do limite para o FaceNet, e o VGGFace2 pode conter pessoas do LFW, o que favorece o E01.
 - O fine-tuning usou 433 identidades, uma seed e uma configuração de hiperparâmetros (D5 e D11), sem busca. A conclusão vale para essa configuração.
 - O EER de validação dos modelos com fine-tuning é otimista: a mesma validação escolheu a época e o modelo.
 - O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero.
+- O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
 - E03 e E05 (fine-tuning completo) ficaram de fora.
 
 **Custo computacional e complexidade.**
@@ -606,7 +607,7 @@ Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), 
 - **Fine-tuning:** it changes the model but brings no statistically significant gain on test (paired bootstrap against E01: E04 +0.02 p.p., CI −0.35 to +0.42; E06 −0.12 p.p., CI −0.45 to +0.21). E01 is already at 98.75%, and 433 training identities teach little to a model pretrained on about 9,000 people. The best epoch was always the first; after it, the model starts memorizing the training identities.
 - **Threshold:** the LFW threshold (0.445) does not transfer to the application; the private D8 threshold is 0.766, because private unknowns were photographed in the same conditions as the enrolled people. At 0.766, no unknown was accepted and 9.2% of enrolled photos were rejected.
 - **Errors:** most LFW errors are false rejections (25 of 36 for E01). The 6 private test errors are all rejections of enrolled people, spread over 4 participants, with no confusion between people.
-- **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%.
+- **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; MTCNN in `strict` mode wrongly rejected about 1% of the private photos (3 of 284, a second face that does not exist); one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%.
 - **Cost:** all models have about 23.5 M parameters; fine-tuning takes about 2 minutes and 660 MB of GPU memory on the RTX 4060. ResNet-50 would also be the worst choice in cost, with a 4 times larger embedding.
 
 ## Privacy and LGPD
