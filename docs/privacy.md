@@ -7,7 +7,7 @@ Fotos de rosto, e tudo o que se extrai delas para reconhecer uma pessoa, são **
 ## Finalidade e base legal
 
 - **Finalidade única:** experimentos acadêmicos de reconhecimento facial da disciplina de Inteligência Artificial da UFMS (Parte 1) e a demonstração da aplicação (Parte 2). Os dados não são usados para nenhum outro fim, não são compartilhados fora da dupla e não servem para identificar quem não consentiu (seções 25 e 26).
-- **Base legal:** consentimento específico e destacado da titular (LGPD, art. 11, I), colhido pelo Termo de Consentimento adaptado do Anexo A antes de qualquer foto ser usada (seção 14). Sem termo assinado, a foto não entra no dataset.
+- **Base legal:** consentimento específico e destacado da titular (LGPD, art. 11, I), colhido pelo Termo de Consentimento adaptado do Anexo A ([modelo em branco](consent_form.md)) antes de qualquer foto ser usada (seção 14). Sem termo assinado, a foto não entra no dataset.
 - **Só adultos** (seção 16). Nenhuma participante é criança ou adolescente.
 - **Revogação:** a participante pode retirar o consentimento a qualquer momento (LGPD, art. 8º, § 5º), e os dados dela são excluídos como descrito em "Exclusão de uma participante".
 
@@ -35,7 +35,7 @@ O que **não** é dado privado: o LFW (dataset público, D1), os splits e pares 
 
 ## Envio das fotos por WhatsApp
 
-O mensageiro é um serviço de terceiros, então o envio só acontece com a **cláusula específica no termo** que o autoriza (seções 14 e 23). Quem não autorizou entrega as fotos por pendrive ou as tira com uma de nós.
+O mensageiro é um serviço de terceiros, então o envio só acontece com a **cláusula específica no termo** que o autoriza (seção "Envio das fotografias por mensageiro" do [modelo](consent_form.md)) (seções 14 e 23). Quem não autorizou entrega as fotos por pendrive ou as tira com uma de nós.
 
 - **Canal:** só a conversa individual com a integrante que fez o convite, com criptografia de ponta a ponta. Nunca grupos, e-mail, nuvem ou link de compartilhamento.
 - **Formato:** as fotos vão como foto, não como documento, para o aplicativo remover metadados como a localização. A mensagem diz só "Etapa 1" ou "Etapa 2".
