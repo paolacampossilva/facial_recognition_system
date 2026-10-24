@@ -1,6 +1,6 @@
 # D16: modelo escolhido para a aplicação
 
-- **Status:** Em revisão (decisão das duas, a aprovar no PR)
+- **Status:** Aceita
 - **Data:** 2026-10-22
 - **Dona:** Juntas
 
@@ -42,7 +42,7 @@ O sistema não aceitou nenhum desconhecido e não confundiu nenhuma pessoa cadas
 ## Consequências
 
 - **Ressalva sobre a escolha:** nos modelos com fine-tuning, a mesma validação escolheu a melhor época (early stopping) e depois o modelo, então o EER de validação do E04 e do E06 é otimista. Isso aparece no teste, onde E01, E04 e E06 empatam. A escolha segue a regra, mas o ganho do E06 sobre o E01 não está comprovado.
-- **O threshold do LFW não serve para a aplicação:** 0,445 no LFW contra 0,766 no privado. Os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas, então se parecem mais com elas. Por isso o threshold da aplicação vem do E08, e não da verificação pública.
+- **O threshold do LFW não serve para a aplicação:** 0,445 no LFW contra 0,766 no privado, provavelmente porque os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas e se parecem mais com elas. Por isso o threshold da aplicação vem do E08, e não da verificação pública.
 - **Limitações do E08:** a galeria tem 11 pessoas, e o FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW). Com 0 aceitações, o FAR real pode ser maior que zero; com essa amostra, só dá para dizer que ele provavelmente fica abaixo de cerca de 1,4% (regra de três, 3/222, com 95% de confiança). Uma seed só (D11).
 - **Na aplicação (Parte 2):** carregar o FaceNet com o checkpoint `checkpoints/E06/best.pt`, comparar pelo vizinho mais próximo e usar o threshold 0,766, lido da configuração (spec 007). O checkpoint foi treinado só com o LFW, então não é dado privado (seção 19), mas fica fora do Git pelo tamanho. Ele é refeito com `python scripts/train.py --config configs/E06.yaml`, e o README da Parte 2 explica isso.
 - Resultados em `experiments/results/E07.json` e `E08.json` (só números agregados e IDs anônimos) e gráficos em `experiments/figures/E08_confusion.png` e `E08_threshold.png`.
