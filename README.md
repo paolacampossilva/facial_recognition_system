@@ -27,13 +27,14 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
   - [Métricas](#métricas)
   - [Threshold](#threshold)
   - [Reprodutibilidade](#reprodutibilidade)
+  - [Resultados e análise](#resultados-e-análise)
 - [Privacidade e LGPD](#privacidade-e-lgpd)
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Tipos de commit](#tipos-de-commit)
 
 ## Visão geral
 
-> **Status:** em desenvolvimento. O ambiente e os testes estão documentados em [Instalação](#instalação); a execução dos experimentos e da aplicação será documentada quando existir.
+> **Status:** experimentos da Parte 1 concluídos: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1). A aplicação (Parte 2) será documentada quando existir.
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
@@ -153,7 +154,14 @@ python scripts/run_open_set.py --config configs/E07_E08.yaml
 
 | Experimento | Modelo | Estratégia | Dataset | Accuracy | F1 | Observação |
 |---|---|---|---|---|---|---|
-| A preencher | | | | | | |
+| E01 | FaceNet (VGGFace2) | pré-treinado, sem fine-tuning | LFW, teste | 98,75% | 98,75% | EER 1,11%. Baseline forte |
+| E02 | ResNet-50 (ImageNet) | pré-treinado, sem fine-tuning | LFW, teste | 68,66% | 68,01% | EER 31,06%. O pré-treino genérico não separa rostos |
+| E04 | FaceNet | fine-tuning parcial + ArcFace | LFW, teste | 98,68% | 98,68% | EER 1,18%. Equivalente ao E01 |
+| E06 | FaceNet | fine-tuning parcial + Triplet | LFW, teste | 98,86% | 98,85% | EER 1,04%. Menor EER de validação: modelo escolhido (D16) |
+| E07 | E06 | vizinho mais próximo, protótipo, k-NN e SVM | privado, validação | 97,54% | 94,18% (macro) | Vence o vizinho mais próximo. F1 macro do SVM de até 0,656 |
+| E08 | E06 + vizinho mais próximo | threshold com FAR ≤ 1% (0,766) | privado, teste | 97,91% | 94,62% (macro) | FAR 0%, FRR 9,2%, nenhuma identificação errada |
+
+Nos experimentos públicos, accuracy e F1 são da verificação de pares no threshold do EER escolhido na validação, com IC de 95% nos JSONs. No privado, são da identificação open-set, com "desconhecido" como uma classe. E03 e E05 foram cortados por prazo.
 
 ### Preparação dos dados
 
@@ -215,8 +223,8 @@ Uma face é aceita quando `similaridade >= threshold`, e o threshold é sempre e
 
 | Onde | Critério | Valor |
 |---|---|---|
-| Público (E01 a E06) | threshold do EER nos pares de validação, onde FAR = FRR. É o critério neutro para comparar modelos | _a preencher_ |
-| Privado e aplicação (E08) | menor threshold com **FAR ≤ 1%** na validação. Se o FRR de validação passar de 20%, usa-se o do EER | _a preencher_ |
+| Público (E01 a E06) | threshold do EER nos pares de validação, onde FAR = FRR. É o critério neutro para comparar modelos | E01: 0,450 · E02: 0,833 · E04: 0,443 · E06: 0,445 |
+| Privado e aplicação (E08) | menor threshold com **FAR ≤ 1%** na validação. Se o FRR de validação passar de 20%, usa-se o do EER | 0,766 (FAR de validação 0,9%, FRR 7,9%; sem fallback) |
 
 A falsa aceitação pesa mais que a falsa rejeição: reconhecer um estranho como alguém cadastrado é pior do que pedir para a pessoa tentar de novo. Com cerca de 200 tentativas de desconhecidos por split, o FAR do privado tem resolução de 0,5% (1 aceitação em 200), por isso a meta é 1% e não 0,1%. No E07, cada estratégia de comparação tem o próprio threshold, porque os escores não estão na mesma escala (similaridade no cosseno, no protótipo e no k-NN, probabilidade no SVM).
 
@@ -238,7 +246,65 @@ Comando de cada experimento:
 | Avaliação de E01 a E06 | threshold na validação, métricas com IC e gráficos | `python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml` |
 | E07 e E08 | estratégia de comparação e threshold open-set, no privado | `python scripts/run_open_set.py --config configs/E07_E08.yaml` |
 
-E03 e E05 (fine-tuning completo da ResNet-50) foram cortados por prazo (D4 e D5). O E07 e o E08 só rodam na máquina do grupo, com o cofre aberto e os recortes privados gerados antes (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+Para recalcular as similaridades médias do E02 citadas na análise, depois da avaliação:
+
+```bash
+python -c "import json; from pathlib import Path; from facial_recognition_system.experiments import load_experiment_config; from facial_recognition_system.experiments.evaluation import load_experiment_scores; c, _ = load_experiment_config(Path('configs/E02.yaml')); s = load_experiment_scores(c, json.loads(Path('experiments/results/E02.json').read_text())).test; print(f'{s.genuine.mean():.2f} {s.impostor.mean():.2f}')"
+```
+
+E03 e E05 (fine-tuning completo da ResNet-50 e do FaceNet) foram cortados por prazo (D4 e D5). O E07 e o E08 só rodam na máquina do grupo, com o cofre aberto e os recortes privados gerados antes (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+
+### Resultados e análise
+
+Gráficos: [ROC dos quatro modelos no teste](experiments/figures/comparison_roc.png), histogramas de similaridade por experimento (por exemplo, [E06](experiments/figures/E06_hist.png)), [matriz de confusão do E08](experiments/figures/E08_confusion.png) com IDs anônimos e [FAR × FRR da validação privada](experiments/figures/E08_threshold.png).
+
+**Cada experimento: hipótese, resultado e interpretação**
+
+- **E01, FaceNet pré-treinado.** Hipótese: é um baseline forte. **Confirmada:** EER de 1,11% no teste (IC 0,76–1,59), ROC-AUC de 0,9994. Parte do resultado pode vir de o VGGFace2 ter celebridades em comum com o LFW (D4).
+- **E02, ResNet-50 do ImageNet.** Hipótese: o pré-treino genérico é ruim para rostos. **Confirmada:** EER de 31,06%. Com o mesmo tamanho do FaceNet (cerca de 23,5 M parâmetros), ela acha todos os rostos parecidos: nos pares de teste, a similaridade média é de 0,84 entre fotos da mesma pessoa e de 0,78 entre pessoas diferentes (as duas distribuições do [histograma do E02](experiments/figures/E02_hist.png); o comando que recalcula as médias está em [Reprodutibilidade](#reprodutibilidade)).
+- **E04, fine-tuning parcial com ArcFace.** Hipótese: o fine-tuning melhora sem overfitting. **Não confirmada:** o EER de validação caiu de 0,76% para 0,48%, mas no teste ficou em 1,18%, equivalente ao E01. A loss de treino caiu de 19 para 3 enquanto o EER de validação voltava a subir depois da época 3: overfitting nas 433 identidades.
+- **E06, fine-tuning parcial com Triplet.** Hipótese: a Triplet gera embeddings tão bons ou melhores que o ArcFace. **Parcialmente confirmada:** melhor que o E04 na validação (0,41% contra 0,48%) e no teste (1,04% contra 1,18%), mas sem diferença estatisticamente significativa em relação ao E01.
+- **E07, estratégia de comparação.** Hipótese: com poucas fotos por pessoa, uma estratégia sem treino vai tão bem quanto o k-NN e o SVM. **Confirmada:** o vizinho mais próximo teve o maior F1 macro na validação (0,942), seguido do protótipo e do k-NN (0,934). O SVM ficou entre 0,515 e 0,656: com cerca de 10 fotos por pessoa na galeria, não há exemplos para treinar um classificador.
+- **E08, threshold open-set.** Hipótese: o menor threshold com FAR ≤ 1% mantém o FRR abaixo de 20%. **Confirmada:** FRR de 7,9% na validação e de 9,2% no teste, sem nenhum desconhecido aceito no teste (0 de 222).
+
+**Qual modelo foi melhor e por quê.** No LFW, os três modelos FaceNet empatam no teste. O E06 foi escolhido pela regra fixada antes dos resultados, o menor EER de validação (D16). A grande diferença está no pré-treino: com o mesmo tamanho, a rede treinada em rostos (E01) erra 1 par em 90, e a treinada em objetos (E02) erra quase 1 em 3.
+
+**Impacto do fine-tuning.** O treino muda o modelo (a norma da mudança nos pesos das camadas treináveis vai de 2% a 12% da norma original, D5), mas não melhora o teste de forma comprovada. Comparação pareada com o E01, nos mesmos 2.888 pares de teste e com o threshold da validação:
+
+| | Erros | Corrige / cria em relação ao E01 | Diferença de EER (IC 95%, bootstrap pareado) |
+|---|---|---|---|
+| E01 | 36 (11 falsas aceitações + 25 falsas rejeições) | – | – |
+| E04 | 38 (8 + 30) | 13 / 15 | +0,02 p.p. (−0,35 a +0,42) |
+| E06 | 33 (8 + 25) | 10 / 7 | −0,12 p.p. (−0,45 a +0,21) |
+
+O E01 já acerta 98,75%, e de 23 a 26 dos erros são os mesmos nos três modelos (pares difíceis do LFW). As 433 identidades de treino ensinam pouco a um modelo pré-treinado em cerca de 9 mil pessoas. A melhor época foi sempre a 1; depois dela, o modelo passa a decorar as identidades de treino.
+
+**O que melhorou e o que piorou.** Melhorou: o pré-treino em rostos (E02 → E01, de 31% para 1% de EER), a Triplet em relação ao ArcFace e as estratégias sem treino no privado em relação ao SVM. Piorou: o SVM no privado e, levemente, o ArcFace no teste público (2 erros a mais que o E01).
+
+**Impacto do threshold.** O threshold do LFW (0,445) não serve para a aplicação: no privado, o da D8 é 0,766, provavelmente porque os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas e se parecem mais com elas. Com 0,766, nenhum desconhecido entrou e 9,2% das fotos de pessoas cadastradas foram rejeitadas. O threshold do EER da validação (0,744) teria rejeitado menos (7,7%), mas a D8 prioriza não aceitar estranhos.
+
+**Erros encontrados.** No LFW, a maior parte dos erros são falsas rejeições (25 de 36 no E01): fotos da mesma pessoa em condições muito diferentes. No privado, os 6 erros do teste são todos rejeições de pessoas cadastradas, espalhadas por 4 participantes; não houve confusão entre pessoas. No pré-processamento, o MTCNN rejeitou 3 das 284 fotos privadas por "mais de um rosto" (modo `strict`, D3), mas a conferência manual mostrou que todas tinham uma pessoa só: foram falsos positivos do detector. No LFW, 1 das 13.233 fotos ficou de fora por não ter rosto acima de 0,9.
+
+**Limitações.**
+- O LFW está perto do limite para o FaceNet, e o VGGFace2 pode conter pessoas do LFW, o que favorece o E01.
+- O fine-tuning usou 433 identidades, uma seed e uma configuração de hiperparâmetros (D5 e D11), sem busca. A conclusão vale para essa configuração.
+- O EER de validação dos modelos com fine-tuning é otimista: a mesma validação escolheu a época e o modelo.
+- O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero.
+- O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
+- E03 e E05 (fine-tuning completo) ficaram de fora.
+
+**Custo computacional e complexidade.**
+
+| | Parâmetros | Embedding | Treino na RTX 4060 | Pico de memória da GPU |
+|---|---|---|---|---|
+| E01 | 23,5 M | 512 | – | – |
+| E02 | 23,5 M | 2.048 | – | – |
+| E04 | 23,5 M (2,5 M treinados) | 512 | 123 s (6 épocas) | 660 MB |
+| E06 | 23,5 M (2,5 M treinados) | 512 | 110 s (6 épocas) | 657 MB |
+
+Parâmetros da rede que gera o embedding. O `training.total_parameters` do E04 e do E06 é 27,9 M porque inclui a camada de logits do VGGFace2 (512 × 8.631 pesos mais 8.631 vieses, 4,4 M), que existe na rede carregada mas não entra no embedding. A ResNet-50 tem 25,6 M com a camada `fc`, removida pela D4.
+
+Os modelos têm o mesmo tamanho, então o desempenho não vem da complexidade da rede, e sim do que ela aprendeu antes. O fine-tuning é barato (cerca de 2 minutos), mas não compensou no LFW. Para a aplicação, a ResNet-50 seria a pior escolha também no custo: embedding 4 vezes maior para guardar e comparar. Os tempos de extração dos JSONs dependem do cache de disco e não servem para comparar modelos (D10).
 
 ## Privacidade e LGPD
 
@@ -334,13 +400,14 @@ facial_recognition_system/
   - [Metrics](#metrics)
   - [Threshold](#threshold-1)
   - [Reproducibility](#reproducibility)
+  - [Results and analysis](#results-and-analysis)
 - [Privacy and LGPD](#privacy-and-lgpd)
 - [Folder structure](#folder-structure)
 - [Commit types](#commit-types)
 
 ## Overview
 
-> **Status:** in development. The environment and tests are documented in [Installation](#installation); running the experiments and the application will be documented once they exist.
+> **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1). The application (Part 2) will be documented once it exists.
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
@@ -460,7 +527,14 @@ python scripts/run_open_set.py --config configs/E07_E08.yaml
 
 | Experiment | Model | Strategy | Dataset | Accuracy | F1 | Notes |
 |---|---|---|---|---|---|---|
-| To be filled | | | | | | |
+| E01 | FaceNet (VGGFace2) | pretrained, no fine-tuning | LFW, test | 98.75% | 98.75% | EER 1.11%. Strong baseline |
+| E02 | ResNet-50 (ImageNet) | pretrained, no fine-tuning | LFW, test | 68.66% | 68.01% | EER 31.06%. Generic pretraining does not separate faces |
+| E04 | FaceNet | partial fine-tuning + ArcFace | LFW, test | 98.68% | 98.68% | EER 1.18%. Equivalent to E01 |
+| E06 | FaceNet | partial fine-tuning + Triplet | LFW, test | 98.86% | 98.85% | EER 1.04%. Lowest validation EER: chosen model (D16) |
+| E07 | E06 | nearest neighbor, prototype, k-NN and SVM | private, validation | 97.54% | 94.18% (macro) | Nearest neighbor wins. SVM macro F1 of at most 0.656 |
+| E08 | E06 + nearest neighbor | threshold with FAR ≤ 1% (0.766) | private, test | 97.91% | 94.62% (macro) | FAR 0%, FRR 9.2%, no misidentification |
+
+In the public experiments, accuracy and F1 come from pair verification at the EER threshold chosen on validation, with 95% CIs in the JSONs. In the private ones, they come from open-set identification, with "unknown" as a class. E03 and E05 were cut for time.
 
 ### Data preparation
 
@@ -522,8 +596,8 @@ A face is accepted when `similarity >= threshold`, and the threshold is always c
 
 | Where | Criterion | Value |
 |---|---|---|
-| Public (E01 to E06) | EER threshold on the validation pairs, where FAR = FRR. The neutral criterion to compare models | _to be filled_ |
-| Private and application (E08) | smallest threshold with **FAR ≤ 1%** on validation. If the validation FRR goes above 20%, the EER threshold is used | _to be filled_ |
+| Public (E01 to E06) | EER threshold on the validation pairs, where FAR = FRR. The neutral criterion to compare models | E01: 0.450 · E02: 0.833 · E04: 0.443 · E06: 0.445 |
+| Private and application (E08) | smallest threshold with **FAR ≤ 1%** on validation. If the validation FRR goes above 20%, the EER threshold is used | 0.766 (validation FAR 0.9%, FRR 7.9%; no fallback) |
 
 A false accept weighs more than a false reject: recognizing a stranger as an enrolled person is worse than asking someone to try again. With about 200 unknown attempts per split, the private FAR has a 0.5% resolution (1 acceptance in 200), which is why the target is 1% and not 0.1%. In E07, each comparison strategy has its own threshold, because the scores are not on the same scale (similarity for cosine, prototype and k-NN, probability for the SVM).
 
@@ -545,7 +619,18 @@ Command of each experiment:
 | Evaluation of E01 to E06 | threshold on validation, metrics with CI and plots | `python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml` |
 | E07 and E08 | comparison strategy and open-set threshold, on private data | `python scripts/run_open_set.py --config configs/E07_E08.yaml` |
 
-E03 and E05 (full fine-tuning of ResNet-50) were cut for lack of time (D4 and D5). E07 and E08 only run on the group's machine, with the vault open and the private crops generated first (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were cut for lack of time (D4 and D5). E07 and E08 only run on the group's machine, with the vault open and the private crops generated first (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+
+### Results and analysis
+
+Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), similarity histograms per experiment (for example, [E06](experiments/figures/E06_hist.png)), [E08 confusion matrix](experiments/figures/E08_confusion.png) with anonymous IDs and [FAR × FRR on private validation](experiments/figures/E08_threshold.png). The full discussion is in the Portuguese section above; in short:
+
+- **Best model:** on LFW, the three FaceNet models tie on test. E06 was chosen by the rule fixed before the results, the lowest validation EER (D16). The big difference is pretraining: with the same size (about 23.5 M parameters), the face-trained network (E01) misses 1 pair in 90 and the object-trained one (E02) almost 1 in 3.
+- **Fine-tuning:** it changes the model but brings no statistically significant gain on test (paired bootstrap against E01: E04 +0.02 p.p., CI −0.35 to +0.42; E06 −0.12 p.p., CI −0.45 to +0.21). E01 is already at 98.75%, and 433 training identities teach little to a model pretrained on about 9,000 people. The best epoch was always the first; after it, the model starts memorizing the training identities.
+- **Threshold:** the LFW threshold (0.445) does not transfer to the application; the private D8 threshold is 0.766, probably because private unknowns were photographed in the same conditions as the enrolled people. At 0.766, no unknown was accepted and 9.2% of enrolled photos were rejected.
+- **Errors:** most LFW errors are false rejections (25 of 36 for E01). The 6 private test errors are all rejections of enrolled people, spread over 4 participants, with no confusion between people.
+- **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; MTCNN in `strict` mode wrongly rejected about 1% of the private photos (3 of 284, a second face that does not exist); one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%.
+- **Cost:** all models have about 23.5 M parameters in the network that produces the embedding (the 27.9 M in the E04 and E06 JSONs include the VGGFace2 logits layer, which is not used); fine-tuning takes about 2 minutes and 660 MB of GPU memory on the RTX 4060. ResNet-50 would also be the worst choice in cost, with a 4 times larger embedding.
 
 ## Privacy and LGPD
 
