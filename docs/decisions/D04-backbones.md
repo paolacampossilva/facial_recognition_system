@@ -33,7 +33,7 @@ Os dois ficam atrás da mesma interface (`FaceEmbedder`: `preprocess` e `forward
 
 ## Consequências
 
-- Verificação no teste do LFW, com o threshold do EER escolhido na validação (código do PR #70): **E01 com EER de 1,1% e ROC-AUC de 0,999; E02 com EER de 31,1% e ROC-AUC de 0,749.** O pré-treino em rostos é o que separa as pessoas. O ImageNet aprende "é um rosto", mas não "de quem é o rosto": na ResNet-50, a similaridade média é 0,85 entre fotos da mesma pessoa e 0,78 entre pessoas diferentes.
+- Verificação no teste do LFW, com o threshold do EER escolhido na validação (código do PR #70): **E01 com EER de 1,1% e ROC-AUC de 0,999; E02 com EER de 31,1% e ROC-AUC de 0,749.** O pré-treino em rostos é o que separa as pessoas. O ImageNet aprende "é um rosto", mas não "de quem é o rosto": na ResNet-50, a similaridade média nos pares de teste é 0,84 entre fotos da mesma pessoa e 0,78 entre pessoas diferentes (as distribuições do `E02_hist.png`; o comando que recalcula as médias está em "Reprodutibilidade" no README).
 - **Limitação a registrar no README:** o VGGFace2 pode conter celebridades que também estão no LFW, o que favorece o E01 (D1). No dataset privado (E07), essas pessoas não existem, e o resultado vai mostrar o quanto isso pesou.
 - Só o FaceNet passa por fine-tuning. Com fine-tuning, a ResNet-50 viraria os experimentos E03 e E05, que foram cortados por prazo (division.md).
 - Implementado em [src/facial_recognition_system/models/embedders.py](../../src/facial_recognition_system/models/embedders.py) (PR #67), com testes de forma, norma e entrada em [tests/test_models.py](../../tests/test_models.py). Configs em [configs/E01.yaml](../../configs/E01.yaml) e [configs/E02.yaml](../../configs/E02.yaml).
