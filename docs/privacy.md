@@ -116,3 +116,16 @@ Se um dado privado for parar onde não deveria (um commit, uma conversa de grupo
 | Nada enviado a serviços externos | "Agentes de IA e serviços externos" acima |
 | É possível excluir uma pessoa | "Exclusão de uma participante" acima e a spec 006 |
 | O grupo conhece as regras | este documento e as seções 12 a 25 do enunciado |
+
+### Verificação da entrega da Parte 1
+
+Verificado por Paola e Valentina em 24/10/2026, na `dev` com o PR #91 já mergeado (último merge antes da entrega).
+
+- **Histórico do Git:** `git log --all --format= --name-only | sort -u` lista 136 caminhos, cobrindo todas as branches e PRs, inclusive os fechados. Os únicos binários são `docs/participant_photo_guide.pdf` e 11 gráficos agregados em `experiments/figures/`. Nenhum caminho em `data/private`, `faces/`, `embeddings/`, `checkpoints/` ou `consent/`, e nenhuma foto, `.db`, `.pt` ou `.npz`. Os nomes com "private" (`private_split.py`, `check_private_files.py` e os testes deles) são código-fonte.
+- **Termo de consentimento:** o único arquivo de termo no repositório é `docs/consent_form.md`, o modelo em branco. Os termos assinados existem só no cofre.
+- **Resultados publicados:** nenhum ID de participante em `experiments/results/*.json`. O `E08.json` tem só a tabela de totais (`counts`), sem matriz por participante, e o campo `hardware` não tem nome de máquina nem de usuário.
+- **Testes e lint:** `pytest` com 220 passed (2 deselected), `ruff check` e `ruff format --check` sem pendências.
+- **Reprodução a partir do README:** o E01 foi reproduzido do zero no Mac (CPU) em cerca de 6,5 minutos, com `extract_embeddings.py` e depois `evaluate.py`. O EER de teste deu 1,11%, igual ao da RTX 4060. O threshold foi 0,452 contra 0,450 e a accuracy de teste 98,72% contra 98,75%, por causa da diferença numérica entre CPU e GPU (D11).
+- **Itens confirmados pelas duas:** todas as 13 participantes assinaram o termo e os termos estão no cofre; o vídeo respeita as autorizações (D15); nenhum dado privado foi enviado a serviço externo; as duas conhecem as regras de proteção de dados do projeto.
+
+A verificação da Parte 2 (#53) repete os mesmos comandos e acrescenta uma linha a este registro.
