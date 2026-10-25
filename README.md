@@ -38,6 +38,8 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
+**Vídeo da Parte 1:** [assistir no YouTube](https://www.youtube.com/watch?v=r8HYzewxVCQ)
+
 | Parte | Objetivo | Entrega |
 |---|---|---|
 | Parte 1, Experimentação | Comparar modelos, estratégias de treinamento/fine-tuning, funções de perda e thresholds para descobrir a melhor configuração | Código, experimentos, métricas e vídeo com os resultados |
@@ -437,6 +439,8 @@ facial_recognition_system/
 > **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1), and the decisions in the [ADRs](docs/decisions/README.md) (the chosen model is in [D16](docs/decisions/D16-chosen-model.md)). The application (Part 2) will be documented once it exists.
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
+
+**Part 1 video:** [watch on YouTube](https://www.youtube.com/watch?v=r8HYzewxVCQ)
 
 | Part | Goal | Deliverable |
 |---|---|---|
