@@ -28,4 +28,4 @@ O threshold é escolhido **sempre na validação** e aplicado no teste **sem rea
 - O FAR do privado tem resolução de 0,5% (1 em 200 tentativas de desconhecidos), e isso vai na análise do E08.
 - O valor e o critério ficam registrados no JSON do experimento, em `threshold` (`value`, `criterion`, `chosen_on: "val"`), e a aplicação lê o threshold da configuração (spec 007).
 - Implementado em [src/facial_recognition_system/evaluation/threshold.py](../../src/facial_recognition_system/evaluation/threshold.py) (PR #70): `choose_eer_threshold` e `choose_far_threshold`, com o fallback.
-- Exemplo com o E01 na validação pública: o threshold do EER é 0,452 (FAR = FRR = 0,76%), e o de FAR ≤ 1% é 0,436 (FRR de 0,62%).
+- Exemplo com o E01 na validação pública: o threshold do EER é 0,450 (FAR = FRR = 0,76%), e o de FAR ≤ 1% é 0,438 (FAR de 0,97% e FRR de 0,69%).

@@ -45,8 +45,8 @@ A seção 28 pede para investigar o fine-tuning parcial e funções de perda de 
   - **no teste, ficou equivalente ao E01**: EER de 1,04% (IC 0,69–1,42) contra 1,11%, com uma leve tendência a favor do E06 (ver abaixo).
 
   A perda começa baixa (0,023): o FaceNet pré-treinado já separa quase todos os trios por mais de 0,2, então só os casos mais difíceis do lote geram gradiente.
-- **O treino mudou o modelo, mas pouco.** As camadas congeladas ficaram idênticas. Os pesos das treináveis mudaram de 2% a 12% (norma relativa), e as estatísticas das BatchNorm treináveis se ajustaram ao LFW. O embedding da mesma foto antes e depois do treino tem cosseno médio de 0,93 no E04 e de 0,97 no E06.
-- **Comparação pareada com o E01 no teste** (os mesmos pares para os dois modelos, threshold escolhido na validação):
+- **O treino mudou o modelo, mas pouco.** As camadas congeladas ficaram idênticas. Os pesos das treináveis mudaram 3,6% no E04 e 2,2% no E06 em norma relativa (no máximo 12,3% numa camada), e as estatísticas das BatchNorm treináveis se ajustaram ao LFW. O embedding da mesma foto antes e depois do treino tem cosseno médio de 0,93 no E04 e de 0,97 no E06.
+- **Comparação pareada com o E01 no teste** (os mesmos pares para os dois modelos, threshold escolhido na validação; todos os números desta seção saem de `python scripts/compare_paired.py --reference configs/E01.yaml --config configs/E04.yaml configs/E06.yaml`):
 
   | | Erros em 2.888 pares | Corrige / cria em relação ao E01 | Diferença de EER observada (IC 95%, bootstrap pareado, 1.000 reamostragens) | Melhor que o E01 em |
   |---|---|---|---|---|

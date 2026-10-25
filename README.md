@@ -34,7 +34,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 
 ## Visão geral
 
-> **Status:** experimentos da Parte 1 concluídos: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1). A aplicação (Parte 2) será documentada quando existir.
+> **Status:** experimentos da Parte 1 concluídos: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1), e as decisões, nos [ADRs](docs/decisions/README.md) (o modelo escolhido está na [D16](docs/decisions/D16-chosen-model.md)). A aplicação (Parte 2) será documentada quando existir.
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
@@ -73,6 +73,15 @@ Uma face com similaridade abaixo do threshold é classificada como **pessoa desc
 | Modelo de embedding facial | FaceNet (InceptionResnetV1, VGGFace2) com fine-tuning parcial e Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Framework de deep learning | PyTorch 2.7.1 (CUDA 12.8) |
 | Interface da aplicação | Streamlit ([D13](docs/decisions/D13-interface.md)), na Parte 2 |
+
+Os pesos pré-treinados não ficam no repositório: as bibliotecas os baixam do endereço oficial na primeira execução.
+
+| Modelo | Pesos | Fonte | Licença do código | Dados de treino dos pesos |
+|---|---|---|---|---|
+| FaceNet (InceptionResnetV1) | `vggface2` | [facenet-pytorch](https://github.com/timesler/facenet-pytorch) 2.6.0 (release v2.2.9 dos pesos) | MIT | VGGFace2 |
+| ResNet-50 | `IMAGENET1K_V2` | [torchvision](https://pytorch.org/vision/stable/models/generated/torchvision.models.resnet50.html) 0.22.1 | BSD-3-Clause | ImageNet |
+
+Os pesos seguem os termos de uso dos dados em que foram treinados, por isso o projeto os usa só para fins acadêmicos e não os redistribui.
 
 ## Instalação
 
@@ -161,7 +170,7 @@ python scripts/run_open_set.py --config configs/E07_E08.yaml
 | E07 | E06 | vizinho mais próximo, protótipo, k-NN e SVM | privado, validação | 97,54% | 94,18% (macro) | Vence o vizinho mais próximo. F1 macro do SVM de até 0,656 |
 | E08 | E06 + vizinho mais próximo | threshold com FAR ≤ 1% (0,766) | privado, teste | 97,91% | 94,62% (macro) | FAR 0%, FRR 9,2%, nenhuma identificação errada |
 
-Nos experimentos públicos, accuracy e F1 são da verificação de pares no threshold do EER escolhido na validação, com IC de 95% nos JSONs. No privado, são da identificação open-set, com "desconhecido" como uma classe. E03 e E05 foram cortados por prazo.
+Nos experimentos públicos, accuracy e F1 são da verificação de pares no threshold do EER escolhido na validação, com IC de 95% nos JSONs. No privado, são da identificação open-set, com "desconhecido" como uma classe. E03 e E05 (fine-tuning completo) ficaram de fora: com 3.961 fotos de treino, ajustar os 23,5 M de parâmetros tende a decorar as 433 identidades (D5), e não houve prazo para testar.
 
 ### Preparação dos dados
 
@@ -230,7 +239,7 @@ A falsa aceitação pesa mais que a falsa rejeição: reconhecer um estranho com
 
 ### Reprodutibilidade
 
-- **Configuração:** um YAML por experimento em [configs/](configs/), com todos os hiperparâmetros escritos por extenso (D11). O resultado vai para `experiments/results/<EXP>.json`, com hipótese, cópia do YAML, seed, versões das bibliotecas, hardware, tempos, threshold e métricas.
+- **Configuração:** um YAML por experimento em [configs/](configs/), com os hiperparâmetros escritos por extenso (D11). O optimizer é sempre o AdamW (`scripts/train.py`, D5), com os learning rates e o weight decay do YAML. O resultado vai para `experiments/results/<EXP>.json`, com hipótese, cópia do YAML, seed, versões das bibliotecas, hardware, tempos, threshold e métricas.
 - **Seed 42** em Python, NumPy e PyTorch, com o autotuning do cuDNN desligado. Também usam a seed os sorteios do split, do subconjunto de fine-tuning e do DataLoader. Uma seed por treino; a variação é medida pelo bootstrap.
 - **Versões:** Python 3.11, PyTorch 2.7.1 com CUDA 12.8, facenet-pytorch 2.6.0, scikit-learn 1.9.1, todas fixadas no [requirements.txt](requirements.txt). O JSON de cada experimento registra as versões com que ele rodou.
 - **Hardware:** todos os experimentos rodam no notebook com RTX 4060 (8 GB), o que deixa os tempos de treino comparáveis (D10). O resultado é repetível na mesma máquina, mas não com bits idênticos em outra GPU ou outra versão do CUDA.
@@ -244,6 +253,7 @@ Comando de cada experimento:
 | E04 | FaceNet com fine-tuning parcial e ArcFace | `python scripts/train.py --config configs/E04.yaml` |
 | E06 | FaceNet com fine-tuning parcial e Triplet Loss | `python scripts/train.py --config configs/E06.yaml` |
 | Avaliação de E01 a E06 | threshold na validação, métricas com IC e gráficos | `python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml` |
+| Comparação pareada com o E01 | erros, diferença de EER com bootstrap pareado, mudança dos pesos e cosseno ("Impacto do fine-tuning") | `python scripts/compare_paired.py --reference configs/E01.yaml --config configs/E04.yaml configs/E06.yaml` |
 | E07 e E08 | estratégia de comparação e threshold open-set, no privado | `python scripts/run_open_set.py --config configs/E07_E08.yaml` |
 
 Para recalcular as similaridades médias do E02 citadas na análise, depois da avaliação:
@@ -252,7 +262,7 @@ Para recalcular as similaridades médias do E02 citadas na análise, depois da a
 python -c "import json; from pathlib import Path; from facial_recognition_system.experiments import load_experiment_config; from facial_recognition_system.experiments.evaluation import load_experiment_scores; c, _ = load_experiment_config(Path('configs/E02.yaml')); s = load_experiment_scores(c, json.loads(Path('experiments/results/E02.json').read_text())).test; print(f'{s.genuine.mean():.2f} {s.impostor.mean():.2f}')"
 ```
 
-E03 e E05 (fine-tuning completo da ResNet-50 e do FaceNet) foram cortados por prazo (D4 e D5). O E07 e o E08 só rodam na máquina do grupo, com o cofre aberto e os recortes privados gerados antes (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+E03 e E05 (fine-tuning completo da ResNet-50 e do FaceNet) ficaram de fora (D4 e D5). O E07 e o E08 só rodam na máquina do grupo, com o cofre aberto e os recortes privados gerados antes (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
 
 ### Resultados e análise
 
@@ -269,7 +279,7 @@ Gráficos: [ROC dos quatro modelos no teste](experiments/figures/comparison_roc.
 
 **Qual modelo foi melhor e por quê.** No LFW, os três modelos FaceNet empatam no teste. O E06 foi escolhido pela regra fixada antes dos resultados, o menor EER de validação (D16). A grande diferença está no pré-treino: com o mesmo tamanho, a rede treinada em rostos (E01) erra 1 par em 90, e a treinada em objetos (E02) erra quase 1 em 3.
 
-**Impacto do fine-tuning.** O treino muda o modelo (a norma da mudança nos pesos das camadas treináveis vai de 2% a 12% da norma original, D5), mas não melhora o teste de forma comprovada. Comparação pareada com o E01, nos mesmos 2.888 pares de teste e com o threshold da validação:
+**Impacto do fine-tuning.** O treino muda o modelo (os pesos treináveis mudaram 3,6% no E04 e 2,2% no E06 em norma relativa, com no máximo 12,3% numa camada; o embedding da mesma foto tem cosseno médio de 0,93 e 0,97 com o do E01), mas não melhora o teste de forma comprovada. Comparação pareada com o E01, nos mesmos 2.888 pares de teste e com o threshold da validação (números de `scripts/compare_paired.py`):
 
 | | Erros | Corrige / cria em relação ao E01 | Diferença de EER observada (IC 95%, bootstrap pareado) |
 |---|---|---|---|
@@ -292,7 +302,7 @@ O E01 já acerta 98,75%, e 20 erros são comuns aos três modelos (pares difíce
 - O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero. E 200 desses 222 desconhecidos são fotos de imprensa do LFW, de outro domínio e mais fáceis de rejeitar. Contando só os 22 do mesmo ambiente, 0 aceitações limitam o FAR a cerca de 14%: o FAR real no nosso ambiente provavelmente é maior que o medido.
 - O LFW é formado principalmente por homens brancos e figuras públicas. O desempenho pode não ser igual entre grupos demográficos, e isso não foi medido.
 - O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
-- E03 e E05 (fine-tuning completo) ficaram de fora.
+- E03 e E05 (fine-tuning completo) ficaram de fora, por prazo e pelo risco de decorar as 433 identidades de treino (D5).
 
 **Custo computacional e complexidade.**
 
@@ -320,7 +330,7 @@ Ficam **fora do GitHub** e são processados apenas localmente:
 - termos de consentimento;
 - logs e resultados individualizados.
 
-Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto por junções em `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` (decisão D10 em [docs/division.md](docs/division.md)).
+Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto por junções em `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` (decisão [D10](docs/decisions/D10-hardware.md) e [docs/privacy.md](docs/privacy.md)).
 
 O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para que termos assinados e a planilha de controle não entrem por engano. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
 
@@ -336,20 +346,36 @@ facial_recognition_system/
 │   └── splits/                   # listas de treino/validação/teste (só dados públicos)
 ├── docs/
 │   ├── assignment.md             # enunciado do trabalho
-│   ├── decisions/                # ADRs
-│   └── specs/                    # especificações com critérios de aceitação
+│   ├── consent_form.md           # modelo em branco do termo de consentimento
+│   ├── decisions/                # ADRs (D1 a D16)
+│   ├── division.md               # plano e divisão do trabalho (os ADRs prevalecem)
+│   ├── participant_photo_guide.pdf  # guia de fotos para as participantes
+│   ├── privacy.md                # tratamento dos dados pessoais e registro do Anexo B
+│   └── specs/                    # specs da aplicação, a partir da Parte 2
 ├── experiments/
 │   ├── figures/                  # gráficos agregados
 │   └── results/                  # um JSON de resultado por experimento
 ├── scripts/
-│   └── check_private_files.py    # hook de pre-commit contra dados privados
+│   ├── check_leakage.py          # checagem de leakage entre splits
+│   ├── check_private_files.py    # hook de pre-commit contra dados privados
+│   ├── compare_paired.py         # comparação pareada com o E01
+│   ├── download_datasets.py      # baixa e confere o LFW
+│   ├── evaluate.py               # métricas, threshold e gráficos de E01 a E06
+│   ├── extract_embeddings.py     # embeddings de E01 e E02
+│   ├── make_splits.py            # splits e pares do LFW
+│   ├── preprocess_faces.py       # detecção e recorte com o MTCNN
+│   ├── run_open_set.py           # E07 e E08, no dataset privado
+│   └── train.py                  # fine-tuning de E04 e E06
 ├── src/facial_recognition_system/
-│   ├── data/                     # splits por identidade e pares de verificação
-│   ├── evaluation/               # métricas, threshold e gráficos
+│   ├── data/                     # splits por identidade, pares e leakage
+│   ├── evaluation/               # métricas, threshold, comparação pareada e gráficos
+│   ├── experiments/              # configs, extração, avaliação e execução dos experimentos
 │   ├── models/                   # wrappers dos modelos de embedding
 │   ├── preprocessing/            # detecção, alinhamento e recorte
+│   ├── recognition/              # estratégias de comparação com a galeria
 │   └── training/                 # loops de fine-tuning e cabeças de loss
 ├── tests/
+├── .github/                      # template de PR e workflow das issues
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # configuração do ruff e do pytest
@@ -408,7 +434,7 @@ facial_recognition_system/
 
 ## Overview
 
-> **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1). The application (Part 2) will be documented once it exists.
+> **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1), and the decisions in the [ADRs](docs/decisions/README.md) (the chosen model is in [D16](docs/decisions/D16-chosen-model.md)). The application (Part 2) will be documented once it exists.
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
@@ -447,6 +473,15 @@ A face whose similarity falls below the threshold is classified as an **unknown 
 | Face embedding model | FaceNet (InceptionResnetV1, VGGFace2) with partial fine-tuning and Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Deep learning framework | PyTorch 2.7.1 (CUDA 12.8) |
 | Application interface | Streamlit ([D13](docs/decisions/D13-interface.md)), in Part 2 |
+
+Pretrained weights are not stored in the repository: the libraries download them from the official location on first use.
+
+| Model | Weights | Source | Code license | Training data of the weights |
+|---|---|---|---|---|
+| FaceNet (InceptionResnetV1) | `vggface2` | [facenet-pytorch](https://github.com/timesler/facenet-pytorch) 2.6.0 (weights release v2.2.9) | MIT | VGGFace2 |
+| ResNet-50 | `IMAGENET1K_V2` | [torchvision](https://pytorch.org/vision/stable/models/generated/torchvision.models.resnet50.html) 0.22.1 | BSD-3-Clause | ImageNet |
+
+The weights follow the terms of use of the data they were trained on, so the project uses them for academic purposes only and does not redistribute them.
 
 ## Installation
 
@@ -535,7 +570,7 @@ python scripts/run_open_set.py --config configs/E07_E08.yaml
 | E07 | E06 | nearest neighbor, prototype, k-NN and SVM | private, validation | 97.54% | 94.18% (macro) | Nearest neighbor wins. SVM macro F1 of at most 0.656 |
 | E08 | E06 + nearest neighbor | threshold with FAR ≤ 1% (0.766) | private, test | 97.91% | 94.62% (macro) | FAR 0%, FRR 9.2%, no misidentification |
 
-In the public experiments, accuracy and F1 come from pair verification at the EER threshold chosen on validation, with 95% CIs in the JSONs. In the private ones, they come from open-set identification, with "unknown" as a class. E03 and E05 were cut for time.
+In the public experiments, accuracy and F1 come from pair verification at the EER threshold chosen on validation, with 95% CIs in the JSONs. In the private ones, they come from open-set identification, with "unknown" as a class. E03 and E05 (full fine-tuning) were left out: with 3,961 training photos, tuning all 23.5 M parameters tends to memorize the 433 identities (D5), and there was no time to test it.
 
 ### Data preparation
 
@@ -604,7 +639,7 @@ A false accept weighs more than a false reject: recognizing a stranger as an enr
 
 ### Reproducibility
 
-- **Configuration:** one YAML per experiment in [configs/](configs/), with every hyperparameter written out (D11). The result goes to `experiments/results/<EXP>.json`, with the hypothesis, a copy of the YAML, seed, library versions, hardware, timings, threshold and metrics.
+- **Configuration:** one YAML per experiment in [configs/](configs/), with the hyperparameters written out (D11). The optimizer is always AdamW (`scripts/train.py`, D5), with the learning rates and weight decay from the YAML. The result goes to `experiments/results/<EXP>.json`, with the hypothesis, a copy of the YAML, seed, library versions, hardware, timings, threshold and metrics.
 - **Seed 42** in Python, NumPy and PyTorch, with cuDNN autotuning off. The split, fine-tuning subset and DataLoader draws also use the seed. One seed per training run; variation is measured by the bootstrap.
 - **Versions:** Python 3.11, PyTorch 2.7.1 with CUDA 12.8, facenet-pytorch 2.6.0, scikit-learn 1.9.1, all pinned in [requirements.txt](requirements.txt). Each experiment's JSON records the versions it ran with.
 - **Hardware:** every experiment runs on the RTX 4060 (8 GB) laptop, which keeps training times comparable (D10). Results are repeatable on the same machine, but not bit-identical on another GPU or CUDA version.
@@ -618,9 +653,10 @@ Command of each experiment:
 | E04 | FaceNet with partial fine-tuning and ArcFace | `python scripts/train.py --config configs/E04.yaml` |
 | E06 | FaceNet with partial fine-tuning and Triplet Loss | `python scripts/train.py --config configs/E06.yaml` |
 | Evaluation of E01 to E06 | threshold on validation, metrics with CI and plots | `python scripts/evaluate.py --config configs/E01.yaml configs/E02.yaml configs/E04.yaml configs/E06.yaml` |
+| Paired comparison with E01 | errors, EER difference with paired bootstrap, weight change and cosine ("Fine-tuning" in the analysis) | `python scripts/compare_paired.py --reference configs/E01.yaml --config configs/E04.yaml configs/E06.yaml` |
 | E07 and E08 | comparison strategy and open-set threshold, on private data | `python scripts/run_open_set.py --config configs/E07_E08.yaml` |
 
-E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were cut for lack of time (D4 and D5). E07 and E08 only run on the group's machine, with the vault open and the private crops generated first (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
+E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were left out (D4 and D5). E07 and E08 only run on the group's machine, with the vault open and the private crops generated first (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
 
 ### Results and analysis
 
@@ -646,7 +682,7 @@ The following stays **out of GitHub** and is processed only locally:
 - consent forms;
 - logs and individual-level results.
 
-All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the project through junctions at `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` (decision D10 in [docs/division.md](docs/division.md)).
+All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the project through junctions at `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` (decision [D10](docs/decisions/D10-hardware.md) and [docs/privacy.md](docs/privacy.md)).
 
 The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files in `docs/`, so signed consent forms and the control spreadsheet are not committed by mistake. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
 
@@ -662,20 +698,36 @@ facial_recognition_system/
 │   └── splits/                   # train/validation/test lists (public data only)
 ├── docs/
 │   ├── assignment.md             # assignment description
-│   ├── decisions/                # ADRs
-│   └── specs/                    # specifications with acceptance criteria
+│   ├── consent_form.md           # blank consent form template
+│   ├── decisions/                # ADRs (D1 to D16)
+│   ├── division.md               # work plan and split (the ADRs prevail)
+│   ├── participant_photo_guide.pdf  # photo guide for participants
+│   ├── privacy.md                # personal data handling and Annex B record
+│   └── specs/                    # application specs, from Part 2 on
 ├── experiments/
 │   ├── figures/                  # aggregated plots
 │   └── results/                  # one result JSON per experiment
 ├── scripts/
-│   └── check_private_files.py    # pre-commit hook against private data
+│   ├── check_leakage.py          # leakage check between splits
+│   ├── check_private_files.py    # pre-commit hook against private data
+│   ├── compare_paired.py         # paired comparison against E01
+│   ├── download_datasets.py      # downloads and verifies LFW
+│   ├── evaluate.py               # metrics, threshold and plots of E01 to E06
+│   ├── extract_embeddings.py     # embeddings of E01 and E02
+│   ├── make_splits.py            # LFW splits and pairs
+│   ├── preprocess_faces.py       # MTCNN detection and cropping
+│   ├── run_open_set.py           # E07 and E08, on the private dataset
+│   └── train.py                  # fine-tuning of E04 and E06
 ├── src/facial_recognition_system/
-│   ├── data/                     # identity splits and verification pairs
-│   ├── evaluation/               # metrics, threshold and plots
+│   ├── data/                     # identity splits, pairs and leakage
+│   ├── evaluation/               # metrics, threshold, paired comparison and plots
+│   ├── experiments/              # configs, extraction, evaluation and experiment runs
 │   ├── models/                   # embedding model wrappers
 │   ├── preprocessing/            # detection, alignment and cropping
+│   ├── recognition/              # gallery comparison strategies
 │   └── training/                 # fine-tuning loops and loss heads
 ├── tests/
+├── .github/                      # PR template and issue workflow
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # ruff and pytest configuration

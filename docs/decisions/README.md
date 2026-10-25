@@ -1,6 +1,6 @@
 # Decisões de arquitetura (ADRs)
 
-Cada decisão D1 a D15 do [docs/division.md](../division.md) tem um ADR curto aqui, escrito pela dona da decisão. O arquivo é numerado pela decisão (`D01-...md`), para as duas poderem escrever em paralelo sem disputar números.
+Cada decisão D1 a D15 do [docs/division.md](../division.md), e a D16 (modelo escolhido, decidida depois dos resultados), tem um ADR curto aqui, escrito pela dona da decisão. O arquivo é numerado pela decisão (`D01-...md`), para as duas poderem escrever em paralelo sem disputar números.
 
 ## Formato
 
