@@ -215,7 +215,7 @@ O fine-tuning (E04 e E06) usa só o treino: identidades com pelo menos 4 fotos, 
 
 - accuracy e F1 macro, com "desconhecido" contado como classe;
 - FAR (desconhecidos aceitos como alguém), FRR (conhecidos rejeitados) e taxa de identificação errada (conhecido atribuído à pessoa errada);
-- matriz de confusão agregada, só com IDs anônimos (`experiments/figures/E08_confusion.png`).
+- tabela de totais do E08, sem nada por participante (`experiments/figures/E08_confusion.png`).
 
 ### Threshold
 
@@ -256,7 +256,7 @@ E03 e E05 (fine-tuning completo da ResNet-50 e do FaceNet) foram cortados por pr
 
 ### Resultados e análise
 
-Gráficos: [ROC dos quatro modelos no teste](experiments/figures/comparison_roc.png), histogramas de similaridade por experimento (por exemplo, [E06](experiments/figures/E06_hist.png)), [matriz de confusão do E08](experiments/figures/E08_confusion.png) com IDs anônimos e [FAR × FRR da validação privada](experiments/figures/E08_threshold.png).
+Gráficos: [ROC dos quatro modelos no teste](experiments/figures/comparison_roc.png), histogramas de similaridade por experimento (por exemplo, [E06](experiments/figures/E06_hist.png)), [tabela de totais do E08](experiments/figures/E08_confusion.png) (sem nada por participante) e [FAR × FRR da validação privada](experiments/figures/E08_threshold.png).
 
 **Cada experimento: hipótese, resultado e interpretação**
 
@@ -589,7 +589,7 @@ Fine-tuning (E04 and E06) uses the train split only: identities with at least 4 
 
 - accuracy and macro F1, with "unknown" counted as a class;
 - FAR (unknowns accepted as someone), FRR (known people rejected) and misidentification rate (known person assigned to the wrong identity);
-- aggregated confusion matrix, with anonymous IDs only (`experiments/figures/E08_confusion.png`).
+- E08 table of totals, with nothing per participant (`experiments/figures/E08_confusion.png`).
 
 ### Threshold
 
@@ -624,7 +624,7 @@ E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were cut for lack of tim
 
 ### Results and analysis
 
-Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), similarity histograms per experiment (for example, [E06](experiments/figures/E06_hist.png)), [E08 confusion matrix](experiments/figures/E08_confusion.png) with anonymous IDs and [FAR × FRR on private validation](experiments/figures/E08_threshold.png). The full discussion is in the Portuguese section above; in short:
+Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), similarity histograms per experiment (for example, [E06](experiments/figures/E06_hist.png)), [E08 table of totals](experiments/figures/E08_confusion.png) (nothing per participant) and [FAR × FRR on private validation](experiments/figures/E08_threshold.png). The full discussion is in the Portuguese section above; in short:
 
 - **Best model:** on LFW, the three FaceNet models tie on test. E06 was chosen by the rule fixed before the results, the lowest validation EER (D16). The big difference is pretraining: with the same size (about 23.5 M parameters), the face-trained network (E01) misses 1 pair in 90 and the object-trained one (E02) almost 1 in 3.
 - **Fine-tuning:** it changes the model but brings no statistically significant gain on test (paired bootstrap against E01: E04 +0.02 p.p., CI −0.35 to +0.42; E06 −0.12 p.p., CI −0.45 to +0.21). E01 is already at 98.75%, and 433 training identities teach little to a model pretrained on about 9,000 people. The best epoch was always the first; after it, the model starts memorizing the training identities. For ArcFace, a likely cause is the head starting from random weights and training together with the backbone from the first epoch, so the large early gradients disturb the pretrained layers; Triplet has no head and did better.

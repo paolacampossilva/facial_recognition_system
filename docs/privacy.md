@@ -22,14 +22,14 @@ Fotos de rosto, e tudo o que se extrai delas para reconhecer uma pessoa, são **
 | Resultados por pessoa | cofre | Valentina | **nunca** | idem |
 | Termos assinados e planilha de controle | cofre, `V:\termos\` (sem junção, fora do projeto) | Valentina e Paola (cada uma os das próprias convidadas) | **nunca** | fim da disciplina |
 | Banco da aplicação (Parte 2) | `data/private/app.db`, no cofre | Valentina | **nunca** | ao excluir a pessoa na aplicação, e no fim da disciplina |
-| Métricas e gráficos agregados, com IDs anônimos | `experiments/` | público | sim | permanecem |
+| Métricas e gráficos agregados, sem nada por participante | `experiments/` | público | sim | permanecem |
 
 O que **não** é dado privado: o LFW (dataset público, D1), os splits e pares do LFW e os modelos treinados **só** com o LFW (E04 e E06). Mesmo assim, os checkpoints públicos ficam fora do Git pelo tamanho e por regra geral (`*.pt`). Os pesos pré-treinados do FaceNet e da ResNet-50 são baixados da fonte oficial, por referência (seção 19).
 
 ## Coleta e minimização
 
 - Cerca de 5 a 10 participantes, 20 a 30 fotos por pessoa, em duas sessões em cômodos ou com fundos diferentes. É o mínimo para medir reconhecimento com sessões distintas (D9).
-- Cada participante recebe um **ID anônimo** a partir de `P00`: pares (`P00`, `P02`, ...) para as convidadas da Valentina e ímpares (`P01`, `P03`, ...) para as da Paola, para as duas numerarem em paralelo sem repetir. O nome aparece **só** no termo e na planilha. Pastas, arquivos, logs e resultados usam o ID.
+- Cada participante recebe um **ID anônimo** a partir de `P00`: as duas numeram em paralelo sem repetir ID. O nome aparece **só** no termo e na planilha. Pastas, arquivos, logs e resultados usam o ID.
 - Quem tira as fotos é a própria participante, a partir do [guia de fotos](participant_photo_guide.pdf). Nada vem de scraping, de redes sociais ou de fotos antigas (seção 11).
 - A aplicação da Parte 2 **não guarda fotos**: só o embedding de cada cadastro (D12).
 
@@ -67,7 +67,7 @@ Seguindo a seção 23, **fotos, recortes, embeddings privados, termos e a planil
 
 ## Resultados, vídeos e aplicação
 
-- **Resultados publicados só agregados:** accuracy, F1, FAR, FRR e matriz de confusão com IDs anônimos, sem foto, nome ou resultado que permita identificar alguém (seção 35 e D7). O código de avaliação rejeita rótulos que não sejam IDs anônimos.
+- **Resultados publicados só agregados:** accuracy, F1, FAR, FRR e tabela de totais (conhecidos corretos, atribuídos a outra pessoa, rejeitados; desconhecidos aceitos e rejeitados), sem nenhuma linha por participante, sem foto, nome ou resultado que permita identificar alguém (seção 35 e D7). O código de avaliação rejeita rótulos que não sejam IDs anônimos.
 - **Threshold do E08:** é um único número escolhido na validação privada e publicado como parte da configuração. Por ser um agregado de todas as tentativas, ele não carrega a biometria de nenhuma participante, ao contrário de um classificador ajustado, que fica no cofre.
 - **Vídeos:** só Paola e Valentina aparecem (D15). Nenhuma participante aparece em vídeo, e nenhum resultado individual é mostrado.
 - **Aplicação (Parte 2):** guarda só embeddings, em SQLite, com exclusão em cascata (D12). Os logs não registram nomes, fotos ou embeddings (spec 007).
@@ -111,7 +111,7 @@ Se um dado privado for parar onde não deveria (um commit, uma conversa de grupo
 | `.gitignore` protege os diretórios privados | [.gitignore](../.gitignore) |
 | Histórico do Git verificado | auditoria antes de cada entrega (#34, #53) |
 | Licenças e origem dos datasets públicos | [data/README.md](../data/README.md) e D1 |
-| Resultados não identificam participantes | só agregados, IDs anônimos (D7) |
+| Resultados não identificam participantes | só agregados, sem nada por participante (D7) |
 | Vídeo respeita as autorizações | só as duas integrantes aparecem (D15) |
 | Nada enviado a serviços externos | "Agentes de IA e serviços externos" acima |
 | É possível excluir uma pessoa | "Exclusão de uma participante" acima e a spec 006 |

@@ -6,7 +6,7 @@
 
 ## Contexto
 
-O enunciado pede métricas adequadas (accuracy, precision, recall, F1, ROC-AUC, FAR, FRR, EER, matriz de confusão) e a análise das distribuições de similaridade de mesma pessoa e de pessoas diferentes (seção 31). O projeto tem dois tipos de avaliação: **verificação** nos pares públicos (E01 a E06) e **identificação open-set** no dataset privado (E07 e E08), em que o sistema pode responder "desconhecido".
+O enunciado pede métricas adequadas (accuracy, precision, recall, F1, ROC-AUC, FAR, FRR, EER, matriz de confusão, que no privado vira a tabela de totais) e a análise das distribuições de similaridade de mesma pessoa e de pessoas diferentes (seção 31). O projeto tem dois tipos de avaliação: **verificação** nos pares públicos (E01 a E06) e **identificação open-set** no dataset privado (E07 e E08), em que o sistema pode responder "desconhecido".
 
 ## Decisão
 
@@ -20,7 +20,7 @@ O enunciado pede métricas adequadas (accuracy, precision, recall, F1, ROC-AUC, 
 - accuracy e F1 macro, com "desconhecido" como uma classe;
 - FAR (tentativas de desconhecidos aceitas como alguém) e FRR (tentativas de conhecidos rejeitadas);
 - taxa de identificação errada (conhecido atribuído à pessoa errada), que FAR e FRR não capturam;
-- matriz de confusão agregada, só com IDs anônimos.
+- tabela de totais (conhecidos corretos, atribuídos a outra pessoa e rejeitados; desconhecidos aceitos e rejeitados), sem nenhuma linha por participante.
 
 ## Alternativas consideradas
 
@@ -30,6 +30,7 @@ O enunciado pede métricas adequadas (accuracy, precision, recall, F1, ROC-AUC, 
 
 ## Consequências
 
+- Status: a matriz por ID foi publicada na primeira versão do E08 e trocada por totais em 24/10/2026, porque é resultado individualizado (enunciado, seções 17 e 35).
 - Resultados do privado são sempre agregados. A validação de entrada rejeita rótulos que não sejam IDs anônimos (`P01`) ou "unknown", sem repetir o nome rejeitado na mensagem de erro (LGPD, seção 18).
 - Implementado em [src/facial_recognition_system/evaluation/](../../src/facial_recognition_system/evaluation/) (PR #70): `verification.py`, `open_set.py` e `scores.py`. As métricas e os intervalos vão para `metrics.val` e `metrics.test` no JSON de cada experimento.
 - Teste de ponta a ponta com o E01: EER de 0,76% na validação e de 1,11% (IC 95% de 0,73% a 1,56%) no teste.
