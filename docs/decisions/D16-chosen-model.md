@@ -33,7 +33,7 @@ O sistema não aceitou nenhum desconhecido e não confundiu nenhuma pessoa cadas
 
 ## Alternativas consideradas
 
-- **E01, o FaceNet pré-treinado sem fine-tuning:** no teste do LFW, o E06 não é estatisticamente melhor que o E01 (diferença de EER de −0,12 p.p., IC 95% de −0,45 a +0,21, bootstrap pareado, D5), e o E01 é mais simples (sem checkpoint próprio). Ficou de fora porque trocar a regra **depois** de ver o teste seria usar o teste para escolher (seção 29). A regra da validação foi fixada antes dos resultados e foi seguida.
+- **E01, o FaceNet pré-treinado sem fine-tuning:** no teste do LFW, o E06 não é estatisticamente melhor que o E01 (diferença de EER de −0,07 p.p., IC 95% de −0,45 a +0,21, bootstrap pareado, D5), e o E01 é mais simples (sem checkpoint próprio). Ficou de fora porque trocar a regra **depois** de ver o teste seria usar o teste para escolher (seção 29). A regra da validação foi fixada antes dos resultados e foi seguida.
 - **E04 (ArcFace):** EER de validação maior que o do E06 (0,48% contra 0,41%) e equivalente ao E01 no teste.
 - **E02 (ResNet-50 ImageNet):** EER de 31% em validação e teste; não reconhece rostos.
 - **Protótipo ou k-NN no lugar do vizinho mais próximo:** ficaram logo atrás no E07 (F1 macro de validação de 0,934 contra 0,942). O SVM foi bem pior (até 0,656), porque cada pessoa tem só cerca de 10 fotos na galeria, poucas para treinar um classificador.
