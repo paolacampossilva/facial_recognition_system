@@ -12,7 +12,7 @@ Cada parte tem um vídeo público. O da Parte 1 apresenta problema, datasets, ar
 
 **Só Paola e Valentina aparecem nos vídeos.** Nenhuma participante do dataset privado aparece, mesmo que tenha autorizado no termo.
 
-- **Vídeo da Parte 1:** sem fotos de participantes. O dataset privado aparece só em números agregados e na matriz de confusão com IDs anônimos (`P01`). Exemplos de imagens, se houver, vêm do LFW e apenas para ilustrar o pipeline.
+- **Vídeo da Parte 1:** sem fotos de participantes. O dataset privado aparece só em números agregados e na tabela de totais do E08. Exemplos de imagens, se houver, vêm do LFW e apenas para ilustrar o pipeline.
 - **Vídeo da Parte 2:**
   - **cadastro e reconhecimento:** uma de nós se cadastra pela câmera e depois é reconhecida;
   - **pessoa desconhecida:** a outra aparece **antes** de se cadastrar e recebe "pessoa desconhecida";
