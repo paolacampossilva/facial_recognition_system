@@ -48,13 +48,13 @@ A seção 28 pede para investigar o fine-tuning parcial e funções de perda de 
 - **O treino mudou o modelo, mas pouco.** As camadas congeladas ficaram idênticas. Os pesos das treináveis mudaram de 2% a 12% (norma relativa), e as estatísticas das BatchNorm treináveis se ajustaram ao LFW. O embedding da mesma foto antes e depois do treino tem cosseno médio de 0,93 no E04 e de 0,97 no E06.
 - **Comparação pareada com o E01 no teste** (os mesmos pares para os dois modelos, threshold escolhido na validação):
 
-  | | Erros em 2.888 pares | Corrige / cria em relação ao E01 | Diferença de EER (IC 95%, bootstrap pareado, 1.000 reamostragens) | Melhor que o E01 em |
+  | | Erros em 2.888 pares | Corrige / cria em relação ao E01 | Diferença de EER observada (IC 95%, bootstrap pareado, 1.000 reamostragens) | Melhor que o E01 em |
   |---|---|---|---|---|
   | E01 | 36 (11 FA + 25 FR) | – | – | – |
-  | E04 ArcFace | 38 (8 FA + 30 FR) | 13 / 15 | +0,02 p.p. (−0,35 a +0,42) | 42% das reamostragens |
-  | E06 Triplet | 33 (8 FA + 25 FR) | 10 / 7 | −0,12 p.p. (−0,45 a +0,21) | 72% das reamostragens |
+  | E04 ArcFace | 38 (8 FA + 30 FR) | 13 / 15 | +0,07 p.p. (−0,35 a +0,42) | 42% das reamostragens |
+  | E06 Triplet | 33 (8 FA + 25 FR) | 10 / 7 | −0,07 p.p. (−0,45 a +0,21) | 72% das reamostragens |
 
-  **Nenhum dos dois traz melhora estatisticamente significativa**: os dois intervalos incluem o zero. O E06 tem uma leve tendência a favor (3 erros a menos), e o E04 fica equivalente. De 23 a 26 dos erros são os mesmos nos três modelos: são os pares difíceis do LFW, que nenhum dos treinos resolve.
+  **Nenhum dos dois traz melhora estatisticamente significativa**: os dois intervalos incluem o zero. O E06 tem uma leve tendência a favor (3 erros a menos), e o E04 fica equivalente. 20 erros são comuns aos três modelos (o E04 repete 23 dos 36 erros do E01, e o E06, 26): são os pares difíceis do LFW, que nenhum dos treinos resolve.
 - **Por que o ganho é pequeno:** o E01 já acerta 98,75% dos pares do teste, então sobra pouco para melhorar. O FaceNet foi pré-treinado em cerca de 9 mil pessoas do VGGFace2, que pode ter celebridades em comum com o LFW (D4), e 433 identidades ensinam pouco de novo. A melhor época foi sempre a 1: depois dela, o modelo passa a decorar as identidades de treino.
 - **Limite da conclusão:** vale para a configuração desta decisão (uma learning rate, uma seed, as duas perdas). Não houve busca de hiperparâmetros; uma learning rate menor, por exemplo, poderia dar um ganho mais estável. O efeito no domínio real, com fotos de celular de pessoas que o FaceNet nunca viu, só aparece no E07.
 - As duas perdas treinam em cerca de 2 minutos, com pico de cerca de 660 MB na GPU (D10).
