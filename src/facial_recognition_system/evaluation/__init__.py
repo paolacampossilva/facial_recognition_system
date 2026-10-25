@@ -7,14 +7,14 @@ from facial_recognition_system.evaluation.experiment import (
 )
 from facial_recognition_system.evaluation.open_set import (
     UNKNOWN_LABEL,
-    ConfusionMatrix,
     OpenSetAttempts,
+    OpenSetCounts,
     OpenSetMetrics,
     open_set_metrics,
 )
 from facial_recognition_system.evaluation.open_set_plots import (
-    plot_confusion_matrix,
     plot_far_frr,
+    plot_open_set_counts,
 )
 from facial_recognition_system.evaluation.plots import plot_roc, plot_similarity_histogram
 from facial_recognition_system.evaluation.scores import (
@@ -43,11 +43,11 @@ from facial_recognition_system.evaluation.verification import (
 
 __all__ = [
     "UNKNOWN_LABEL",
-    "ConfusionMatrix",
     "EqualErrorRate",
     "ExperimentEvaluation",
     "MetricInterval",
     "OpenSetAttempts",
+    "OpenSetCounts",
     "OpenSetMetrics",
     "SimilarityDistributions",
     "SplitMetrics",
@@ -64,8 +64,8 @@ __all__ = [
     "false_accept_rate",
     "false_reject_rate",
     "open_set_metrics",
-    "plot_confusion_matrix",
     "plot_far_frr",
+    "plot_open_set_counts",
     "plot_roc",
     "plot_similarity_histogram",
     "similarity_distributions",

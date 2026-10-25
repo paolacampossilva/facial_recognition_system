@@ -4,7 +4,8 @@ Each attempt has its true identity (or ``UNKNOWN_LABEL`` for someone outside
 the gallery), the gallery identity the comparison strategy picked and the
 rejection score of that pick. Below the threshold the attempt becomes
 "unknown". Labels must be anonymous IDs (``P01``), so no name reaches the
-aggregated results or the confusion matrix (LGPD).
+results, and only aggregated outcome counts are published, nothing per
+participant (LGPD).
 """
 
 import re
@@ -12,7 +13,7 @@ from typing import Self
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+from sklearn.metrics import accuracy_score, f1_score
 
 from facial_recognition_system.evaluation.scores import VerificationScores
 
@@ -68,11 +69,16 @@ class OpenSetAttempts(BaseModel):
         return VerificationScores(scores=self.scores, labels=np.array(is_known))
 
 
-class ConfusionMatrix(BaseModel):
-    """Rows are true labels and columns are decisions, both in ``labels`` order."""
+class OpenSetCounts(BaseModel):
+    """Aggregated outcome counts of the open-set attempts, with nothing per participant (LGPD)."""
 
-    labels: list[str]
-    matrix: list[list[int]]
+    known_attempts: int
+    known_correct: int
+    known_misidentified: int
+    known_rejected: int
+    unknown_attempts: int
+    unknown_accepted: int
+    unknown_rejected: int
 
 
 class OpenSetMetrics(BaseModel):
@@ -82,7 +88,7 @@ class OpenSetMetrics(BaseModel):
     far: float | None
     frr: float | None
     misidentification_rate: float | None
-    confusion: ConfusionMatrix
+    counts: OpenSetCounts
 
 
 def open_set_metrics(attempts: OpenSetAttempts, threshold: float) -> OpenSetMetrics:
@@ -95,7 +101,7 @@ def open_set_metrics(attempts: OpenSetAttempts, threshold: float) -> OpenSetMetr
     Returns:
         Accuracy and F1 macro with "unknown" as a class, FAR (unknowns accepted),
         FRR (known people rejected), misidentification rate (known people accepted
-        as someone else) and the confusion matrix. A rate is None when the
+        as someone else) and the aggregated outcome counts. A rate is None when the
         attempts have no unknown or no known person to compute it on.
     """
     true_labels = np.array(attempts.true_labels)
@@ -110,7 +116,15 @@ def open_set_metrics(attempts: OpenSetAttempts, threshold: float) -> OpenSetMetr
     misidentification_rate = _rate(misidentified[is_known])
 
     labels = sorted(set(true_labels) | set(decisions))
-    matrix = confusion_matrix(true_labels, decisions, labels=labels)
+    counts = OpenSetCounts(
+        known_attempts=int(is_known.sum()),
+        known_correct=int((decisions == true_labels)[is_known].sum()),
+        known_misidentified=int(misidentified[is_known].sum()),
+        known_rejected=int((decisions[is_known] == UNKNOWN_LABEL).sum()),
+        unknown_attempts=int(is_unknown.sum()),
+        unknown_accepted=int((decisions[is_unknown] != UNKNOWN_LABEL).sum()),
+        unknown_rejected=int((decisions[is_unknown] == UNKNOWN_LABEL).sum()),
+    )
 
     return OpenSetMetrics(
         threshold=threshold,
@@ -119,7 +133,7 @@ def open_set_metrics(attempts: OpenSetAttempts, threshold: float) -> OpenSetMetr
         far=far,
         frr=frr,
         misidentification_rate=misidentification_rate,
-        confusion=ConfusionMatrix(labels=labels, matrix=matrix.tolist()),
+        counts=counts,
     )
 
 

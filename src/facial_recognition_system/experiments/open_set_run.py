@@ -30,8 +30,8 @@ from facial_recognition_system.data import (
 )
 from facial_recognition_system.evaluation import (
     UNKNOWN_LABEL,
-    plot_confusion_matrix,
     plot_far_frr,
+    plot_open_set_counts,
 )
 from facial_recognition_system.experiments.embeddings import (
     EmbeddingSet,
@@ -187,7 +187,7 @@ def write_results(
     device: torch.device,
     results_dir: Path,
 ) -> None:
-    """Writes the E07 and E08 JSONs. E07 keeps no confusion matrix, only the rates."""
+    """Writes the E07 and E08 JSONs. E07 keeps no outcome counts, only the rates."""
     selection, study = run.selection, run.study
     selection_record = _record(
         config.selection_experiment,
@@ -207,7 +207,7 @@ def write_results(
                     "strategy": candidate.strategy,
                     "params": candidate.params,
                     "threshold": candidate.threshold.model_dump(mode="json"),
-                    "val": candidate.val.model_dump(mode="json", exclude={"confusion"}),
+                    "val": candidate.val.model_dump(mode="json", exclude={"counts"}),
                 }
                 for candidate in selection.candidates
             ],
@@ -231,7 +231,7 @@ def write_results(
             "val_curve": [point.model_dump() for point in study.val_curve],
             "val": study.val.model_dump(mode="json"),
             "test": study.test.model_dump(mode="json"),
-            "test_at_eer": study.test_at_eer.model_dump(mode="json", exclude={"confusion"}),
+            "test_at_eer": study.test_at_eer.model_dump(mode="json", exclude={"counts"}),
         },
     }
 
@@ -244,8 +244,8 @@ def write_results(
 def save_open_set_figures(study: ThresholdStudy, experiment: str, figures_dir: Path) -> None:
     """Saves ``<EXP>_confusion.png`` (test) and ``<EXP>_threshold.png`` (validation curve)."""
     figures_dir.mkdir(parents=True, exist_ok=True)
-    confusion = plot_confusion_matrix(
-        study.test.confusion, title=f"{experiment}: matriz de confusão no teste"
+    counts = plot_open_set_counts(
+        study.test.counts, title=f"{experiment}: resultados no teste (totais)"
     )
     curve = plot_far_frr(
         [point.threshold for point in study.val_curve],
@@ -254,7 +254,7 @@ def save_open_set_figures(study: ThresholdStudy, experiment: str, figures_dir: P
         study.threshold.value,
         title=f"{experiment}: FAR e FRR na validação ({study.strategy})",
     )
-    confusion.savefig(figures_dir / f"{experiment}_confusion.png", dpi=150)
+    counts.savefig(figures_dir / f"{experiment}_confusion.png", dpi=150)
     curve.savefig(figures_dir / f"{experiment}_threshold.png", dpi=150)
 
 

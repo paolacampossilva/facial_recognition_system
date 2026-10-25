@@ -1,46 +1,51 @@
 """Figures of the private open-set evaluation (E08).
 
-They only show aggregated counts and rates, with anonymous IDs. Labels are in
+They only show aggregated counts and rates, nothing per participant. Labels are in
 Portuguese because the figures go to the README and the video.
 """
 
 from collections.abc import Sequence
 
-import numpy as np
 from matplotlib.figure import Figure
 
-from facial_recognition_system.evaluation.open_set import UNKNOWN_LABEL, ConfusionMatrix
+from facial_recognition_system.evaluation.open_set import OpenSetCounts
 
-UNKNOWN_DISPLAY: str = "desconhecido"
+NOT_APPLICABLE: str = "—"
 
 
-def plot_confusion_matrix(confusion: ConfusionMatrix, title: str) -> Figure:
-    """Draws the confusion matrix with the count in each cell.
+def plot_open_set_counts(counts: OpenSetCounts, title: str) -> Figure:
+    """Draws the table of aggregated totals, with nothing per participant.
 
     Args:
-        confusion: Rows are true labels and columns decisions, anonymous IDs only.
+        counts: Aggregated outcome counts of the known and unknown attempts.
         title: Title of the figure.
 
     Returns:
         The figure, ready to be saved.
     """
-    matrix = np.array(confusion.matrix)
-    names = [UNKNOWN_DISPLAY if label == UNKNOWN_LABEL else label for label in confusion.labels]
-    size = max(4.0, 0.5 * len(names) + 2)
+    columns = [
+        "Reconhecida\ncorretamente",
+        "Atribuída a outra pessoa\n(desconhecidos: aceito\ncomo alguém)",
+        "Rejeitada como\ndesconhecida",
+    ]
+    rows = [
+        f"Pessoas cadastradas\n({counts.known_attempts} tentativas)",
+        f"Desconhecidos\n({counts.unknown_attempts} tentativas)",
+    ]
+    cells = [
+        [str(counts.known_correct), str(counts.known_misidentified), str(counts.known_rejected)],
+        [NOT_APPLICABLE, str(counts.unknown_accepted), str(counts.unknown_rejected)],
+    ]
 
-    figure = Figure(figsize=(size, size), layout="constrained")
+    figure = Figure(figsize=(8, 3), layout="constrained")
     axes = figure.subplots()
-    image = axes.imshow(matrix, cmap="Blues")
-    figure.colorbar(image, ax=axes, shrink=0.8)
-    threshold = matrix.max() / 2 if matrix.size else 0
-    for row, column in np.ndindex(matrix.shape):
-        color = "white" if matrix[row, column] > threshold else "black"
-        axes.text(column, row, str(matrix[row, column]), ha="center", va="center", color=color)
-
-    axes.set_xticks(range(len(names)), names, rotation=45, ha="right")
-    axes.set_yticks(range(len(names)), names)
-    axes.set_xlabel("decisão do sistema")
-    axes.set_ylabel("identidade real")
+    axes.axis("off")
+    table = axes.table(
+        cellText=cells, rowLabels=rows, colLabels=columns, cellLoc="center", loc="center"
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(11)
+    table.scale(1, 3)
     axes.set_title(title)
     return figure
 
