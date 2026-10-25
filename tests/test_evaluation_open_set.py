@@ -99,6 +99,8 @@ def test_invalid_attempts_are_rejected(
 @pytest.mark.unit
 def test_rejection_message_does_not_echo_the_names() -> None:
     with pytest.raises(ValidationError) as error:
-        OpenSetAttempts(true_labels=["Ada_Lovelace"], predicted_labels=["P01"], scores=[0.9])
+        OpenSetAttempts(
+            true_labels=["Ada_Lovelace"], predicted_labels=["P01"], scores=np.array([0.9])
+        )
 
     assert "Ada_Lovelace" not in str(error.value)
