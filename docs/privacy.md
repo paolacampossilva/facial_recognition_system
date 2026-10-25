@@ -18,9 +18,9 @@ Fotos de rosto, e tudo o que se extrai delas para reconhecer uma pessoa, são **
 | Fotos originais | cofre, `V:\private\<ID>\session{1,2}\` (junção `data/private/`) | Valentina | **nunca** | fim da disciplina ou pedido da participante |
 | Recortes do MTCNN | cofre, `V:\faces\` (junção `faces/private/`) | Valentina | **nunca** | idem |
 | Embeddings do E07 e do E08 | cofre, `V:\embeddings\` (junção `embeddings/private/`) | Valentina | **nunca** | idem |
-| Classificadores ajustados com dados privados (k-NN, SVM, protótipos do E07) | cofre, `V:\checkpoints\` (junção `checkpoints/private/`) | Valentina | **nunca** | idem |
+| Classificadores ajustados com dados privados (k-NN, SVM, protótipos do E07) | só em memória, durante a execução do E07; nada é gravado em disco | — | **nunca** | ao fim de cada execução |
 | Resultados por pessoa | cofre | Valentina | **nunca** | idem |
-| Termos assinados e planilha de controle | cofre, `V:\termos\` (sem junção, fora do projeto) | Valentina e Paola (cada uma os das próprias convidadas) | **nunca** | fim da disciplina |
+| Termos assinados e planilha de controle | cofre, `V:\termos\` (sem junção, fora do projeto) | Valentina, que tem a senha do cofre (a Paola enviou os termos das convidadas dela para o cofre, ver abaixo) | **nunca** | fim da disciplina |
 | Banco da aplicação (Parte 2) | `data/private/app.db`, no cofre | Valentina | **nunca** | ao excluir a pessoa na aplicação, e no fim da disciplina |
 | Métricas e gráficos agregados, sem nada por participante | `experiments/` | público | sim | permanecem |
 
@@ -28,8 +28,9 @@ O que **não** é dado privado: o LFW (dataset público, D1), os splits e pares 
 
 ## Coleta e minimização
 
-- Cerca de 5 a 10 participantes, 20 a 30 fotos por pessoa, em duas sessões em cômodos ou com fundos diferentes. É o mínimo para medir reconhecimento com sessões distintas (D9).
-- Cada participante recebe um **ID anônimo** a partir de `P00`: as duas numeram em paralelo sem repetir ID. O nome aparece **só** no termo e na planilha. Pastas, arquivos, logs e resultados usam o ID.
+- 13 participantes (o plano previa de 5 a 10), cerca de 22 fotos por pessoa, em duas sessões em cômodos ou com fundos diferentes. É o mínimo para medir reconhecimento com sessões distintas (D9).
+- Fotos recebidas em HEIC foram convertidas para JPEG **sem metadados** (EXIF e XMP removidos, incluindo a localização) dentro do cofre, com conferência de cada arquivo convertido, e os HEIC originais foram apagados. O script só imprimiu contagens.
+- Cada participante recebe um **ID anônimo** a partir de `P00`: as duas numeram em paralelo sem repetir ID. O nome aparece **só** no termo e na planilha. Pastas, arquivos e logs usam o ID; os resultados publicados não usam nem o ID, só totais.
 - Quem tira as fotos é a própria participante, a partir do [guia de fotos](participant_photo_guide.pdf). Nada vem de scraping, de redes sociais ou de fotos antigas (seção 11).
 - A aplicação da Parte 2 **não guarda fotos**: só o embedding de cada cadastro (D12).
 
@@ -126,6 +127,14 @@ Verificado por Paola e Valentina em 24/10/2026, na `dev` com o PR #91 já mergea
 - **Resultados publicados:** nenhum ID de participante em `experiments/results/*.json`. O `E08.json` tem só a tabela de totais (`counts`), sem matriz por participante, e o campo `hardware` não tem nome de máquina nem de usuário.
 - **Testes e lint:** `pytest` com 220 passed (2 deselected), `ruff check` e `ruff format --check` sem pendências.
 - **Reprodução a partir do README:** o E01 foi reproduzido do zero no Mac (CPU) em cerca de 6,5 minutos, com `extract_embeddings.py` e depois `evaluate.py`. O EER de teste deu 1,11%, igual ao da RTX 4060. O threshold foi 0,452 contra 0,450 e a accuracy de teste 98,72% contra 98,75%, por causa da diferença numérica entre CPU e GPU (D11).
-- **Itens confirmados pelas duas:** todas as 13 participantes assinaram o termo e os termos estão no cofre; o vídeo respeita as autorizações (D15); nenhum dado privado foi enviado a serviço externo; as duas conhecem as regras de proteção de dados do projeto.
+- **Itens confirmados pelas duas:** todas as 13 participantes assinaram o termo e os termos estão no cofre; nenhum dado privado foi enviado a serviço externo; as duas conhecem as regras de proteção de dados do projeto.
+- **Vídeo:** "o vídeo respeita as autorizações" (D15) só é confirmado depois de as duas assistirem à versão editada, antes da publicação. A confirmação entra neste registro com a data.
+
+#### Ocorrência: resultados por participante no histórico
+
+- **O que foi exposto:** de 22/10 (commit `a4c376a`, PR #81) a 24/10, o `experiments/results/E08.json` e a figura `E08_confusion.png` publicaram a matriz de confusão do E08 com uma linha por ID anônimo: quantas tentativas de cada ID foram reconhecidas ou rejeitadas. Não havia nome, foto nem embedding, e a relação entre ID e pessoa só existe no cofre. Mesmo assim, é resultado individualizado (seção 17 do enunciado), que este documento classifica como "nunca" no GitHub.
+- **Correção:** no PR #91 (commit `0fc8c15`, 24/10), a matriz virou uma tabela de totais, no JSON e na figura, e um teste passou a falhar se qualquer ID aparecer nos JSONs de resultados. A regra que ligava a paridade do ID a quem convidou a participante saiu do `division.md`.
+- **O que continua exposto:** a versão antiga segue no histórico da branch `dev` e nas páginas dos PRs no GitHub, que só o suporte do GitHub apaga. A `main` recebe a `dev` por squash, então o histórico dela não inclui a versão antiga.
+- **Comunicação:** como prevê "Se algo vazar", as participantes afetadas são avisadas do que foi exposto e da correção.
 
 A verificação da Parte 2 (#53) repete os mesmos comandos e acrescenta uma linha a este registro.
