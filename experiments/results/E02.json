@@ -1,0 +1,133 @@
+{
+  "experiment": "E02",
+  "hypothesis": "O pré-treino genérico do ImageNet é ruim para rostos: a ResNet-50 sem fine-tuning separa pior os pares do LFW do que o FaceNet de E01.",
+  "model": "resnet50-imagenet1k-v2",
+  "strategy": "pré-treinado no ImageNet, sem fine-tuning",
+  "dataset": "lfw",
+  "seed": 42,
+  "config": {
+    "experiment": "E02",
+    "hypothesis": "O pré-treino genérico do ImageNet é ruim para rostos: a ResNet-50 sem fine-tuning separa pior os pares do LFW do que o FaceNet de E01.",
+    "strategy": "pré-treinado no ImageNet, sem fine-tuning",
+    "model": {
+      "backbone": "resnet50",
+      "pretrained": true
+    },
+    "dataset": {
+      "name": "lfw",
+      "crops_dir": "data/public/lfw_crop160",
+      "splits_dir": "data/splits",
+      "splits": [
+        "val",
+        "test"
+      ]
+    },
+    "embedding": {
+      "batch_size": 128
+    },
+    "seed": 42
+  },
+  "libraries": {
+    "python": "3.11.9",
+    "torch": "2.7.1+cu128",
+    "torchvision": "0.22.1+cu128",
+    "facenet-pytorch": "2.6.0",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.4.6"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "cuda": "12.8",
+    "os": "Windows-10",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"
+  },
+  "embeddings": {
+    "val": {
+      "file": "embeddings/E02/val.npz",
+      "photos": 3489,
+      "identities": 2286,
+      "dimension": 2048,
+      "seconds": 13.46
+    },
+    "test": {
+      "file": "embeddings/E02/test.npz",
+      "photos": 3302,
+      "identities": 2285,
+      "dimension": 2048,
+      "seconds": 21.5
+    }
+  },
+  "training": null,
+  "threshold": {
+    "value": 0.8329102396965027,
+    "criterion": "eer",
+    "chosen_on": "val",
+    "far": 0.31928127159640635,
+    "frr": 0.31928127159640635
+  },
+  "metrics": {
+    "val": {
+      "threshold": 0.8329102396965027,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.747286404824891,
+        "low": 0.7287737085856446,
+        "high": 0.7639191301594367
+      },
+      "eer": {
+        "value": 0.3192812715964064,
+        "low": 0.3033863165169316,
+        "high": 0.3375950241879751
+      },
+      "tar_at_far": {
+        "value": 0.12785072563925362,
+        "low": 0.09053213545266067,
+        "high": 0.16587767795438838
+      },
+      "accuracy": {
+        "value": 0.6807187284035936,
+        "low": 0.6630960608154803,
+        "high": 0.6969678645473393
+      },
+      "f1": {
+        "value": 0.6807187284035936,
+        "low": 0.6622639506173444,
+        "high": 0.6978689063204905
+      }
+    },
+    "test": {
+      "threshold": 0.8329102396965027,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.7490682857464864,
+        "low": 0.7315407575528682,
+        "high": 0.7656104041225149
+      },
+      "eer": {
+        "value": 0.3105954770314632,
+        "low": 0.29604388324976555,
+        "high": 0.32860102583285977
+      },
+      "tar_at_far": {
+        "value": 0.10726643598615918,
+        "low": 0.058823529411764705,
+        "high": 0.14256055363321798
+      },
+      "accuracy": {
+        "value": 0.6866343490304709,
+        "low": 0.6693126731301939,
+        "high": 0.7018784626038781
+      },
+      "f1": {
+        "value": 0.6800989749027925,
+        "low": 0.6617128948371799,
+        "high": 0.6973965555935283
+      }
+    }
+  }
+}

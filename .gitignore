@@ -5,6 +5,11 @@ __pycache__/
 venv/
 .env
 
+# Packaging
+*.egg-info/
+build/
+dist/
+
 # Tooling
 .pytest_cache/
 .ruff_cache/
@@ -18,7 +23,23 @@ venv/
 data/private/
 faces/
 embeddings/
-checkpoints/private/
+checkpoints/
 consent/
 *.db
 *.sqlite
+*.sqlite3
+
+# Public datasets (downloaded from the official source, never redistributed)
+data/public/
+
+# Model weights, embeddings and fitted classifiers (may derive from private data)
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.npy
+*.npz
+*.pkl
+*.joblib
+database/

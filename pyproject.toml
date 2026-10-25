@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facial-recognition-system"
+version = "0.1.0"
+description = "Face recognition experiments and application for the UFMS Artificial Intelligence course"
+readme = "README.md"
+# 3.11.4+ for tarfile.extractall(filter=...)
+requires-python = ">=3.11.4,<3.12"
+authors = [
+    { name = "Paola Campos da Silva" },
+    { name = "Valentina Campos Soares" },
+]
+
+# Dependencies are pinned in requirements.txt (torch needs the cu128 index).
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "."]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+# GPU tests are excluded by default; run them explicitly with `pytest -m gpu -s`.
+addopts = "--strict-markers -m 'not gpu'"
+markers = [
+    "unit: fast tests with no network, GPU or real model",
+    "integration: tests that use real models or public data",
+    "e2e: full application flow",
+    "gpu: requires an NVIDIA GPU with CUDA; fails (is not skipped) if the GPU cannot run the model",
+]

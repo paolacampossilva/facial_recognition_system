@@ -1,0 +1,222 @@
+{
+  "experiment": "E04",
+  "hypothesis": "O fine-tuning parcial do FaceNet com ArcFace no subconjunto de treino do LFW melhora a verificação em relação ao E01, sem overfitting.",
+  "model": "facenet-vggface2-arcface-E04",
+  "strategy": "fine-tuning parcial com ArcFace",
+  "dataset": "lfw",
+  "seed": 42,
+  "config": {
+    "experiment": "E04",
+    "hypothesis": "O fine-tuning parcial do FaceNet com ArcFace no subconjunto de treino do LFW melhora a verificação em relação ao E01, sem overfitting.",
+    "strategy": "fine-tuning parcial com ArcFace",
+    "model": {
+      "backbone": "facenet",
+      "pretrained": true
+    },
+    "dataset": {
+      "name": "lfw",
+      "crops_dir": "data/public/lfw_crop160",
+      "splits_dir": "data/splits",
+      "splits": [
+        "val",
+        "test"
+      ]
+    },
+    "embedding": {
+      "batch_size": 128
+    },
+    "training": {
+      "loss": "arcface",
+      "trainable": [
+        "block8",
+        "last_linear",
+        "last_bn"
+      ],
+      "subset": {
+        "min_photos": 4,
+        "max_photos": 40
+      },
+      "augmentation": {
+        "horizontal_flip": true,
+        "brightness": 0.2,
+        "contrast": 0.2,
+        "saturation": 0.2
+      },
+      "arcface": {
+        "scale": 32,
+        "margin": 0.5
+      },
+      "batch_size": 128,
+      "max_epochs": 30,
+      "patience": 5,
+      "backbone_lr": 0.0001,
+      "head_lr": 0.001,
+      "weight_decay": 0.0005,
+      "num_workers": 0
+    },
+    "seed": 42
+  },
+  "libraries": {
+    "python": "3.11.9",
+    "torch": "2.7.1+cu128",
+    "torchvision": "0.22.1+cu128",
+    "facenet-pytorch": "2.6.0",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.4.6"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "cuda": "12.8",
+    "os": "Windows-10",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"
+  },
+  "embeddings": {
+    "val": {
+      "file": "embeddings/E04/val.npz",
+      "photos": 3489,
+      "identities": 2286,
+      "dimension": 512,
+      "seconds": 8.62
+    },
+    "test": {
+      "file": "embeddings/E04/test.npz",
+      "photos": 3302,
+      "identities": 2285,
+      "dimension": 512,
+      "seconds": 8.99
+    }
+  },
+  "training": {
+    "loss": "arcface",
+    "subset": {
+      "identities": 433,
+      "photos": 3961
+    },
+    "trainable_parameters": 2519296,
+    "total_parameters": 27910327,
+    "epochs_run": 6,
+    "best_epoch": 1,
+    "initial_val_eer": 0.0076019350380096655,
+    "best_val_eer": 0.004837595024187994,
+    "stopped_early": true,
+    "seconds": 123.29,
+    "peak_gpu_memory_mb": 660,
+    "checkpoint": "checkpoints/E04/best.pt",
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": null,
+        "val_eer": 0.0076019350380096655,
+        "seconds": 0.0
+      },
+      {
+        "epoch": 1,
+        "train_loss": 18.976225280761717,
+        "val_eer": 0.004837595024187994,
+        "seconds": 21.06
+      },
+      {
+        "epoch": 2,
+        "train_loss": 13.282698567708334,
+        "val_eer": 0.005528680027643397,
+        "seconds": 19.05
+      },
+      {
+        "epoch": 3,
+        "train_loss": 9.416967821121215,
+        "val_eer": 0.004837595024187994,
+        "seconds": 19.22
+      },
+      {
+        "epoch": 4,
+        "train_loss": 6.685653861363729,
+        "val_eer": 0.0076019350380096655,
+        "seconds": 18.93
+      },
+      {
+        "epoch": 5,
+        "train_loss": 4.686301438013713,
+        "val_eer": 0.0076019350380096655,
+        "seconds": 18.7
+      },
+      {
+        "epoch": 6,
+        "train_loss": 3.211793080965678,
+        "val_eer": 0.006910850034554262,
+        "seconds": 18.42
+      }
+    ]
+  },
+  "threshold": {
+    "value": 0.44337451457977295,
+    "criterion": "eer",
+    "chosen_on": "val",
+    "far": 0.0048375950241879755,
+    "frr": 0.0048375950241879755
+  },
+  "metrics": {
+    "val": {
+      "threshold": 0.44337451457977295,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.9998629292356657,
+        "low": 0.9997415714613892,
+        "high": 0.9999551057426919
+      },
+      "eer": {
+        "value": 0.004837595024187994,
+        "low": 0.0020732550103662673,
+        "high": 0.007947477539737378
+      },
+      "tar_at_far": {
+        "value": 0.9965445749827229,
+        "low": 0.9930891499654457,
+        "high": 0.9993089149965446
+      },
+      "accuracy": {
+        "value": 0.995162404975812,
+        "low": 0.9923980649619903,
+        "high": 0.997581202487906
+      },
+      "f1": {
+        "value": 0.995162404975812,
+        "low": 0.9924085576259489,
+        "high": 0.9975820379965458
+      }
+    },
+    "test": {
+      "threshold": 0.44337451457977295,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.9992331431777799,
+        "low": 0.9986484088560212,
+        "high": 0.9996082867536155
+      },
+      "eer": {
+        "value": 0.01177285883168234,
+        "low": 0.007617732185206236,
+        "high": 0.01593663599718963
+      },
+      "tar_at_far": {
+        "value": 0.986159169550173,
+        "low": 0.9764705882352941,
+        "high": 0.9951557093425606
+      },
+      "accuracy": {
+        "value": 0.9868421052631579,
+        "low": 0.9823407202216067,
+        "high": 0.9906509695290858
+      },
+      "f1": {
+        "value": 0.9867503486750349,
+        "low": 0.9821612827755763,
+        "high": 0.99058265453339
+      }
+    }
+  }
+}

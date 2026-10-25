@@ -1,0 +1,35 @@
+{
+  "config": {
+    "candidate_hash_size": 8,
+    "candidate_max_distance": 4,
+    "confirm_hash_size": 16,
+    "confirm_max_distance": 48
+  },
+  "photos_per_split": {
+    "train": 6439,
+    "val": 3490,
+    "test": 3303
+  },
+  "duplicates": [
+    {
+      "path_a": "Eva_Amurri/Eva_Amurri_0001.png",
+      "split_a": "val",
+      "path_b": "Emmy_Rossum/Emmy_Rossum_0001.png",
+      "split_b": "test",
+      "candidate_distance": 3,
+      "confirm_distance": 23
+    },
+    {
+      "path_a": "Martha_Bowen/Martha_Bowen_0002.png",
+      "split_a": "train",
+      "path_b": "Gabrielle_Rose/Gabrielle_Rose_0001.png",
+      "split_b": "val",
+      "candidate_distance": 4,
+      "confirm_distance": 35
+    }
+  ],
+  "excluded": [
+    "Emmy_Rossum/Emmy_Rossum_0001.png",
+    "Gabrielle_Rose/Gabrielle_Rose_0001.png"
+  ]
+}

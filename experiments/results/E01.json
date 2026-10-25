@@ -1,0 +1,133 @@
+{
+  "experiment": "E01",
+  "hypothesis": "O FaceNet pré-treinado em VGGFace2, sem fine-tuning, já é um baseline forte na verificação de pares do LFW.",
+  "model": "facenet-vggface2",
+  "strategy": "pré-treinado, sem fine-tuning",
+  "dataset": "lfw",
+  "seed": 42,
+  "config": {
+    "experiment": "E01",
+    "hypothesis": "O FaceNet pré-treinado em VGGFace2, sem fine-tuning, já é um baseline forte na verificação de pares do LFW.",
+    "strategy": "pré-treinado, sem fine-tuning",
+    "model": {
+      "backbone": "facenet",
+      "pretrained": true
+    },
+    "dataset": {
+      "name": "lfw",
+      "crops_dir": "data/public/lfw_crop160",
+      "splits_dir": "data/splits",
+      "splits": [
+        "val",
+        "test"
+      ]
+    },
+    "embedding": {
+      "batch_size": 128
+    },
+    "seed": 42
+  },
+  "libraries": {
+    "python": "3.11.9",
+    "torch": "2.7.1+cu128",
+    "torchvision": "0.22.1+cu128",
+    "facenet-pytorch": "2.6.0",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.4.6"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "cuda": "12.8",
+    "os": "Windows-10",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"
+  },
+  "embeddings": {
+    "val": {
+      "file": "embeddings/E01/val.npz",
+      "photos": 3489,
+      "identities": 2286,
+      "dimension": 512,
+      "seconds": 20.23
+    },
+    "test": {
+      "file": "embeddings/E01/test.npz",
+      "photos": 3302,
+      "identities": 2285,
+      "dimension": 512,
+      "seconds": 16.39
+    }
+  },
+  "training": null,
+  "threshold": {
+    "value": 0.45025691390037537,
+    "criterion": "eer",
+    "chosen_on": "val",
+    "far": 0.007601935038009675,
+    "frr": 0.007601935038009675
+  },
+  "metrics": {
+    "val": {
+      "threshold": 0.45025691390037537,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.9998323629328176,
+        "low": 0.9997019546673072,
+        "high": 0.9999317272969981
+      },
+      "eer": {
+        "value": 0.0076019350380096655,
+        "low": 0.0041465100207325346,
+        "high": 0.011057360055286795
+      },
+      "tar_at_far": {
+        "value": 0.9930891499654457,
+        "low": 0.9882515549412578,
+        "high": 1.0
+      },
+      "accuracy": {
+        "value": 0.9923980649619903,
+        "low": 0.9889426399447132,
+        "high": 0.9955079474775398
+      },
+      "f1": {
+        "value": 0.9923980649619903,
+        "low": 0.988987730498137,
+        "high": 0.9955125992405938
+      }
+    },
+    "test": {
+      "threshold": 0.45025691390037537,
+      "target_far": 0.01,
+      "confidence": 0.95,
+      "n_resamples": 1000,
+      "roc_auc": {
+        "value": 0.9993520803209386,
+        "low": 0.9988806360259647,
+        "high": 0.9996772511132374
+      },
+      "eer": {
+        "value": 0.011080337723936313,
+        "low": 0.007617732185206236,
+        "high": 0.015927985478158498
+      },
+      "tar_at_far": {
+        "value": 0.9889273356401385,
+        "low": 0.9757785467128027,
+        "high": 0.9937716262975779
+      },
+      "accuracy": {
+        "value": 0.9875346260387812,
+        "low": 0.9830332409972299,
+        "high": 0.9913434903047091
+      },
+      "f1": {
+        "value": 0.9874826147426982,
+        "low": 0.9829327760362243,
+        "high": 0.9913165800198422
+      }
+    }
+  }
+}
