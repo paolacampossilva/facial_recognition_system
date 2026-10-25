@@ -24,7 +24,6 @@ PARTICIPANTS: dict[str, tuple[int, int, int]] = {
 # Dark colors point away from every participant (mid-gray would embed as a near-zero vector).
 LFW_UNKNOWN_COLORS: list[tuple[int, int, int]] = [(30, 30, 30), (45, 35, 30), (30, 40, 45)]
 PHOTOS_PER_SESSION: int = 5
-ALLOWED_LABEL: re.Pattern[str] = re.compile(r"^(P\d{2,}|unknown)$")
 
 
 class MeanColorEmbedder(FaceEmbedder):
@@ -105,16 +104,6 @@ def run(root: Path) -> int:
     )
 
 
-def _labels_in(value: object) -> list[str]:
-    """Every label of a confusion matrix found anywhere in a results record."""
-    if isinstance(value, dict):
-        found = list(value["labels"]) if "labels" in value and "matrix" in value else []
-        return found + [label for child in value.values() for label in _labels_in(child)]
-    if isinstance(value, list):
-        return [label for child in value for label in _labels_in(child)]
-    return []
-
-
 @pytest.mark.unit
 def test_main_writes_aggregated_results_of_e07_and_e08(workspace: Path) -> None:
     assert run(workspace) == 0
@@ -135,10 +124,14 @@ def test_main_writes_aggregated_results_of_e07_and_e08(workspace: Path) -> None:
     assert study["split"]["parts"]["val"]["lfw_unknown_photos"] == len(LFW_UNKNOWN_COLORS)
     # Well-separated colors: no known person is taken for someone else.
     assert study["metrics"]["test"]["misidentification_rate"] == 0.0
+    assert "counts" in study["metrics"]["val"]
+    assert "counts" in study["metrics"]["test"]
+    assert "counts" not in study["metrics"]["test_at_eer"]
+    assert all("counts" not in c["val"] for c in selection["metrics"]["candidates"])
 
 
 @pytest.mark.unit
-def test_results_hold_no_photo_path_and_only_anonymous_labels(workspace: Path) -> None:
+def test_results_hold_no_photo_path_and_no_participant_id(workspace: Path) -> None:
     assert run(workspace) == 0
 
     for experiment in ("E07", "E08"):
@@ -146,8 +139,7 @@ def test_results_hold_no_photo_path_and_only_anonymous_labels(workspace: Path) -
         assert "session1/" not in text
         assert "session2/" not in text
         assert "Lfw_" not in text
-        labels = _labels_in(json.loads(text))
-        assert all(ALLOWED_LABEL.match(label) for label in labels)
+        assert re.search(r"P\d{2,}", text) is None
 
 
 @pytest.mark.unit

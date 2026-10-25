@@ -32,11 +32,20 @@ def test_open_set_rates_at_the_threshold(attempts: OpenSetAttempts) -> None:
 
 
 @pytest.mark.unit
-def test_confusion_matrix_has_unknown_as_a_class(attempts: OpenSetAttempts) -> None:
-    confusion = open_set_metrics(attempts, threshold=0.5).confusion
+def test_counts_add_up_and_match_the_rates(attempts: OpenSetAttempts) -> None:
+    metrics = open_set_metrics(attempts, threshold=0.5)
+    counts = metrics.counts
 
-    assert confusion.labels == ["P01", "P02", UNKNOWN_LABEL]
-    assert confusion.matrix == [[1, 1, 1], [0, 2, 0], [1, 0, 2]]
+    assert (counts.known_attempts, counts.unknown_attempts) == (5, 3)
+    assert counts.known_correct + counts.known_misidentified + counts.known_rejected == 5
+    assert counts.unknown_accepted + counts.unknown_rejected == 3
+    assert (counts.known_correct, counts.known_misidentified, counts.known_rejected) == (3, 1, 1)
+    assert (counts.unknown_accepted, counts.unknown_rejected) == (1, 2)
+    assert metrics.far == pytest.approx(counts.unknown_accepted / counts.unknown_attempts)
+    assert metrics.frr == pytest.approx(counts.known_rejected / counts.known_attempts)
+    assert metrics.misidentification_rate == pytest.approx(
+        counts.known_misidentified / counts.known_attempts
+    )
 
 
 @pytest.mark.unit
