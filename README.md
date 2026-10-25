@@ -63,16 +63,16 @@ Threshold
 Reconhecido / desconhecido
 ```
 
-Uma face com similaridade abaixo do threshold é classificada como **pessoa desconhecida**. O valor do threshold será escolhido experimentalmente na Parte 1.
+Uma face com similaridade abaixo do threshold é classificada como **pessoa desconhecida**. O threshold da aplicação, 0,766, foi escolhido na validação privada do E08 (ver [Threshold](#threshold)).
 
 ## Tecnologias
 
 | Camada | Tecnologia |
 |---|---|
 | Linguagem | Python 3.11 |
-| Modelo de embedding facial | A definir na Parte 1 |
+| Modelo de embedding facial | FaceNet (InceptionResnetV1, VGGFace2) com fine-tuning parcial e Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Framework de deep learning | PyTorch 2.7.1 (CUDA 12.8) |
-| Interface da aplicação | A definir na Parte 2 |
+| Interface da aplicação | Streamlit ([D13](docs/decisions/D13-interface.md)), na Parte 2 |
 
 ## Instalação
 
@@ -277,19 +277,20 @@ Gráficos: [ROC dos quatro modelos no teste](experiments/figures/comparison_roc.
 | E04 | 38 (8 + 30) | 13 / 15 | +0,02 p.p. (−0,35 a +0,42) |
 | E06 | 33 (8 + 25) | 10 / 7 | −0,12 p.p. (−0,45 a +0,21) |
 
-O E01 já acerta 98,75%, e de 23 a 26 dos erros são os mesmos nos três modelos (pares difíceis do LFW). As 433 identidades de treino ensinam pouco a um modelo pré-treinado em cerca de 9 mil pessoas. A melhor época foi sempre a 1; depois dela, o modelo passa a decorar as identidades de treino.
+O E01 já acerta 98,75%, e de 23 a 26 dos erros são os mesmos nos três modelos (pares difíceis do LFW). As 433 identidades de treino ensinam pouco a um modelo pré-treinado em cerca de 9 mil pessoas. A melhor época foi sempre a 1; depois dela, o modelo passa a decorar as identidades de treino. No ArcFace, uma causa provável é a cabeça começar com pesos aleatórios e treinar junto com o backbone desde a primeira época: os gradientes grandes do começo mexem nas camadas pré-treinadas. A Triplet não tem cabeça e foi melhor que o ArcFace. Treinar primeiro só a cabeça, com o backbone congelado, seria o próximo experimento.
 
 **O que melhorou e o que piorou.** Melhorou: o pré-treino em rostos (E02 → E01, de 31% para 1% de EER), a Triplet em relação ao ArcFace e as estratégias sem treino no privado em relação ao SVM. Piorou: o SVM no privado e, levemente, o ArcFace no teste público (2 erros a mais que o E01).
 
-**Impacto do threshold.** O threshold do LFW (0,445) não serve para a aplicação: no privado, o da D8 é 0,766, provavelmente porque os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas e se parecem mais com elas. Com 0,766, nenhum desconhecido entrou e 9,2% das fotos de pessoas cadastradas foram rejeitadas. O threshold do EER da validação (0,744) teria rejeitado menos (7,7%), mas a D8 prioriza não aceitar estranhos.
+**Impacto do threshold.** O threshold do LFW (0,445) não serve para a aplicação: no privado, o da D8 é 0,766, provavelmente porque os desconhecidos do privado foram fotografados nas mesmas condições das pessoas cadastradas e se parecem mais com elas, e porque comparar uma foto com a galeria inteira (o vizinho mais próximo entre cerca de 10 fotos por pessoa) dá similaridades mais altas do que comparar dois pares soltos. São hipóteses, não foram medidas. Com 0,766, nenhum desconhecido entrou e 9,2% das fotos de pessoas cadastradas foram rejeitadas. O threshold do EER da validação (0,744) teria rejeitado menos (7,7%), mas a D8 prioriza não aceitar estranhos.
 
-**Erros encontrados.** No LFW, a maior parte dos erros são falsas rejeições (25 de 36 no E01): fotos da mesma pessoa em condições muito diferentes. No privado, os 6 erros do teste são todos rejeições de pessoas cadastradas, espalhadas por 4 participantes; não houve confusão entre pessoas. No pré-processamento, o MTCNN rejeitou 3 das 284 fotos privadas por "mais de um rosto" (modo `strict`, D3), mas a conferência manual mostrou que todas tinham uma pessoa só: foram falsos positivos do detector. No LFW, 1 das 13.233 fotos ficou de fora por não ter rosto acima de 0,9.
+**Erros encontrados.** No LFW, a maior parte dos erros são falsas rejeições (25 de 36 no E01): fotos da mesma pessoa em condições muito diferentes. No privado, os 6 erros do teste são todos rejeições de pessoas cadastradas; não houve confusão entre pessoas. No pré-processamento, o MTCNN rejeitou 3 das 284 fotos privadas por "mais de um rosto" (modo `strict`, D3), mas a conferência manual mostrou que todas tinham uma pessoa só: foram falsos positivos do detector. No LFW, 1 das 13.233 fotos ficou de fora por não ter rosto acima de 0,9.
 
 **Limitações.**
 - O LFW está perto do limite para o FaceNet, e o VGGFace2 pode conter pessoas do LFW, o que favorece o E01.
 - O fine-tuning usou 433 identidades, uma seed e uma configuração de hiperparâmetros (D5 e D11), sem busca. A conclusão vale para essa configuração.
 - O EER de validação dos modelos com fine-tuning é otimista: a mesma validação escolheu a época e o modelo.
-- O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero.
+- O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero. E 200 desses 222 desconhecidos são fotos de imprensa do LFW, de outro domínio e mais fáceis de rejeitar. Contando só os 22 do mesmo ambiente, 0 aceitações limitam o FAR a cerca de 14%: o FAR real no nosso ambiente provavelmente é maior que o medido.
+- O LFW é formado principalmente por homens brancos e figuras públicas. O desempenho pode não ser igual entre grupos demográficos, e isso não foi medido.
 - O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
 - E03 e E05 (fine-tuning completo) ficaram de fora.
 
@@ -436,16 +437,16 @@ Threshold
 Recognized / unknown
 ```
 
-A face whose similarity falls below the threshold is classified as an **unknown person**. The threshold value will be chosen experimentally in Part 1.
+A face whose similarity falls below the threshold is classified as an **unknown person**. The application threshold, 0.766, was chosen on the private validation set in E08 (see [Threshold](#threshold-1)).
 
 ## Technologies
 
 | Layer | Technology |
 |---|---|
 | Language | Python 3.11 |
-| Face embedding model | To be defined in Part 1 |
+| Face embedding model | FaceNet (InceptionResnetV1, VGGFace2) with partial fine-tuning and Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Deep learning framework | PyTorch 2.7.1 (CUDA 12.8) |
-| Application interface | To be defined in Part 2 |
+| Application interface | Streamlit ([D13](docs/decisions/D13-interface.md)), in Part 2 |
 
 ## Installation
 
@@ -626,10 +627,10 @@ E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were cut for lack of tim
 Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), similarity histograms per experiment (for example, [E06](experiments/figures/E06_hist.png)), [E08 confusion matrix](experiments/figures/E08_confusion.png) with anonymous IDs and [FAR × FRR on private validation](experiments/figures/E08_threshold.png). The full discussion is in the Portuguese section above; in short:
 
 - **Best model:** on LFW, the three FaceNet models tie on test. E06 was chosen by the rule fixed before the results, the lowest validation EER (D16). The big difference is pretraining: with the same size (about 23.5 M parameters), the face-trained network (E01) misses 1 pair in 90 and the object-trained one (E02) almost 1 in 3.
-- **Fine-tuning:** it changes the model but brings no statistically significant gain on test (paired bootstrap against E01: E04 +0.02 p.p., CI −0.35 to +0.42; E06 −0.12 p.p., CI −0.45 to +0.21). E01 is already at 98.75%, and 433 training identities teach little to a model pretrained on about 9,000 people. The best epoch was always the first; after it, the model starts memorizing the training identities.
-- **Threshold:** the LFW threshold (0.445) does not transfer to the application; the private D8 threshold is 0.766, probably because private unknowns were photographed in the same conditions as the enrolled people. At 0.766, no unknown was accepted and 9.2% of enrolled photos were rejected.
-- **Errors:** most LFW errors are false rejections (25 of 36 for E01). The 6 private test errors are all rejections of enrolled people, spread over 4 participants, with no confusion between people.
-- **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; MTCNN in `strict` mode wrongly rejected about 1% of the private photos (3 of 284, a second face that does not exist); one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%.
+- **Fine-tuning:** it changes the model but brings no statistically significant gain on test (paired bootstrap against E01: E04 +0.02 p.p., CI −0.35 to +0.42; E06 −0.12 p.p., CI −0.45 to +0.21). E01 is already at 98.75%, and 433 training identities teach little to a model pretrained on about 9,000 people. The best epoch was always the first; after it, the model starts memorizing the training identities. For ArcFace, a likely cause is the head starting from random weights and training together with the backbone from the first epoch, so the large early gradients disturb the pretrained layers; Triplet has no head and did better.
+- **Threshold:** the LFW threshold (0.445) does not transfer to the application; the private D8 threshold is 0.766, probably because private unknowns were photographed in the same conditions as the enrolled people, and because comparing a photo with the whole gallery gives higher similarities than comparing isolated pairs (hypotheses, not measured). At 0.766, no unknown was accepted and 9.2% of enrolled photos were rejected.
+- **Errors:** most LFW errors are false rejections (25 of 36 for E01). The 6 private test errors are all rejections of enrolled people, with no confusion between people.
+- **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; MTCNN in `strict` mode wrongly rejected about 1% of the private photos (3 of 284, a second face that does not exist); one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%, and 200 of those 222 are LFW press photos from another domain (the 22 in-domain ones only bound it below about 14%); LFW is mostly white men and public figures, so performance across demographic groups was not measured and may differ.
 - **Cost:** all models have about 23.5 M parameters in the network that produces the embedding (the 27.9 M in the E04 and E06 JSONs include the VGGFace2 logits layer, which is not used); fine-tuning takes about 2 minutes and 660 MB of GPU memory on the RTX 4060. ResNet-50 would also be the worst choice in cost, with a 4 times larger embedding.
 
 ## Privacy and LGPD
