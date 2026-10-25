@@ -33,4 +33,4 @@ O enunciado pede métricas adequadas (accuracy, precision, recall, F1, ROC-AUC, 
 - Status: a matriz por ID foi publicada na primeira versão do E08 e trocada por totais em 24/10/2026, porque é resultado individualizado (enunciado, seções 17 e 35).
 - Resultados do privado são sempre agregados. A validação de entrada rejeita rótulos que não sejam IDs anônimos (`P01`) ou "unknown", sem repetir o nome rejeitado na mensagem de erro (LGPD, seção 18).
 - Implementado em [src/facial_recognition_system/evaluation/](../../src/facial_recognition_system/evaluation/) (PR #70): `verification.py`, `open_set.py` e `scores.py`. As métricas e os intervalos vão para `metrics.val` e `metrics.test` no JSON de cada experimento.
-- Teste de ponta a ponta com o E01: EER de 0,76% na validação e de 1,11% (IC 95% de 0,73% a 1,56%) no teste.
+- Teste de ponta a ponta com o E01: EER de 0,76% na validação e de 1,11% (IC 95% de 0,76% a 1,59%) no teste.

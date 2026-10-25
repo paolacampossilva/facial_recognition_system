@@ -1,5 +1,7 @@
 # Divisão do trabalho de Reconhecimento Facial (Paola e Valentina)
 
+> **Plano original de 18/10.** Valores e decisões que mudaram na implementação estão nos [ADRs](decisions/README.md) e no [README](../README.md), que prevalecem sobre este documento.
+
 Prazos do Moodle: **Parte 1 vence dom 25/10/2026 23:59** e **Parte 2 vence dom 15/11/2026 23:59**.
 Cada dia de atraso custa 1 ponto (máximo de 2 dias), então a meta interna é entregar no **sábado anterior** (24/10 e 14/11).
 
@@ -13,7 +15,7 @@ Cada uma é dona de uma fatia vertical (escreve a spec/ADR, implementa, testa e 
 - **Valentina:** ambiente, modelos e treinamento, análise dos resultados, interface/câmera, vídeos.
 - **Juntas:** LGPD e consentimento, coleta do dataset privado, decisões de arquitetura, revisão cruzada, checklist final.
 
-## Situação em 18/10
+## Situação inicial (18/10)
 
 - Repositório com 2 commits: enunciado (`main`) e README inicial (`dev`, que só entra na `main` na entrega).
 - O `.gitignore` de privacidade já existe, mas ainda falta ignorar `*.pt`, `*.pth`, `*.onnx` e `data/public/`.
