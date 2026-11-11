@@ -2,8 +2,8 @@
 
 > **Plano original de 18/10.** Valores e decisões que mudaram na implementação estão nos [ADRs](decisions/README.md) e no [README](../README.md), que prevalecem sobre este documento.
 
-Prazos do Moodle: **Parte 1 vence dom 25/10/2026 23:59** e **Parte 2 vence dom 15/11/2026 23:59**.
-Cada dia de atraso custa 1 ponto (máximo de 2 dias), então a meta interna é entregar no **sábado anterior** (24/10 e 14/11).
+Prazos do Moodle: **Parte 1 vence dom 25/10/2026 23:59** e **Parte 2 vence dom 22/11/2026 23:59** (o plano original previa dom 15/11; o cronograma atualizado da Parte 2 está em [division-parte2.md](division-parte2.md)).
+Cada dia de atraso custa 1 ponto (máximo de 2 dias), então a meta interna é entregar no **sábado anterior** (24/10 e 21/11).
 
 O enunciado pede duas entregas sequenciais (Parte 1: experimentação; Parte 2: aplicação), cada uma com repositório GitHub e vídeo, seguindo Spec-Driven Development e com LGPD como critério eliminatório.
 
@@ -40,6 +40,8 @@ Cada uma é dona de uma fatia vertical (escreve a spec/ADR, implementa, testa e 
 
 ## Cronograma da Parte 2 (26/10 a 14/11)
 
+> Plano original, substituído por [division-parte2.md](division-parte2.md) (16/11 a 21/11, prazo dom 22/11).
+
 | Semana | Paola | Valentina | Juntas |
 |---|---|---|---|
 | 26/10 a 01/11 | specs 001 a 004 e 006 com critérios de aceitação (até qua 28/10), storage SQLite, `EnrollmentService` | specs 005 e 007 (até qua 28/10), esqueleto da UI em Streamlit com serviços fake | Revisão cruzada das specs antes de codar |
@@ -70,7 +72,7 @@ Fechadas na reunião de domingo (issue #6), cada uma registrada como ADR em `doc
 | D11 | Registro de experimentos | Config YAML por experimento em `configs/` (`E01.yaml` ...) e resultado JSON em `experiments/results/` (formato no contrato abaixo). Seed 42 em Python, NumPy e PyTorch. Uma seed por treino, por falta de tempo; a variação é medida pelo bootstrap de D7. Sem MLflow, para manter simples | Valentina |
 | D12 | Armazenamento de embeddings | SQLite em `data/private/app.db` (no `.gitignore`): tabela `persons` (id, nome, data) e tabela `embeddings` (id, `person_id` com `ON DELETE CASCADE`, vetor float32 como BLOB, `model_id`, data). `PRAGMA foreign_keys = ON` em toda conexão, senão o SQLite ignora o cascade. **A aplicação não guarda fotos**, só embeddings (minimização de dados), então a exclusão apaga a linha da pessoa e o cascade leva os embeddings | Paola |
 | D13 | Interface | **Streamlit**, uma tela com abas Cadastro, Reconhecimento e Pessoas cadastradas. Entrada por `st.camera_input` (foto da webcam, não vídeo contínuo) e `st.file_uploader`, o que cobre "imagem ou vídeo" da seção 38. Vídeo ao vivo (`streamlit-webrtc`) fica fora do escopo | Valentina |
-| D14 | Repositório | Público no GitHub. `dev` é a branch de integração: cada tarefa ou spec sai da `dev` numa branch própria e volta por PR revisado pela outra. A `dev` entra na `main` só nas entregas (24/10 e 14/11), então a `main` é sempre "o que foi entregue". Commits no formato `tipo(escopo): descrição` | Juntas |
+| D14 | Repositório | Público no GitHub. `dev` é a branch de integração: cada tarefa ou spec sai da `dev` numa branch própria e volta por PR revisado pela outra. A `dev` entra na `main` só nas entregas (24/10 e 21/11), então a `main` é sempre "o que foi entregue". Commits no formato `tipo(escopo): descrição` | Juntas |
 | D15 | Quem aparece no vídeo | Só Paola e Valentina. Na demonstração da Parte 2, uma se cadastra e a outra aparece antes de se cadastrar como a pessoa desconhecida, sem precisar de terceiros nem de foto de celebridade | Juntas |
 
 ## Protocolo de avaliação
@@ -214,7 +216,7 @@ Specs em `docs/specs/`, com critérios de aceitação antes de implementar:
 ## Organização
 
 - Toda tarefa vira uma issue no GitHub com dona e link para a spec; cada PR é revisado pela outra.
-- As issues estão nos milestones **Parte 1** (24/10) e **Parte 2** (14/11), com o prazo do dia no corpo e labels por área. A branch sugerida está em cada issue.
+- As issues estão nos milestones **Parte 1** (24/10) e **Parte 2** (21/11), com o prazo do dia no corpo e labels por área. A branch sugerida está em cada issue.
 - Fluxo de cada tarefa:
   1. Criar a branch ligada à issue, saindo da `dev`: `gh issue develop <N> --base dev --name <branch> --checkout`.
   2. Commitar normalmente na branch.
