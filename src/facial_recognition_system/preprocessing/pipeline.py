@@ -1,6 +1,7 @@
 """Image to face crop: load, detect, select one face and crop or align it."""
 
 from enum import StrEnum
+from io import BytesIO
 from math import dist
 from pathlib import Path
 
@@ -45,18 +46,26 @@ class PreprocessingConfig(BaseModel):
     alignment: AlignmentMode = AlignmentMode.CROP
 
 
-def load_image(path: Path) -> Image.Image:
+UPLOAD_SOURCE: str = "upload"
+
+
+def load_image(source: Path | bytes) -> Image.Image:
     """Opens an image as RGB, applying the EXIF orientation of phone photos.
 
+    Args:
+        source: A file path, or the bytes of an uploaded or captured image.
+
     Raises:
-        InvalidImageError: The file is missing, corrupted or not an image.
+        InvalidImageError: The file is missing, empty, corrupted, too large to be safe or not an
+            image.
     """
+    opened = BytesIO(source) if isinstance(source, bytes) else source
     try:
-        with Image.open(path) as image:
+        with Image.open(opened) as image:
             oriented = ImageOps.exif_transpose(image)
             return oriented.convert("RGB")
-    except (UnidentifiedImageError, OSError) as error:
-        raise InvalidImageError(path) from error
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
+        raise InvalidImageError(UPLOAD_SOURCE if isinstance(source, bytes) else source) from error
 
 
 class FacePreprocessor:

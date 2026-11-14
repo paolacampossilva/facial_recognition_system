@@ -35,7 +35,7 @@ Todo fluxo da aplicação (cadastro e reconhecimento) começa com uma imagem que
 
 Reaproveita o que já existe em `src/facial_recognition_system/preprocessing/`: `FaceDetector` (`Protocol`), `FacePreprocessor`, `load_image` e as exceções de `errors.py`. Não cria camada nova. A aplicação só instancia o `FacePreprocessor` com `PreprocessingConfig(selection=FaceSelection.STRICT)`.
 
-**Lacuna a fechar na implementação (#43):** hoje `load_image` só aceita um `Path`, e o `InvalidImageError` guarda o caminho. A aplicação recebe os **bytes** do upload ou da câmera, então `load_image` passa a aceitar também bytes (via `io.BytesIO`), e o `InvalidImageError` aceita um nome de origem opcional. Os serviços das specs 002 e 003 recebem bytes e decodificam com ele, o que mantém A5 e A6 na camada certa. O comportamento para `Path` não muda, e os experimentos seguem iguais.
+**Lacuna fechada na implementação (#43):** `load_image` só aceitava um `Path`, e o `InvalidImageError` guardava o caminho. A aplicação recebe os **bytes** do upload ou da câmera, então `load_image` aceita também bytes (via `io.BytesIO`), e o `InvalidImageError` guarda um nome de origem (`source`, que é `"upload"` quando a imagem veio em bytes). Uma imagem grande demais para ser segura (`DecompressionBombError` do Pillow) também vira `InvalidImageError`. Os serviços das specs 002 e 003 recebem bytes e decodificam com ele, o que mantém A5 e A6 na camada certa. O comportamento para `Path` não muda, e os experimentos seguem iguais.
 
 | Erro | Quando | Mensagem para a pessoa (tratada na UI, spec 005) |
 |---|---|---|

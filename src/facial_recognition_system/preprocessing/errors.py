@@ -8,11 +8,14 @@ class PreprocessingError(Exception):
 
 
 class InvalidImageError(PreprocessingError):
-    """The file could not be opened or decoded as an image."""
+    """The file could not be opened or decoded as an image.
 
-    def __init__(self, path: Path) -> None:
-        super().__init__(f"could not open {path} as an image")
-        self.path = path
+    `source` is the path of the file, or a label such as "upload" when the image came as bytes.
+    """
+
+    def __init__(self, source: Path | str = "upload") -> None:
+        super().__init__(f"could not open {source} as an image")
+        self.source = source
 
 
 class NoFaceDetectedError(PreprocessingError):
