@@ -107,6 +107,7 @@ export function enrollView(root) {
     }
     clearDraft(NAME_KEY, PHOTOS_KEY);
     picker.clear();
+    picker.stop();
     nameInput.value = "";
     feedback.replaceChildren(notice("success", `Cadastro de ${result.data.name} concluído.`));
     refreshCount();

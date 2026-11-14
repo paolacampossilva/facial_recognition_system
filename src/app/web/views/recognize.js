@@ -13,9 +13,15 @@ const waiting = () => h("div", { class: "placeholder" },
   h("strong", {}, "O resultado aparece aqui"),
   h("p", { class: "muted" }, "Escolha uma foto e clique em Reconhecer."));
 
+const formatPercent = (value) => `${(Math.max(0, value) * 100).toFixed(1).replace(".", ",")}%`;
+
+// The similarity as a big percentage, with the bar and the original cosine value in small print.
 const similarityMeter = (value) => h("div", { class: "meter" },
-  h("p", { class: "muted" }, `Similaridade: ${formatSimilarity(value)}`),
-  h("progress", { max: 1, value, "aria-label": "Similaridade" }));
+  h("div", { class: "meter__head" },
+    h("strong", { class: "meter__percent" }, formatPercent(value)),
+    h("span", { class: "muted" }, "de similaridade")),
+  h("progress", { max: 1, value: Math.max(0, value), "aria-label": "Similaridade" }),
+  h("p", { class: "muted meter__raw" }, `Valor original: ${formatSimilarity(value)}`));
 
 // An unknown face shows only the similarity, never a name (spec 004).
 function resultPanel(result) {

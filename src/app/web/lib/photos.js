@@ -16,7 +16,7 @@ export function photoPicker({ max, onChange = () => {} }) {
   const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true });
   const input = h("input", { type: "file", accept: "image/*", multiple: max > 1, hidden: true });
   const cameraButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Usar a câmera");
-  const captureButton = h("button", { type: "button" }, icon("camera"), "Capturar foto");
+  const captureButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Capturar foto");
   const closeButton = h("button", { type: "button", class: "danger" }, icon("x"), "Fechar a câmera");
   const cameraBox = h("div", { class: "camera-box", hidden: true },
     video, h("div", { class: "row" }, captureButton, closeButton));
@@ -109,10 +109,14 @@ export function photoPicker({ max, onChange = () => {} }) {
     element,
     count: () => items.length,
     files: () => items.map(({ blob, name }) => ({ blob, name })),
+    // Drops every photo and the limit warning (after a successful submit, for instance).
     clear() {
       discard();
+      message.replaceChildren();
       render();
     },
+    // Turns the camera off without waiting for the person to click "Fechar a câmera".
+    stop: stopCamera,
     dispose() {
       stopCamera();
       discard();
