@@ -50,6 +50,7 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 - **R27.** Com a câmera aberta, "Capturar foto" (estilo neutro) e "Fechar a câmera" (vermelho) ficam logo abaixo da imagem. A prévia da câmera é espelhada, como num espelho, e a foto capturada não é. A câmera é desligada ao sair da tela e quando o cadastro é concluído, e o aviso de limite de fotos some junto com as fotos.
 - **R28.** A página tem favicon, para o navegador não registrar um erro 404 no console.
 - **R29.** O Cadastro mostra dicas para boas fotos no cartão de fotos (uma só pessoa, de frente, boa luz sem contraluz, sem óculos escuros, boné ou máscara, variar ângulo e expressão, foto nítida), em uma caixa com destaque roxo e título roxo, e o Reconhecimento lembra que a foto deve ter um só rosto, de frente e bem iluminada.
+- **R30.** O resultado do reconhecimento marca na barra de similaridade o threshold lido de `GET /api/config`: a barra fica verde quando a pessoa é reconhecida e neutra quando é desconhecida (sem vermelho nem amarelo), e o texto "Acima do limite (0,766)" ou "Abaixo do limite (0,766)" repete a informação, para a cor não ser o único sinal. Quem decide reconhecido ou desconhecido é a API (R4): o front-end só mostra o limite. Se `/api/config` falhar, a barra aparece sem a marca e sem o texto.
 
 ## Contrato HTTP
 
@@ -58,6 +59,7 @@ JSON, mesma origem. Modelos de entrada e saída são Pydantic, os mesmos dos ser
 | Método e rota | Entrada | Saída (sucesso) |
 |---|---|---|
 | `GET /api/health` | | `{status: "ok"}` |
+| `GET /api/config` | | `{threshold}`, o limite de similaridade da aplicação (D08) |
 | `GET /api/persons` | | lista de `{id, name, embedding_count}` |
 | `POST /api/persons` | multipart: `name` e 1 a 10 `photos` | 201, `EnrollmentResult` (spec 002) |
 | `POST /api/recognitions` | multipart: 1 `photo` | `RecognitionResult` (spec 003) |
@@ -116,6 +118,7 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 | A28 | a câmera aberta | olha os botões e troca de tela | "Capturar foto" é neutro, "Fechar a câmera" é vermelho, e a câmera é desligada ao sair |
 | A29 | a tela de Cadastro aberta | olha o cartão de fotos | vê a lista "Dicas para boas fotos" aberta, com as cinco dicas |
 | A30 | a câmera aberta, 10 fotos tentadas e um nome válido | conclui o cadastro | a câmera é desligada, a lista de fotos fica vazia e o aviso "O limite é de 10 fotos." some |
+| A31 | uma pessoa cadastrada | reconhece uma foto dela e depois a de outra pessoa | a barra mostra a marca do limite, verde com "Acima do limite" no primeiro caso e neutra com "Abaixo do limite" no segundo |
 
 ## Fora de escopo
 
@@ -126,6 +129,6 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 
 ## Testes
 
-- **Unitários da API** (`TestClient` com serviços fakes, A1 a A5, A8, A12, A18, A20 e A21): contrato, mapeamento de cada erro para `code` e status, e cabeçalhos de segurança.
-- **Teste do código do front-end** (A19, e A22 e A24 no que dá para checar nos arquivos): varredura de `src/app/web/` no estilo de um teste de contrato, conferindo também a sidebar, o ponto de corte de 860px e o título por tela.
-- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, A22 a A30, e falhando se a página registrar erro de console.
+- **Unitários da API** (`TestClient` com serviços fakes, A1 a A5, A8, A12, A18, A20 e A21, mais o `GET /api/config` e a ausência de logs nas rotas): contrato, mapeamento de cada erro para `code` e status, e cabeçalhos de segurança.
+- **Teste do código do front-end** (A19, e A22 e A24 no que dá para checar nos arquivos, e a R30 pelo `meter.js`, que roda no `node` sem DOM, inclusive sem o threshold): varredura de `src/app/web/` no estilo de um teste de contrato, conferindo também a sidebar, o ponto de corte de 860px e o título por tela.
+- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, A22 a A31, e falhando se a página registrar erro de console.
