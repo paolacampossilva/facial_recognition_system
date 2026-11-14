@@ -13,7 +13,7 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 ## Requisitos
 
 - **R1.** A interface é uma página web (HTML, CSS e JS puro, módulos ES) servida pela mesma API FastAPI, na mesma origem (D17). Não depende de CDN, fonte externa nem biblioteca de front-end.
-- **R2.** Três abas: **Cadastro**, **Reconhecimento** e **Pessoas cadastradas**.
+- **R2.** Três telas no menu lateral: **Cadastro**, **Reconhecimento** e **Pessoas cadastradas**.
 - **R3.** Entrada de fotos por **webcam** (`getUserMedia`, uma captura por clique) e por **arquivo**. Antes de enviar, a interface mostra a prévia da foto.
 - **R4.** A interface só chama a API, e a API só chama os serviços do núcleo. Nenhuma lógica de reconhecimento, threshold ou duplicidade fica no front-end.
 - **R5.** Os erros dos serviços são capturados só na borda da API e viram um modelo único `{code, message}`, com código estável e mensagem em inglês. A interface traduz o `code` para a mensagem em português da tabela abaixo.
@@ -38,6 +38,14 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 - **R18.** A página é montada só com nós DOM e `textContent` (helper `h(tag, attrs, ...filhos)`), nunca com `innerHTML`. Sem script nem estilo embutidos no HTML.
 - **R19.** O servidor envia Content-Security-Policy restritiva: `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'` (`blob:` e `data:` são para a prévia e a captura da câmera).
 - **R20.** `<html lang="pt-br">`, `Esc` fecha diálogos, foco visível, `aria-label` em botão só com ícone e mensagens em português.
+
+### Casca e conteúdo
+
+- **R21.** Casca no padrão do LIA: sidebar de 272px à esquerda (marca, menu com ícones, botão de tema e nota de privacidade no rodapé) e conteúdo à direita. Abaixo de 860px a sidebar vira off-canvas: um botão de menu com `aria-expanded` abre, e `Esc`, o clique no fundo e a navegação fecham, devolvendo o foco ao botão.
+- **R22.** Cada tela começa com um título (`h1`) e uma linha de descrição, e o `document.title` é "<Tela> · Reconhecimento facial".
+- **R23.** O item "Pessoas cadastradas" do menu mostra quantas pessoas há e atualiza depois de um cadastro e de uma exclusão.
+- **R24.** O conteúdo fica em cards, em duas colunas que passam a uma só quando a área de conteúdo fica estreita.
+- **R25.** Em Reconhecimento, o resultado aparece num painel ao lado da foto, com um texto de espera antes de reconhecer. Sem ninguém cadastrado, Reconhecimento e Pessoas cadastradas mostram um estado vazio com um botão que leva ao Cadastro. O Cadastro avisa que as fotos não são guardadas, só os dados faciais (D12).
 
 ## Contrato HTTP
 
@@ -93,6 +101,10 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 | A19 | o código do front-end | é varrido nos testes | não contém `innerHTML`, `window.confirm`, estilo ou script embutido nem URL externa |
 | A20 | um erro inesperado nos serviços | qualquer rota | 500 `internal_error`, sem vazar detalhe interno nem dado pessoal |
 | A21 | serviços fakes injetados | a API é testada | os testes rodam sem rede, sem GPU e sem pesos |
+| A22 | a janela com 860px ou mais | a página abre | a sidebar está visível com os três itens e o contador de pessoas |
+| A23 | a janela com menos de 860px | abre o menu, e depois aperta `Esc` | a sidebar abre com `aria-expanded="true"`, fecha com `Esc`, e o foco volta ao botão de menu |
+| A24 | o menu | troca de tela | o `document.title` muda para "<Tela> · Reconhecimento facial" |
+| A25 | banco sem ninguém | abre Reconhecimento e Pessoas cadastradas, e depois cadastra e exclui uma pessoa | as duas telas mostram o estado vazio com o botão para o Cadastro, e o contador sobe ao cadastrar e desce ao excluir |
 
 ## Fora de escopo
 
@@ -104,5 +116,5 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 ## Testes
 
 - **Unitários da API** (`TestClient` com serviços fakes, A1 a A5, A8, A12, A18, A20 e A21): contrato, mapeamento de cada erro para `code` e status, e cabeçalhos de segurança.
-- **Teste do código do front-end** (A19): varredura dos arquivos de `src/app/web/`, no estilo de um teste de contrato.
-- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, e falhando se a página registrar erro de console.
+- **Teste do código do front-end** (A19, e A22 e A24 no que dá para checar nos arquivos): varredura de `src/app/web/` no estilo de um teste de contrato, conferindo também a sidebar, o ponto de corte de 860px e o título por tela.
+- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, A22 a A25, e falhando se a página registrar erro de console.

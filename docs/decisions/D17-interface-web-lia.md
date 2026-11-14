@@ -10,7 +10,7 @@ A Parte 2 precisa de cadastro (seção 37), reconhecimento com "reconhecido" ou 
 
 ## Decisão
 
-**FastAPI serve uma SPA em HTML, CSS e JS puro (módulos ES), com três abas:**
+**FastAPI serve uma SPA em HTML, CSS e JS puro (módulos ES), com três telas no menu lateral (casca do LIA):**
 
 - **Cadastro:** nome e fotos, chamando o `EnrollmentService`. Mostra os erros da seção 37: nenhum rosto, vários rostos, imagem inadequada e cadastro duplicado.
 - **Reconhecimento:** uma foto, chamando o `RecognitionService`. Mostra a pessoa e a similaridade, ou "pessoa desconhecida" abaixo do threshold.
