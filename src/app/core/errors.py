@@ -40,3 +40,11 @@ class PersonNotFoundError(AppError):
     def __init__(self, person_id: int) -> None:
         super().__init__(f"person {person_id} not found")
         self.person_id = person_id
+
+
+class CorruptEmbeddingError(AppError):
+    """A stored embedding cannot be read back (its size does not match its recorded dimension)."""
+
+    def __init__(self, embedding_id: int) -> None:
+        super().__init__(f"embedding {embedding_id} is corrupt")
+        self.embedding_id = embedding_id
