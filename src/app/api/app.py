@@ -48,10 +48,18 @@ def handle_error(_: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=body.model_dump(exclude_none=True))
 
 
-def create_app(services: Services, web_dir: Path = WEB_DIR) -> FastAPI:
-    """Builds the application around the given services and serves the interface from `web_dir`."""
+def create_app(services: Services, threshold: float, web_dir: Path = WEB_DIR) -> FastAPI:
+    """Builds the application around the given services and serves the interface from `web_dir`.
+
+    Args:
+        services: The enrollment, recognition, deletion and person-list services.
+        threshold: The similarity the services accept as the same person, which the interface
+            shows on the result (it does not change what the services decide).
+        web_dir: Folder with the static interface.
+    """
     application = FastAPI(title="Face recognition", docs_url=None, redoc_url=None)
     application.state.services = services
+    application.state.threshold = threshold
     application.include_router(build_router())
     application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)
