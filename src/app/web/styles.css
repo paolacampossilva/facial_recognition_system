@@ -29,6 +29,7 @@ a { color: var(--accent-ink); }
 
 /* ---- icons ------------------------------------------------------------------------------ */
 
+.icon { display: inline-flex; align-items: center; justify-content: center; }
 .icon::before, .theme-btn__icon {
   content: ""; display: inline-block; flex: none; width: 16px; height: 16px;
   background: currentColor;
@@ -142,6 +143,11 @@ input[type="text"] {
   padding: 9px 12px; font: inherit; color: var(--ink);
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
+
+.field-error { color: var(--danger); font-size: 13px; font-weight: 600; }
+input[type="text"][aria-invalid="true"] { border-color: var(--danger); }
+.photos-field { display: flex; flex-direction: column; gap: 8px; }
+.photos-field[aria-invalid="true"] .photos-empty { border-color: var(--danger); }
 
 .steps { display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none; counter-reset: step; }
 .steps li { display: flex; align-items: flex-start; gap: 10px; counter-increment: step; }

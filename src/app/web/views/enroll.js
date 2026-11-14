@@ -4,7 +4,7 @@ import { api } from "../lib/api.js";
 import { refreshCount } from "../lib/counter.js";
 import { clearDraft, keepDraft, setDraft } from "../lib/drafts.js";
 import { card, h, icon, loading, notice, pageHead, setBusy } from "../lib/dom.js";
-import { describeError } from "../lib/errors.js";
+import { describeError, NAME_REQUIRED, PHOTOS_REQUIRED } from "../lib/errors.js";
 import { photoPicker } from "../lib/photos.js";
 
 const NAME_KEY = "enroll-name";
@@ -29,9 +29,28 @@ export function enrollView(root) {
     onChange: (count) => {
       counter.textContent = `${count} de ${MAX_PHOTOS} fotos`;
       setDraft(PHOTOS_KEY, count ? String(count) : "");
+      if (count > 0) clearError(photosField, photosError);
     },
   });
   const submit = h("button", { type: "submit" }, "Cadastrar");
+  const nameError = h("p", { class: "field-error", id: "person-name-error", role: "alert", hidden: true });
+  const photosError = h("p", { class: "field-error", id: "photos-error", role: "alert", hidden: true });
+  const photosField = h("div", { class: "photos-field" }, picker.element, photosError);
+
+  function showError(control, element, message) {
+    element.textContent = message;
+    element.hidden = false;
+    control.setAttribute("aria-invalid", "true");
+    control.setAttribute("aria-describedby", element.id);
+  }
+
+  function clearError(control, element) {
+    element.hidden = true;
+    control.removeAttribute("aria-invalid");
+    control.removeAttribute("aria-describedby");
+  }
+
+  nameInput.addEventListener("input", () => clearError(nameInput, nameError));
 
   const form = h("form", { class: "page", novalidate: true },
     pageHead("Cadastro", "Cadastre uma pessoa para que ela possa ser reconhecida."),
@@ -40,19 +59,27 @@ export function enrollView(root) {
         h("div", { class: "field" },
           h("label", { for: "person-name" }, "Nome"),
           nameInput,
+          nameError,
           h("p", { class: "muted" }, "É o nome que aparece quando a pessoa é reconhecida.")),
         h("ol", { class: "steps" }, STEPS.map((step) => h("li", {}, step))),
         h("p", { class: "privacy" }, icon("lock"),
           "As fotos não são guardadas, só os dados faciais usados no reconhecimento.")),
-      card("Fotos", "Pela câmera ou por arquivo.", picker.element, counter)),
+      card("Fotos", "Pela câmera ou por arquivo.", photosField, counter)),
     feedback,
     h("div", { class: "form-actions" }, submit));
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = nameInput.value.trim();
-    if (!name || picker.count() === 0) {
-      feedback.replaceChildren(notice("error", describeError({ status: 422, data: { code: "invalid_request" } })));
+    feedback.replaceChildren();
+    if (!name) showError(nameInput, nameError, NAME_REQUIRED);
+    if (picker.count() === 0) showError(photosField, photosError, PHOTOS_REQUIRED);
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    if (picker.count() === 0) {
+      picker.element.querySelector("button").focus();
       return;
     }
     setBusy(submit, true);

@@ -10,6 +10,10 @@ const MESSAGES = {
   internal_error: "Algo deu errado. Tente de novo",
 };
 
+// Problems found in the form before anything is sent, shown next to the field that has them.
+export const NAME_REQUIRED = "Digite o nome da pessoa.";
+export const PHOTOS_REQUIRED = "Adicione de 1 a 10 fotos.";
+
 export const CAMERA_UNAVAILABLE = "Não foi possível usar a câmera. Envie um arquivo";
 export const NO_CONNECTION = "Sem conexão com o servidor. Tente de novo";
 
