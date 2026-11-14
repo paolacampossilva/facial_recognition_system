@@ -58,7 +58,7 @@ Exceção nova: `EmptyGalleryError`, herdando da exceção base da aplicação. 
 
 ## Fora de escopo
 
-- Vídeo contínuo quadro a quadro: a interface reconhece uma foto por vez (D13).
+- Vídeo contínuo quadro a quadro: a interface reconhece uma foto por vez (D17).
 - Reconhecer mais de uma pessoa por imagem (a spec 001 rejeita imagens com vários rostos).
 - Trocar de estratégia em tempo de execução. A D16 fixa o vizinho mais próximo.
 
