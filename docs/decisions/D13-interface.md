@@ -1,6 +1,6 @@
 # D13: interface
 
-- **Status:** Aceita
+- **Status:** Substituída por D17
 - **Data:** 2026-10-18
 - **Dona:** Valentina
 
