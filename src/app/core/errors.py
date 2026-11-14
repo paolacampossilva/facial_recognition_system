@@ -52,3 +52,7 @@ class CorruptEmbeddingError(AppError):
 
 class LaunchError(AppError):
     """The application cannot start (for instance, its port is already in use)."""
+
+
+class ModelLoadError(AppError):
+    """The face model cannot be loaded (missing or unreadable checkpoint, unavailable device)."""
