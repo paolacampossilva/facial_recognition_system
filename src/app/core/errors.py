@@ -48,3 +48,7 @@ class CorruptEmbeddingError(AppError):
     def __init__(self, embedding_id: int) -> None:
         super().__init__(f"embedding {embedding_id} is corrupt")
         self.embedding_id = embedding_id
+
+
+class LaunchError(AppError):
+    """The application cannot start (for instance, its port is already in use)."""
