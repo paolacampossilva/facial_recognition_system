@@ -20,7 +20,7 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 - **R6.** Nenhuma foto é guardada no servidor (D12): a imagem vive em memória durante a requisição. Os logs não trazem nome nem conteúdo da imagem (spec 007).
 - **R7.** Toda tela tem quatro estados desenhados: carregando, vazio, erro e sucesso. O botão de envio fica desabilitado, com indicador de carregamento, durante a chamada e volta ao normal ao terminar, com sucesso ou erro.
 - **R8.** Cada tela tem um único botão primário. Vermelho só aparece em erro e em ação destrutiva.
-- **R9.** Resultado `unknown`: mostra "Pessoa desconhecida" e a similaridade, sem sugerir nenhum nome (spec 004, R2 e A8). Resultado `recognized`: mostra o nome e a similaridade.
+- **R9.** Resultado `unknown`: mostra "Pessoa desconhecida" e a similaridade, sem sugerir nenhum nome (spec 004, R2 e A8). Resultado `recognized`: mostra o nome e a similaridade. Nos dois casos a similaridade aparece em porcentagem, em destaque (ex.: "91,0%"), com o valor original (cosseno) em tamanho menor.
 - **R10.** Galeria vazia: Reconhecimento e Pessoas cadastradas mostram "Nenhuma pessoa cadastrada." (seção 43), e não um erro.
 - **R11.** Excluir uma pessoa pede confirmação num diálogo próprio (nunca `window.confirm`), com o botão nomeado pela ação ("Excluir <nome>") e a opção de cancelar (spec 006, R8). Descartar uma foto escolhida também pede confirmação, com o botão "Descartar foto" e a opção "Manter foto".
 - **R12.** O formulário de cadastro avisa antes de perder o que foi preenchido ("Sair sem salvar?" / "Continuar editando").
@@ -47,9 +47,9 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 - **R24.** O conteúdo fica em cards, em duas colunas que passam a uma só quando a área de conteúdo fica estreita.
 - **R25.** Em Reconhecimento, o resultado aparece num painel ao lado da foto, com um texto de espera antes de reconhecer. Sem ninguém cadastrado, Reconhecimento e Pessoas cadastradas mostram um estado vazio com um botão que leva ao Cadastro. O Cadastro avisa que as fotos não são guardadas, só os dados faciais (D12).
 - **R26.** Os erros de preenchimento do cadastro aparecem junto do campo que os tem, cada um com a sua mensagem (nome e fotos), com o campo marcado por `aria-invalid` e ligado à mensagem por `aria-describedby`. O foco vai para o primeiro campo com erro, e o erro some quando o campo é corrigido. Erros que vêm da API continuam numa mensagem acima do botão.
-- **R27.** Com a câmera aberta, "Capturar foto" é o botão em destaque (cor de acento) e "Fechar a câmera" fica em vermelho, os dois logo abaixo da imagem. A prévia da câmera é espelhada, como num espelho, e a foto capturada não é. Ao sair da tela a câmera é desligada.
+- **R27.** Com a câmera aberta, "Capturar foto" (estilo neutro) e "Fechar a câmera" (vermelho) ficam logo abaixo da imagem. A prévia da câmera é espelhada, como num espelho, e a foto capturada não é. A câmera é desligada ao sair da tela e quando o cadastro é concluído, e o aviso de limite de fotos some junto com as fotos.
 - **R28.** A página tem favicon, para o navegador não registrar um erro 404 no console.
-- **R29.** O Cadastro mostra dicas para boas fotos no cartão de fotos (uma só pessoa, de frente, boa luz sem contraluz, sem óculos escuros, boné ou máscara, variar ângulo e expressão, foto nítida), e o Reconhecimento lembra que a foto deve ter um só rosto, de frente e bem iluminada.
+- **R29.** O Cadastro mostra dicas para boas fotos no cartão de fotos (uma só pessoa, de frente, boa luz sem contraluz, sem óculos escuros, boné ou máscara, variar ângulo e expressão, foto nítida), em uma caixa com destaque roxo e título roxo, e o Reconhecimento lembra que a foto deve ter um só rosto, de frente e bem iluminada.
 
 ## Contrato HTTP
 
@@ -113,8 +113,9 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 | A25 | banco sem ninguém | abre Reconhecimento e Pessoas cadastradas, e depois cadastra e exclui uma pessoa | as duas telas mostram o estado vazio com o botão para o Cadastro, e o contador sobe ao cadastrar e desce ao excluir |
 | A26 | nome vazio e nenhuma foto | clica em Cadastrar | "Digite o nome da pessoa." aparece junto ao nome e "Adicione de 1 a 10 fotos." junto às fotos, cada campo com `aria-invalid`, o foco vai ao nome, e cada mensagem some quando o campo é corrigido |
 | A27 | uma foto escolhida | clica em descartar | abre o diálogo com "Descartar foto" e "Manter foto"; `Esc` ou "Manter foto" mantém a foto, e "Descartar foto" a remove da lista |
-| A28 | a câmera aberta | olha os botões e troca de tela | "Capturar foto" está em destaque, "Fechar a câmera" em vermelho, e a câmera é desligada ao sair |
+| A28 | a câmera aberta | olha os botões e troca de tela | "Capturar foto" é neutro, "Fechar a câmera" é vermelho, e a câmera é desligada ao sair |
 | A29 | a tela de Cadastro aberta | olha o cartão de fotos | vê a lista "Dicas para boas fotos" aberta, com as cinco dicas |
+| A30 | a câmera aberta, 10 fotos tentadas e um nome válido | conclui o cadastro | a câmera é desligada, a lista de fotos fica vazia e o aviso "O limite é de 10 fotos." some |
 
 ## Fora de escopo
 
@@ -127,4 +128,4 @@ Quando o cadastro tem várias fotos, o erro não diz qual delas falhou (spec 002
 
 - **Unitários da API** (`TestClient` com serviços fakes, A1 a A5, A8, A12, A18, A20 e A21): contrato, mapeamento de cada erro para `code` e status, e cabeçalhos de segurança.
 - **Teste do código do front-end** (A19, e A22 e A24 no que dá para checar nos arquivos): varredura de `src/app/web/` no estilo de um teste de contrato, conferindo também a sidebar, o ponto de corte de 860px e o título por tela.
-- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, A22 a A29, e falhando se a página registrar erro de console.
+- **E2E** (#50, da Valentina): Chrome sem interface cobrindo A1, A6, A7, A9 a A11, A13 a A17, A22 a A30, e falhando se a página registrar erro de console.
