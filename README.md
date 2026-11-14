@@ -142,7 +142,7 @@ pytest -m unit
 pytest -m integration
 ```
 
-Dois testes de integração **pulam** (não falham) quando falta o insumo: o do checkpoint E06, que precisa de `checkpoints/E06/best.pt` (ver [Modelo e checkpoint](#modelo-e-checkpoint)), e o dos recortes do LFW, que precisa de `data/public/lfw_crop160` (ver [Preparação dos dados](#preparação-dos-dados)).
+Os testes de integração **pulam** (não falham) quando falta o insumo: o teste do checkpoint E06 precisa de `checkpoints/E06/best.pt` (ver [Modelo e checkpoint](#modelo-e-checkpoint)), o dos recortes do LFW precisa de `data/public/lfw_crop160`, e os dos serviços (`tests/test_services_integration.py`) usam o MTCNN e o modelo reais em fotos do LFW (`data/public/lfw`, ver [Preparação dos dados](#preparação-dos-dados)), com o E06 se existir ou com os pesos pré-treinados do FaceNet no cache. Só fotos públicas entram nesses testes.
 
 ## Conjuntos de dados
 
@@ -676,7 +676,7 @@ pytest -m unit
 pytest -m integration
 ```
 
-Two integration tests **skip** (they do not fail) when their input is missing: the E06 checkpoint one, which needs `checkpoints/E06/best.pt` (see [Model and checkpoint](#model-and-checkpoint)), and the LFW crops one, which needs `data/public/lfw_crop160` (see [Data preparation](#data-preparation)).
+Integration tests **skip** (they do not fail) when their input is missing: the E06 checkpoint test needs `checkpoints/E06/best.pt` (see [Model and checkpoint](#model-and-checkpoint)), the LFW crops one needs `data/public/lfw_crop160`, and the service ones (`tests/test_services_integration.py`) use the real MTCNN and model on LFW photos (`data/public/lfw`, see [Data preparation](#data-preparation)), with E06 if present or the cached pretrained FaceNet weights otherwise. Only public photos go into these tests.
 
 ## Data
 
