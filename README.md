@@ -13,7 +13,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 ## Sumário
 
 - [Visão geral](#visão-geral)
-  - [Pipeline previsto](#pipeline-previsto)
+  - [Pipeline](#pipeline)
 - [Tecnologias](#tecnologias)
 - [Instalação](#instalação)
   - [Hook de privacidade](#hook-de-privacidade)
@@ -28,13 +28,20 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
   - [Threshold](#threshold)
   - [Reprodutibilidade](#reprodutibilidade)
   - [Resultados e análise](#resultados-e-análise)
+- [Aplicação (Parte 2)](#aplicação-parte-2)
+  - [Arquitetura](#arquitetura)
+  - [Como rodar](#como-rodar)
+  - [Como criar o próprio banco](#como-criar-o-próprio-banco)
+  - [Modelo e checkpoint](#modelo-e-checkpoint)
+  - [Privacidade na aplicação](#privacidade-na-aplicação)
+  - [Limitações da aplicação](#limitações-da-aplicação)
 - [Privacidade e LGPD](#privacidade-e-lgpd)
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Tipos de commit](#tipos-de-commit)
 
 ## Visão geral
 
-> **Status:** experimentos da Parte 1 concluídos: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1), e as decisões, nos [ADRs](docs/decisions/README.md) (o modelo escolhido está na [D16](docs/decisions/D16-chosen-model.md)). A aplicação (Parte 2) será documentada quando existir.
+> **Status:** experimentos da Parte 1 concluídos: dados, protocolo, resultados e como reproduzir estão em [Experimentos (Parte 1)](#experimentos-parte-1), e as decisões, nos [ADRs](docs/decisions/README.md) (o modelo escolhido está na [D16](docs/decisions/D16-chosen-model.md)). A aplicação da Parte 2 (cadastro, reconhecimento e exclusão de pessoas) está em [Aplicação (Parte 2)](#aplicação-parte-2).
 
 O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
@@ -45,7 +52,7 @@ O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 | Parte 1, Experimentação | Comparar modelos, estratégias de treinamento/fine-tuning, funções de perda e thresholds para descobrir a melhor configuração | Código, experimentos, métricas e vídeo com os resultados |
 | Parte 2, Aplicação | Usar a melhor configuração da Parte 1 numa aplicação de cadastro, reconhecimento e exclusão de pessoas | Aplicação funcional e vídeo de demonstração |
 
-### Pipeline previsto
+### Pipeline
 
 ```text
 Imagem / câmera
@@ -74,7 +81,8 @@ Uma face com similaridade abaixo do threshold é classificada como **pessoa desc
 | Linguagem | Python 3.11 |
 | Modelo de embedding facial | FaceNet (InceptionResnetV1, VGGFace2) com fine-tuning parcial e Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Framework de deep learning | PyTorch 2.7.1 (CUDA 12.8) |
-| Interface da aplicação | Streamlit ([D13](docs/decisions/D13-interface.md)), na Parte 2 |
+| API e interface da aplicação (Parte 2) | FastAPI servindo uma SPA em HTML, CSS e JavaScript puro ([D17](docs/decisions/D17-interface-web-lia.md), que substitui a [D13](docs/decisions/D13-interface.md), Streamlit) |
+| Armazenamento da aplicação (Parte 2) | SQLite, só com embeddings e sem fotos ([D12](docs/decisions/D12-embedding-storage.md)) |
 
 Os pesos pré-treinados não ficam no repositório: as bibliotecas os baixam do endereço oficial na primeira execução.
 
@@ -126,6 +134,15 @@ pytest -m gpu -s    # testes de GPU; -s mostra qual placa e qual versão do CUDA
 ```
 
 Os testes marcados com `gpu` ficam fora da execução padrão e **falham** (não são pulados) se a GPU não conseguir rodar o modelo. Rode os dois comandos em toda máquina nova com GPU NVIDIA; no Mac, só o primeiro.
+
+Os testes levam um marcador: `unit` (rápidos, sem rede, GPU nem modelo real, com fakes injetados), `integration` (modelo real ou dados públicos) e `e2e` (fluxo completo da aplicação). Para rodar só um grupo:
+
+```bash
+pytest -m unit
+pytest -m integration
+```
+
+Dois testes de integração **pulam** (não falham) quando falta o insumo: o do checkpoint E06, que precisa de `checkpoints/E06/best.pt` (ver [Modelo e checkpoint](#modelo-e-checkpoint)), e o dos recortes do LFW, que precisa de `data/public/lfw_crop160` (ver [Preparação dos dados](#preparação-dos-dados)).
 
 ## Conjuntos de dados
 
@@ -319,6 +336,112 @@ Parâmetros da rede que gera o embedding. O `training.total_parameters` do E04 e
 
 Os modelos têm o mesmo tamanho, então o desempenho não vem da complexidade da rede, e sim do que ela aprendeu antes. O fine-tuning é barato (cerca de 2 minutos), mas não compensou no LFW. Para a aplicação, a ResNet-50 seria a pior escolha também no custo: embedding 4 vezes maior para guardar e comparar. Os tempos de extração dos JSONs dependem do cache de disco e não servem para comparar modelos (D10).
 
+## Aplicação (Parte 2)
+
+Aplicação web local com três telas no menu lateral ([D17](docs/decisions/D17-interface-web-lia.md), specs em [docs/specs/](docs/specs/)):
+
+- **Cadastro:** nome e de 1 a 10 fotos (webcam do navegador ou arquivo). A pessoa só é cadastrada se todas as fotos tiverem exatamente um rosto, e é recusada se o nome já existe (sem diferenciar maiúsculas de minúsculas) ou se o rosto já está cadastrado com outro nome.
+- **Reconhecimento:** uma foto. O resultado é a pessoa e a similaridade, ou "pessoa desconhecida" quando a similaridade fica abaixo do threshold (0,766, [D08](docs/decisions/D08-threshold-selection.md)). Uma face desconhecida nunca mostra o nome de quem ela mais se parece.
+- **Pessoas cadastradas:** lista e exclusão, com confirmação.
+
+O reconhecimento compara o embedding da foto com os da galeria pelo **vizinho mais próximo** ([D06](docs/decisions/D06-comparison-strategy.md) e [D16](docs/decisions/D16-chosen-model.md)). A galeria é lida do banco a cada chamada, sem cache, então um cadastro ou uma exclusão vale na hora.
+
+### Arquitetura
+
+A interface e a lógica são separadas (seção 41 do enunciado): o navegador só fala com a API, a API só chama as portas dos serviços, e os serviços recebem o detector, o modelo e o banco por parâmetro, o que permite testá-los com fakes, sem rede e sem modelo.
+
+```mermaid
+flowchart LR
+    B["Navegador<br/>SPA em HTML, CSS e JS<br/>src/app/web"] -->|"HTTP: JSON e multipart"| A["API FastAPI<br/>src/app/api"]
+    A --> E["EnrollmentService"]
+    A --> R["RecognitionService<br/>+ decide"]
+    A --> D["DeletionService"]
+    A --> P["Lista de pessoas"]
+    E --> F["FaceEncoder<br/>MTCNN + TorchFaceEmbedder"]
+    R --> F
+    E --> S[("SQLite<br/>pessoas e embeddings")]
+    R --> S
+    D --> S
+    P --> S
+```
+
+| Camada | Pasta ou arquivo | Responsabilidade |
+|---|---|---|
+| Interface | `src/app/web/` | três telas, tema claro e escuro, erros por campo, confirmação antes de excluir |
+| API | `src/app/api/` | rotas, portas dos serviços (`Protocol`) e tradução de qualquer erro para um corpo único com código estável (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
+| Serviços | `src/app/core/` | `EnrollmentService`, `RecognitionService` (com a função pura `decide`), `DeletionService`, `FaceEncoder`, modelos Pydantic e exceções |
+| Modelo | `src/app/embedder.py` | `TorchFaceEmbedder`, carrega o checkpoint uma vez, na inicialização |
+| Armazenamento | `src/app/storage/` | repositório SQLite: pessoas e embeddings, nunca fotos ([D12](docs/decisions/D12-embedding-storage.md)) |
+| Inicialização | `src/app/launcher.py` | `python -m app` |
+| Fakes | `src/app/fakes.py` | serviços falsos para testar a API e a interface sem modelo |
+
+Rotas (todas sob `/api`):
+
+| Método e rota | O que faz |
+|---|---|
+| `GET /health` | confere que a aplicação está de pé |
+| `GET /persons` | lista as pessoas com o número de embeddings de cada uma |
+| `POST /persons` | cadastra (campos `name` e `photos`, multipart) |
+| `POST /recognitions` | reconhece uma foto (campo `photo`, multipart) |
+| `DELETE /persons/{id}` | exclui a pessoa e os embeddings dela |
+
+### Como rodar
+
+Com o ambiente instalado (ver [Instalação](#instalação)) e o modelo disponível (ver [Modelo e checkpoint](#modelo-e-checkpoint)), na raiz do repositório:
+
+```bash
+python -m app
+```
+
+Isso sobe o servidor e abre o navegador em `http://127.0.0.1:8000`. Opções:
+
+| Opção | Efeito |
+|---|---|
+| `--port N` | usa outra porta (entre 1024 e 65535; o padrão é 8000) |
+| `--no-browser` | não abre o navegador |
+| `--reload` | reinicia o servidor quando o código muda (desenvolvimento) |
+
+O servidor escuta **só em 127.0.0.1**, de propósito: a aplicação não tem autenticação e guarda dados biométricos, então não há opção para expô-la na rede. Se a porta estiver ocupada, o comando termina com uma mensagem e não sobe nada.
+
+### Como criar o próprio banco
+
+Não existe banco pronto e nenhum é versionado. O arquivo SQLite, com o esquema, é **criado sozinho na primeira execução**, e a galeria começa vazia. Para montar o seu:
+
+1. Rode `python -m app`. Enquanto ninguém estiver cadastrado, a tela de reconhecimento e a lista mostram "Nenhuma pessoa cadastrada.".
+2. Na tela **Cadastro**, informe o nome e de 1 a 10 fotos da pessoa (use só fotos de quem consentiu, ver [Privacidade na aplicação](#privacidade-na-aplicação)). Mais de uma foto, em condições diferentes, deixa o reconhecimento mais confiável.
+3. Cadastre as outras pessoas do mesmo jeito. A partir daí a tela **Reconhecimento** compara cada foto com a sua galeria.
+4. Para recomeçar do zero, exclua as pessoas pela tela **Pessoas cadastradas**, ou apague o arquivo do banco com a aplicação parada.
+
+O banco dos dados reais fica no cofre, em `data/private/app.db` ([docs/privacy.md](docs/privacy.md)). Cada embedding guarda o `model_id` do modelo que o gerou, e o reconhecimento só compara embeddings do mesmo modelo.
+
+### Modelo e checkpoint
+
+O modelo da aplicação é o **E06**: FaceNet (VGGFace2) com fine-tuning parcial e Triplet Loss ([D16](docs/decisions/D16-chosen-model.md)). O checkpoint não está no repositório (`*.pt` é bloqueado pelo `.gitignore` e pelo hook). Para gerá-lo, com o LFW preparado (ver [Preparação dos dados](#preparação-dos-dados)) e uma GPU NVIDIA:
+
+```bash
+python scripts/train.py --config configs/E06.yaml
+```
+
+O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). O `model_id` dos embeddings vira `facenet-vggface2-E06`, com o nome da pasta do experimento: embeddings de pesos diferentes não estão no mesmo espaço, e misturá-los num banco só faria o reconhecimento errar sem dar erro nenhum. Sem o checkpoint, a aplicação falha na inicialização com uma mensagem dizendo como treiná-lo.
+
+### Privacidade na aplicação
+
+- **Nenhuma foto é guardada.** O banco tem só o embedding de cada cadastro, e a foto enviada para reconhecer também é descartada.
+- **Exclusão em cascata** ([spec 006](docs/specs/006-person-deletion.md)): excluir uma pessoa apaga o registro e os embeddings numa transação. O SQLite roda com `secure_delete`, para o conteúdo apagado não ficar no arquivo, e o arquivo do banco é criado com permissão `0600` (só o dono lê).
+- **Só local.** O servidor escuta em 127.0.0.1 e a interface não carrega nada de fora (a política de segurança do navegador, CSP, só permite recursos da própria aplicação).
+- **Logs sem dados pessoais:** registram contagens e status, não nomes nem fotos.
+- O banco e o checkpoint ficam fora do GitHub (ver [Privacidade e LGPD](#privacidade-e-lgpd)).
+
+### Limitações da aplicação
+
+- A **similaridade é o cosseno** entre dois embeddings, não uma probabilidade: 80% não quer dizer "80% de chance de ser a pessoa". Só o threshold de 0,766, escolhido no E08, separa reconhecido de desconhecido.
+- No E08, com esse threshold, **9,2% das fotos de pessoas cadastradas foram rejeitadas** (FRR) e nenhum desconhecido foi aceito em 222. Na prática, uma pessoa cadastrada às vezes aparece como desconhecida e precisa tentar de novo. A galeria do E08 tinha 11 pessoas, então o desempenho com uma galeria bem maior não foi medido.
+- O reconhecimento é **foto a foto**: uma imagem por vez, sem vídeo contínuo, e com exatamente um rosto por imagem.
+- O MTCNN em modo `strict` rejeitou cerca de 1% das fotos privadas por "mais de um rosto" numa foto de uma pessoa só (3 de 284). Na aplicação, a pessoa precisa tirar outra foto.
+- Não há **prova de vida**: uma foto de uma foto pode ser aceita como a pessoa.
+- Não há autenticação, por isso a aplicação só é acessível na própria máquina.
+- Mais limites do modelo em [Resultados e análise](#resultados-e-análise).
+
 ## Privacidade e LGPD
 
 Dados biométricos são dados pessoais sensíveis (LGPD, Lei nº 13.709/2018). Descumprir as regras abaixo zera o trabalho.
@@ -334,7 +457,7 @@ Ficam **fora do GitHub** e são processados apenas localmente:
 
 Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto por junções em `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` (decisão [D10](docs/decisions/D10-hardware.md) e [docs/privacy.md](docs/privacy.md)).
 
-O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para que termos assinados e a planilha de controle não entrem por engano. A aplicação terá um mecanismo para excluir todos os dados de uma pessoa cadastrada, e os dados privados serão eliminados ao fim da disciplina.
+O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para que termos assinados e a planilha de controle não entrem por engano. A aplicação exclui todos os dados de uma pessoa cadastrada (ver [Privacidade na aplicação](#privacidade-na-aplicação)), e os dados privados serão eliminados ao fim da disciplina.
 
 Como cada dado é coletado, guardado, excluído e eliminado, e o mapa do checklist do Anexo B, estão em [docs/privacy.md](docs/privacy.md). Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [docs/assignment.md](docs/assignment.md).
 
@@ -349,11 +472,12 @@ facial_recognition_system/
 ├── docs/
 │   ├── assignment.md             # enunciado do trabalho
 │   ├── consent_form.md           # modelo em branco do termo de consentimento
-│   ├── decisions/                # ADRs (D1 a D16)
+│   ├── decisions/                # ADRs (D1 a D17)
 │   ├── division.md               # plano e divisão do trabalho (os ADRs prevalecem)
+│   ├── division-parte2.md        # cronograma e divisão da Parte 2
 │   ├── participant_photo_guide.pdf  # guia de fotos para as participantes
 │   ├── privacy.md                # tratamento dos dados pessoais e registro do Anexo B
-│   └── specs/                    # specs da aplicação, a partir da Parte 2
+│   └── specs/                    # specs da aplicação (Parte 2)
 ├── experiments/
 │   ├── figures/                  # gráficos agregados
 │   └── results/                  # um JSON de resultado por experimento
@@ -368,6 +492,14 @@ facial_recognition_system/
 │   ├── preprocess_faces.py       # detecção e recorte com o MTCNN
 │   ├── run_open_set.py           # E07 e E08, no dataset privado
 │   └── train.py                  # fine-tuning de E04 e E06
+├── src/app/                      # aplicação da Parte 2
+│   ├── api/                      # API FastAPI, portas dos serviços e tradução de erros
+│   ├── core/                     # cadastro, reconhecimento, exclusão, encoder, modelos e erros
+│   ├── storage/                  # repositório SQLite (pessoas e embeddings)
+│   ├── web/                      # interface: SPA em HTML, CSS e JS puro
+│   ├── embedder.py               # TorchFaceEmbedder (checkpoint do E06)
+│   ├── fakes.py                  # serviços falsos para testes
+│   └── launcher.py               # python -m app
 ├── src/facial_recognition_system/
 │   ├── data/                     # splits por identidade, pares e leakage
 │   ├── evaluation/               # métricas, threshold, comparação pareada e gráficos
@@ -415,7 +547,7 @@ facial_recognition_system/
 ## Table of contents
 
 - [Overview](#overview)
-  - [Planned pipeline](#planned-pipeline)
+  - [Pipeline](#pipeline-1)
 - [Technologies](#technologies)
 - [Installation](#installation)
   - [Privacy hook](#privacy-hook)
@@ -430,13 +562,20 @@ facial_recognition_system/
   - [Threshold](#threshold-1)
   - [Reproducibility](#reproducibility)
   - [Results and analysis](#results-and-analysis)
+- [Application (Part 2)](#application-part-2)
+  - [Architecture](#architecture)
+  - [How to run](#how-to-run)
+  - [Creating your own database](#creating-your-own-database)
+  - [Model and checkpoint](#model-and-checkpoint)
+  - [Privacy in the application](#privacy-in-the-application)
+  - [Application limitations](#application-limitations)
 - [Privacy and LGPD](#privacy-and-lgpd)
 - [Folder structure](#folder-structure)
 - [Commit types](#commit-types)
 
 ## Overview
 
-> **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1), and the decisions in the [ADRs](docs/decisions/README.md) (the chosen model is in [D16](docs/decisions/D16-chosen-model.md)). The application (Part 2) will be documented once it exists.
+> **Status:** Part 1 experiments done: data, protocol, results and how to reproduce them are in [Experiments (Part 1)](#experiments-part-1), and the decisions in the [ADRs](docs/decisions/README.md) (the chosen model is in [D16](docs/decisions/D16-chosen-model.md)). The Part 2 application (enrolling, recognizing and deleting people) is in [Application (Part 2)](#application-part-2).
 
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
@@ -447,7 +586,7 @@ The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.m
 | Part 1, Experimentation | Compare models, training/fine-tuning strategies, loss functions and thresholds to find the best configuration | Code, experiments, metrics and a video presenting the results |
 | Part 2, Application | Use the best Part 1 configuration in an application for enrolling, recognizing and deleting people | Working application and a demo video |
 
-### Planned pipeline
+### Pipeline
 
 ```text
 Image / camera
@@ -476,7 +615,8 @@ A face whose similarity falls below the threshold is classified as an **unknown 
 | Language | Python 3.11 |
 | Face embedding model | FaceNet (InceptionResnetV1, VGGFace2) with partial fine-tuning and Triplet Loss (E06, [D16](docs/decisions/D16-chosen-model.md)) |
 | Deep learning framework | PyTorch 2.7.1 (CUDA 12.8) |
-| Application interface | Streamlit ([D13](docs/decisions/D13-interface.md)), in Part 2 |
+| Application API and interface (Part 2) | FastAPI serving a single-page app in plain HTML, CSS and JavaScript ([D17](docs/decisions/D17-interface-web-lia.md), which replaces [D13](docs/decisions/D13-interface.md), Streamlit) |
+| Application storage (Part 2) | SQLite, embeddings only and no photos ([D12](docs/decisions/D12-embedding-storage.md)) |
 
 Pretrained weights are not stored in the repository: the libraries download them from the official location on first use.
 
@@ -528,6 +668,15 @@ pytest -m gpu -s    # GPU tests; -s shows which card and CUDA version were used
 ```
 
 Tests marked `gpu` are excluded from the default run and **fail** (they are not skipped) if the GPU cannot run the model. Run both commands on every new machine with an NVIDIA GPU; on the Mac, only the first one.
+
+Tests carry a marker: `unit` (fast, no network, GPU or real model, with injected fakes), `integration` (real model or public data) and `e2e` (full application flow). To run one group:
+
+```bash
+pytest -m unit
+pytest -m integration
+```
+
+Two integration tests **skip** (they do not fail) when their input is missing: the E06 checkpoint one, which needs `checkpoints/E06/best.pt` (see [Model and checkpoint](#model-and-checkpoint)), and the LFW crops one, which needs `data/public/lfw_crop160` (see [Data preparation](#data-preparation)).
 
 ## Data
 
@@ -673,6 +822,112 @@ Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), 
 - **Limitations:** LFW is near the ceiling for FaceNet and may overlap with VGGFace2; MTCNN in `strict` mode wrongly rejected about 1% of the private photos (3 of 284, a second face that does not exist); one seed and one hyperparameter setting for fine-tuning; optimistic validation EER for the fine-tuned models; a small private set (13 participants, gallery of 11), so 0 accepted unknowns out of 222 only bounds the real FAR below about 1.4%, and 200 of those 222 are LFW press photos from another domain (the 22 in-domain ones only bound it below about 14%); LFW is mostly white men and public figures, so performance across demographic groups was not measured and may differ.
 - **Cost:** all models have about 23.5 M parameters in the network that produces the embedding (the 27.9 M in the E04 and E06 JSONs include the VGGFace2 logits layer, which is not used); fine-tuning takes about 2 minutes and 660 MB of GPU memory on the RTX 4060. ResNet-50 would also be the worst choice in cost, with a 4 times larger embedding.
 
+## Application (Part 2)
+
+Local web application with three screens in the side menu ([D17](docs/decisions/D17-interface-web-lia.md), specs in [docs/specs/](docs/specs/), in Portuguese):
+
+- **Enrollment:** a name and 1 to 10 photos (browser webcam or file). The person is enrolled only if every photo has exactly one face, and is refused if the name already exists (case-insensitive) or if the face is already enrolled under another name.
+- **Recognition:** one photo. The result is the person and the similarity, or "unknown person" when the similarity is below the threshold (0.766, [D08](docs/decisions/D08-threshold-selection.md)). An unknown face never shows the name of the person it most resembles.
+- **Enrolled people:** list and deletion, with confirmation.
+
+Recognition compares the photo's embedding with the gallery's by **nearest neighbor** ([D06](docs/decisions/D06-comparison-strategy.md) and [D16](docs/decisions/D16-chosen-model.md)). The gallery is read from the database on every call, with no cache, so an enrollment or a deletion counts at once.
+
+### Architecture
+
+Interface and logic are separate (section 41 of the assignment): the browser only talks to the API, the API only calls the service ports, and the services receive the detector, the model and the database as parameters, so they can be tested with fakes, with no network and no model.
+
+```mermaid
+flowchart LR
+    B["Browser<br/>SPA in HTML, CSS and JS<br/>src/app/web"] -->|"HTTP: JSON and multipart"| A["FastAPI API<br/>src/app/api"]
+    A --> E["EnrollmentService"]
+    A --> R["RecognitionService<br/>+ decide"]
+    A --> D["DeletionService"]
+    A --> P["List of people"]
+    E --> F["FaceEncoder<br/>MTCNN + TorchFaceEmbedder"]
+    R --> F
+    E --> S[("SQLite<br/>people and embeddings")]
+    R --> S
+    D --> S
+    P --> S
+```
+
+| Layer | Folder or file | Responsibility |
+|---|---|---|
+| Interface | `src/app/web/` | three screens, light and dark theme, per-field errors, confirmation before deleting |
+| API | `src/app/api/` | routes, service ports (`Protocol`) and translation of any error into a single body with a stable code (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
+| Services | `src/app/core/` | `EnrollmentService`, `RecognitionService` (with the pure function `decide`), `DeletionService`, `FaceEncoder`, Pydantic models and exceptions |
+| Model | `src/app/embedder.py` | `TorchFaceEmbedder`, loads the checkpoint once, at startup |
+| Storage | `src/app/storage/` | SQLite repository: people and embeddings, never photos ([D12](docs/decisions/D12-embedding-storage.md)) |
+| Startup | `src/app/launcher.py` | `python -m app` |
+| Fakes | `src/app/fakes.py` | fake services to test the API and the interface without a model |
+
+Routes (all under `/api`):
+
+| Method and route | What it does |
+|---|---|
+| `GET /health` | checks that the application is up |
+| `GET /persons` | lists the people with each one's number of embeddings |
+| `POST /persons` | enrolls (fields `name` and `photos`, multipart) |
+| `POST /recognitions` | recognizes one photo (field `photo`, multipart) |
+| `DELETE /persons/{id}` | deletes the person and their embeddings |
+
+### How to run
+
+With the environment installed (see [Installation](#installation)) and the model available (see [Model and checkpoint](#model-and-checkpoint)), at the repository root:
+
+```bash
+python -m app
+```
+
+This starts the server and opens the browser at `http://127.0.0.1:8000`. Options:
+
+| Option | Effect |
+|---|---|
+| `--port N` | uses another port (between 1024 and 65535; the default is 8000) |
+| `--no-browser` | does not open the browser |
+| `--reload` | restarts the server when the code changes (development) |
+
+The server listens **only on 127.0.0.1**, on purpose: the application has no authentication and holds biometric data, so there is no option to expose it on the network. If the port is busy, the command exits with a message and starts nothing.
+
+### Creating your own database
+
+There is no ready-made database and none is versioned. The SQLite file, with its schema, is **created by itself on the first run**, and the gallery starts empty. To build yours:
+
+1. Run `python -m app`. While nobody is enrolled, the recognition screen and the list show "Nenhuma pessoa cadastrada." ("No person enrolled." in Portuguese, the interface language).
+2. On the **Enrollment** screen, enter the name and 1 to 10 photos of the person (use only photos of people who consented, see [Privacy in the application](#privacy-in-the-application)). More than one photo, in different conditions, makes recognition more reliable.
+3. Enroll the other people the same way. From then on the **Recognition** screen compares each photo with your gallery.
+4. To start over, delete the people on the **Enrolled people** screen, or delete the database file with the application stopped.
+
+The database with real data lives in the vault, at `data/private/app.db` ([docs/privacy.md](docs/privacy.md), in Portuguese). Each embedding stores the `model_id` of the model that made it, and recognition only compares embeddings of the same model.
+
+### Model and checkpoint
+
+The application model is **E06**: FaceNet (VGGFace2) with partial fine-tuning and Triplet Loss ([D16](docs/decisions/D16-chosen-model.md)). The checkpoint is not in the repository (`*.pt` is blocked by `.gitignore` and by the hook). To generate it, with LFW prepared (see [Data preparation](#data-preparation)) and an NVIDIA GPU:
+
+```bash
+python scripts/train.py --config configs/E06.yaml
+```
+
+The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). The embeddings' `model_id` becomes `facenet-vggface2-E06`, with the experiment folder's name: embeddings from different weights are not in the same space, and mixing them in one database would make recognition wrong without any error. Without the checkpoint, the application fails at startup with a message saying how to train it.
+
+### Privacy in the application
+
+- **No photo is stored.** The database holds only each enrollment's embedding, and the photo sent for recognition is also discarded.
+- **Cascade deletion** ([spec 006](docs/specs/006-person-deletion.md), in Portuguese): deleting a person removes the record and the embeddings in one transaction. SQLite runs with `secure_delete`, so deleted content does not stay in the file, and the database file is created with `0600` permissions (only the owner can read it).
+- **Local only.** The server listens on 127.0.0.1 and the interface loads nothing from outside (the browser security policy, CSP, only allows the application's own resources).
+- **Logs without personal data:** they record counts and status, not names or photos.
+- The database and the checkpoint stay out of GitHub (see [Privacy and LGPD](#privacy-and-lgpd)).
+
+### Application limitations
+
+- The **similarity is the cosine** between two embeddings, not a probability: 80% does not mean "80% chance it is the person". Only the 0.766 threshold, chosen in E08, separates recognized from unknown.
+- In E08, at that threshold, **9.2% of enrolled people's photos were rejected** (FRR) and no unknown was accepted out of 222. In practice, an enrolled person sometimes shows up as unknown and has to try again. The E08 gallery had 11 people, so performance with a much larger gallery was not measured.
+- Recognition is **photo by photo**: one image at a time, no continuous video, and exactly one face per image.
+- MTCNN in `strict` mode rejected about 1% of the private photos for "more than one face" on a single-person photo (3 of 284). In the application, the person has to take another photo.
+- There is no **liveness check**: a photo of a photo may be accepted as the person.
+- There is no authentication, which is why the application is only reachable on the machine itself.
+- More model limits in [Results and analysis](#results-and-analysis).
+
 ## Privacy and LGPD
 
 Biometric data is sensitive personal data under Brazil's LGPD (Law No. 13,709/2018). Breaking the rules below results in a zero grade.
@@ -688,7 +943,7 @@ The following stays **out of GitHub** and is processed only locally:
 
 All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the project through junctions at `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` (decision [D10](docs/decisions/D10-hardware.md) and [docs/privacy.md](docs/privacy.md)).
 
-The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files in `docs/`, so signed consent forms and the control spreadsheet are not committed by mistake. The application will provide a way to delete all data of an enrolled person, and private data will be deleted at the end of the course.
+The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files in `docs/`, so signed consent forms and the control spreadsheet are not committed by mistake. The application deletes all data of an enrolled person (see [Privacy in the application](#privacy-in-the-application)), and private data will be deleted at the end of the course.
 
 How each piece of data is collected, stored, deleted and destroyed, and the Annex B checklist map, are in [docs/privacy.md](docs/privacy.md) (in Portuguese). Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assignment.md](docs/assignment.md).
 
@@ -703,11 +958,12 @@ facial_recognition_system/
 ├── docs/
 │   ├── assignment.md             # assignment description
 │   ├── consent_form.md           # blank consent form template
-│   ├── decisions/                # ADRs (D1 to D16)
+│   ├── decisions/                # ADRs (D1 to D17)
 │   ├── division.md               # work plan and split (the ADRs prevail)
+│   ├── division-parte2.md        # Part 2 schedule and split (in Portuguese)
 │   ├── participant_photo_guide.pdf  # photo guide for participants
 │   ├── privacy.md                # personal data handling and Annex B record
-│   └── specs/                    # application specs, from Part 2 on
+│   └── specs/                    # application specs (Part 2)
 ├── experiments/
 │   ├── figures/                  # aggregated plots
 │   └── results/                  # one result JSON per experiment
@@ -722,6 +978,14 @@ facial_recognition_system/
 │   ├── preprocess_faces.py       # MTCNN detection and cropping
 │   ├── run_open_set.py           # E07 and E08, on the private dataset
 │   └── train.py                  # fine-tuning of E04 and E06
+├── src/app/                      # Part 2 application
+│   ├── api/                      # FastAPI API, service ports and error translation
+│   ├── core/                     # enrollment, recognition, deletion, encoder, models and errors
+│   ├── storage/                  # SQLite repository (people and embeddings)
+│   ├── web/                      # interface: single-page app in plain HTML, CSS and JS
+│   ├── embedder.py               # TorchFaceEmbedder (E06 checkpoint)
+│   ├── fakes.py                  # fake services for tests
+│   └── launcher.py               # python -m app
 ├── src/facial_recognition_system/
 │   ├── data/                     # identity splits, pairs and leakage
 │   ├── evaluation/               # metrics, threshold, paired comparison and plots
