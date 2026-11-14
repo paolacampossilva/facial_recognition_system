@@ -1,6 +1,6 @@
 # Decisões de arquitetura (ADRs)
 
-Cada decisão D1 a D15 do [docs/division.md](../division.md), e a D16 (modelo escolhido, decidida depois dos resultados), tem um ADR curto aqui, escrito pela dona da decisão. O arquivo é numerado pela decisão (`D01-...md`), para as duas poderem escrever em paralelo sem disputar números.
+Cada decisão D1 a D15 do [docs/division.md](../division.md), a D16 (modelo escolhido, decidida depois dos resultados) e a D17 (interface web, que substitui a D13), tem um ADR curto aqui, escrito pela dona da decisão. O arquivo é numerado pela decisão (`D01-...md`), para as duas poderem escrever em paralelo sem disputar números.
 
 ## Formato
 
@@ -42,7 +42,8 @@ Se um valor mudar durante a implementação, o ADR é atualizado com o motivo, e
 | D10 | Hardware | Valentina | [D10-hardware.md](D10-hardware.md) |
 | D11 | Registro de experimentos | Valentina | [D11-experiment-tracking.md](D11-experiment-tracking.md) |
 | D12 | Armazenamento de embeddings | Paola | [D12-embedding-storage.md](D12-embedding-storage.md) |
-| D13 | Interface | Valentina | [D13-interface.md](D13-interface.md) |
+| D13 | Interface (substituída pela D17) | Valentina | [D13-interface.md](D13-interface.md) |
 | D14 | Repositório | Juntas | [D14-repository.md](D14-repository.md) |
 | D15 | Quem aparece no vídeo | Juntas | [D15-video-participants.md](D15-video-participants.md) |
 | D16 | Modelo escolhido para a aplicação | Juntas | [D16-chosen-model.md](D16-chosen-model.md) |
+| D17 | Interface web (FastAPI e JS puro) | Paola | [D17-interface-web-lia.md](D17-interface-web-lia.md) |
