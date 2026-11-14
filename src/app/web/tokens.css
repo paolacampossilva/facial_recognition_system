@@ -28,7 +28,10 @@
   --ring: var(--accent);
   --dur-fast: .12s;
   --dur: .2s;
+  --sidebar-w: 272px;
   --z-topbar: 20;
+  --z-scrim: 35;
+  --z-drawer: 40;
   --radius: 10px;
   --radius-sm: 7px;
   --radius-lg: 14px;

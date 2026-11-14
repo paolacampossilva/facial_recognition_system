@@ -1,11 +1,16 @@
-// Shell: three tabs with hash routing, the theme button and the "leave without saving" guard.
+// Shell: three screens in the side menu with hash routing, the theme button and the
+// "leave without saving" guard.
 
+import { countBadge, refreshCount } from "./lib/counter.js";
 import { confirmLeave } from "./lib/drafts.js";
 import { h, icon } from "./lib/dom.js";
+import { initShell } from "./lib/shell.js";
 import { initTheme } from "./lib/theme.js";
 import { enrollView } from "./views/enroll.js";
 import { personsView } from "./views/persons.js";
 import { recognizeView } from "./views/recognize.js";
+
+const PRODUCT = "Reconhecimento facial";
 
 // Each view renders into the root and returns a function that releases what it holds (the camera).
 const ROUTES = [
@@ -14,7 +19,7 @@ const ROUTES = [
   { path: "pessoas", label: "Pessoas cadastradas", icon: "users", view: personsView },
 ];
 
-const tabs = document.getElementById("tabs");
+const menu = document.getElementById("menu");
 const root = document.getElementById("view");
 let current = null;
 
@@ -23,10 +28,10 @@ const routeFromHash = () => {
   return ROUTES.find((route) => route.path === name) ?? ROUTES[0];
 };
 
-function paintTabs(active) {
-  tabs.replaceChildren(...ROUTES.map((route) =>
+function paintMenu(active) {
+  menu.replaceChildren(...ROUTES.map((route) =>
     h("a", { href: `#/${route.path}`, "aria-current": route === active ? "page" : null },
-      icon(route.icon), route.label)));
+      icon(route.icon), route.label, route.path === "pessoas" && countBadge)));
 }
 
 async function show() {
@@ -38,11 +43,14 @@ async function show() {
   }
   current?.dispose?.();
   current = { route: next, dispose: null };
-  paintTabs(next);
+  document.title = `${next.label} · ${PRODUCT}`;
+  paintMenu(next);
   root.replaceChildren();
   current.dispose = next.view(root);
 }
 
 initTheme(document.getElementById("theme"));
+initShell();
 window.addEventListener("hashchange", show);
+refreshCount();
 show();

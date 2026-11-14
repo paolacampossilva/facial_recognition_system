@@ -10,6 +10,7 @@ export function photoPicker({ max, onChange = () => {} }) {
   let stream = null;
 
   const list = h("ul", { class: "photos", "aria-label": "Fotos escolhidas" });
+  const empty = h("div", { class: "photos-empty" }, icon("camera"), "As fotos escolhidas aparecem aqui.");
   const message = h("div", { "aria-live": "polite" });
   const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true, hidden: true });
   const input = h("input", { type: "file", accept: "image/*", multiple: max > 1, hidden: true });
@@ -26,6 +27,7 @@ export function photoPicker({ max, onChange = () => {} }) {
           type: "button", class: "secondary", "aria-label": `Remover a foto ${index + 1}`,
           onclick: () => remove(index),
         }, icon("trash")))));
+    empty.hidden = items.length > 0;
     onChange(items.length);
   }
 
@@ -90,10 +92,10 @@ export function photoPicker({ max, onChange = () => {} }) {
   });
 
   const element = h("div", { class: "stack" },
-    h("div", { class: "row" }, cameraButton, uploadButton, input),
+    h("div", { class: "row" }, cameraButton, captureButton, closeButton, uploadButton, input),
     video,
-    h("div", { class: "row" }, captureButton, closeButton),
     message,
+    empty,
     list);
 
   return {
