@@ -29,7 +29,7 @@ fastapi==0.163.0
 starlette==1.10.0
 uvicorn==0.54.0
 python-multipart==0.0.33
-httpx==0.28.1
+httpx2==2.16.0
 
 # Desenvolvimento
 pytest==9.1.1
