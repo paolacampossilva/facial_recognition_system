@@ -270,7 +270,7 @@ def test_discarding_a_photo_asks_for_confirmation_with_a_danger_button() -> None
 
 def test_camera_buttons_are_highlighted_and_the_preview_is_mirrored() -> None:
     source = code_of(WEB_DIR / "lib" / "photos.js")
-    assert re.search(r'captureButton = h\("button", \{ type: "button" \}', source)  # primary style
+    assert re.search(r'captureButton = h\("button", \{[^}]*class: "secondary"', source)
     assert re.search(r'closeButton = h\("button", \{[^}]*class: "danger"', source)
     styles = (WEB_DIR / "styles.css").read_text()
     assert re.search(r"\.camera \{[^}]*transform: scaleX\(-1\)", styles)
@@ -288,3 +288,26 @@ def test_the_enrollment_screen_gives_tips_for_good_photos() -> None:
     assert "Dicas para boas fotos" in source
     assert "TIPS" in source
     assert "um só rosto" in code_of(WEB_DIR / "views" / "recognize.js")
+
+
+def test_clearing_the_photos_also_clears_the_limit_warning_and_the_camera_can_be_stopped() -> None:
+    source = code_of(WEB_DIR / "lib" / "photos.js")
+    clear_body = source[source.index("clear() {") : source.index("stop: stopCamera")]
+    assert "message.replaceChildren()" in clear_body
+    assert "stop: stopCamera" in source
+    enroll = code_of(WEB_DIR / "views" / "enroll.js")
+    assert "picker.stop()" in enroll
+
+
+def test_the_similarity_is_shown_as_a_big_percentage_with_the_original_value() -> None:
+    source = code_of(WEB_DIR / "views" / "recognize.js")
+    assert "formatPercent" in source and "* 100" in source
+    assert "Valor original" in source
+    styles = (WEB_DIR / "styles.css").read_text()
+    assert re.search(r"\.meter__percent \{[^}]*font-size: 32px", styles)
+
+
+def test_the_tips_box_has_a_violet_highlight_and_a_violet_title() -> None:
+    styles = (WEB_DIR / "styles.css").read_text()
+    assert re.search(r"\.tips \{[^}]*border: 1px solid var\(--accent\)", styles)
+    assert re.search(r"\.tips summary \{[^}]*color: var\(--accent-ink\)", styles)
