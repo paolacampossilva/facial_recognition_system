@@ -1,6 +1,5 @@
 """HTTP routes: thin functions that read the request, call a service and return its result."""
 
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Request, UploadFile, status
@@ -8,14 +7,13 @@ from fastapi import APIRouter, File, Form, Request, UploadFile, status
 from app.api.ports import Services
 from app.core.errors import UploadTooLargeError
 from app.core.models import (
+    ClientConfig,
     DeletionResult,
     EnrollmentRequest,
     EnrollmentResult,
     PersonSummary,
     RecognitionResult,
 )
-
-logger = logging.getLogger(__name__)
 
 # TODO(#48): move to the Settings class of the configuration module (spec 007).
 MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
@@ -40,6 +38,10 @@ def build_router() -> APIRouter:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @router.get("/config")
+    def config(request: Request) -> ClientConfig:
+        return ClientConfig(threshold=request.app.state.threshold)
+
     @router.get("/persons")
     def list_persons(request: Request) -> list[PersonSummary]:
         return services_of(request).persons.list_persons()
@@ -52,29 +54,17 @@ def build_router() -> APIRouter:
     ) -> EnrollmentResult:
         contents = [await read_upload(photo) for photo in photos]
         enrollment = EnrollmentRequest(name=name, photos=contents)
-        result = services_of(request).enrollment.enroll(enrollment)
-        logger.info(
-            "person enrolled",
-            extra={"person_id": result.person_id, "embedding_count": result.embedding_count},
-        )
-        return result
+        return services_of(request).enrollment.enroll(enrollment)
 
     @router.post("/recognitions")
     async def recognize(
         request: Request, photo: Annotated[UploadFile, File()]
     ) -> RecognitionResult:
         content = await read_upload(photo)
-        result = services_of(request).recognition.recognize(content)
-        logger.info("face recognized", extra={"status": result.status.value})
-        return result
+        return services_of(request).recognition.recognize(content)
 
     @router.delete("/persons/{person_id}")
     def delete_person(request: Request, person_id: int) -> DeletionResult:
-        result = services_of(request).deletion.delete(person_id)
-        logger.info(
-            "person deleted",
-            extra={"person_id": result.person_id, "deleted_embeddings": result.deleted_embeddings},
-        )
-        return result
+        return services_of(request).deletion.delete(person_id)
 
     return router

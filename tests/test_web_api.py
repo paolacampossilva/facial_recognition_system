@@ -1,5 +1,6 @@
 """API tests with the fake services: contract, error mapping and security headers (spec 005)."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -23,13 +24,14 @@ from facial_recognition_system.preprocessing.errors import (
 
 pytestmark = pytest.mark.unit
 
+THRESHOLD: float = 0.766
 EVEN_FILE: bytes = b"xx"
 ODD_FILE: bytes = b"xxx"
 
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(create_app(FakeServices()), raise_server_exceptions=False)
+    return TestClient(create_app(FakeServices(), THRESHOLD), raise_server_exceptions=False)
 
 
 def photo(content: bytes = EVEN_FILE, name: str = "a.jpg") -> tuple[str, tuple[str, bytes, str]]:
@@ -43,6 +45,22 @@ def enroll(client: TestClient, name: str, photos: int = 1):
 
 def test_health_is_ok(client: TestClient) -> None:
     assert client.get("/api/health").json() == {"status": "ok"}
+
+
+def test_config_returns_the_threshold_the_app_was_built_with(client: TestClient) -> None:
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    assert response.json() == {"threshold": THRESHOLD}
+
+
+def test_the_routes_do_not_log_what_the_services_already_log(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO):
+        enroll(client, "Ana")
+        client.post("/api/recognitions", files={"photo": ("a.jpg", EVEN_FILE, "image/jpeg")})
+        client.delete("/api/persons/1")
+    assert [record for record in caplog.records if record.name.startswith("app.api")] == []
 
 
 def test_enrollment_returns_201_and_the_person_shows_in_the_list(client: TestClient) -> None:
@@ -167,7 +185,7 @@ class ExplodingServices(FakeServices):
 
 
 def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None:
-    client = TestClient(create_app(ExplodingServices()), raise_server_exceptions=False)
+    client = TestClient(create_app(ExplodingServices(), THRESHOLD), raise_server_exceptions=False)
     response = client.get("/api/persons")
     assert response.status_code == 500
     assert response.json() == {"code": "internal_error", "message": "Unexpected error"}

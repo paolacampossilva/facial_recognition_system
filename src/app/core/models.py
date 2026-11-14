@@ -53,6 +53,12 @@ class RecognitionResult(BaseModel):
     similarity: float
 
 
+class ClientConfig(BaseModel):
+    """The settings the interface needs to show a result (spec 005)."""
+
+    threshold: float  # the lowest cosine similarity accepted as the same person (decision D08)
+
+
 class DeletionResult(BaseModel):
     """What the deletion of one person removed."""
 

@@ -161,7 +161,7 @@ def test_every_route_the_front_end_calls_exists_in_the_api() -> None:
         re.sub(r"\$\{[^}]+\}", "{person_id}", path)
         for path in re.findall(r'call\(\s*[`"](/[^`"]*)[`"]', source)
     }
-    api_paths = create_app(FakeServices()).openapi()["paths"]
+    api_paths = create_app(FakeServices(), 0.766).openapi()["paths"]
     documented = {path.removeprefix("/api") for path in api_paths}
     assert called
     assert called <= documented
@@ -180,6 +180,29 @@ def test_theme_module_chooses_labels_and_survives_blocked_storage() -> None:
       theme.effectiveTheme(null, true) === "dark",
       theme.effectiveTheme("light", true) === "light",
       theme.savedTheme() === null,
+    ];
+    process.exit(checks.every(Boolean) ? 0 : 1);
+    """
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_meter_state_marks_the_limit_and_degrades_without_it() -> None:
+    script = f"""
+    const meter = await import("{(WEB_DIR / "lib" / "meter.js").as_uri()}");
+    const above = meter.meterState(0.91, 0.766, true);
+    const below = meter.meterState(0.42, 0.766, false);
+    const noLimit = meter.meterState(0.91, null, true);
+    const outOfRange = meter.meterState(-0.2, 1.4, false);
+    const checks = [
+      above.tone === "above" && above.mark === 0.766 && above.fill === 0.91,
+      above.limitText === "Acima do limite (0,766)",
+      below.tone === "below" && below.limitText === "Abaixo do limite (0,766)",
+      noLimit.mark === null && noLimit.limitText === null && noLimit.tone === "above",
+      outOfRange.fill === 0 && outOfRange.mark === 1,
     ];
     process.exit(checks.every(Boolean) ? 0 : 1);
     """

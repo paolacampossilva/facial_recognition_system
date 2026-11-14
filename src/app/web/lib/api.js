@@ -28,6 +28,7 @@ function formWith(entries) {
 }
 
 export const api = {
+  config: () => call("/config"),
   listPersons: () => call("/persons"),
   enroll: (name, photos) =>
     call("/persons", {
