@@ -24,7 +24,7 @@ export function personsView(root) {
     if (!confirmed) return;
     const result = await api.deletePerson(person.id);
     feedback.replaceChildren(result.ok
-      ? notice("success", `${person.name} foi excluída(o).`)
+      ? notice("success", `Cadastro de ${person.name} excluído.`)
       : notice("error", describeError(result)));
     await load();
     refreshCount();

@@ -2,6 +2,7 @@
 // a preview of each photo and a way to remove it. Photos live in memory as blobs.
 
 import { captureFrame, cameraAvailable, closeCamera, openCamera } from "./camera.js";
+import { confirmDialog } from "./dialogs.js";
 import { h, icon, notice } from "./dom.js";
 import { CAMERA_UNAVAILABLE } from "./errors.js";
 
@@ -12,11 +13,13 @@ export function photoPicker({ max, onChange = () => {} }) {
   const list = h("ul", { class: "photos", "aria-label": "Fotos escolhidas" });
   const empty = h("div", { class: "photos-empty" }, icon("camera"), "As fotos escolhidas aparecem aqui.");
   const message = h("div", { "aria-live": "polite" });
-  const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true, hidden: true });
+  const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true });
   const input = h("input", { type: "file", accept: "image/*", multiple: max > 1, hidden: true });
   const cameraButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Usar a câmera");
-  const captureButton = h("button", { type: "button", class: "secondary", hidden: true }, "Capturar foto");
-  const closeButton = h("button", { type: "button", class: "secondary", hidden: true }, "Fechar a câmera");
+  const captureButton = h("button", { type: "button" }, icon("camera"), "Capturar foto");
+  const closeButton = h("button", { type: "button", class: "danger" }, icon("x"), "Fechar a câmera");
+  const cameraBox = h("div", { class: "camera-box", hidden: true },
+    video, h("div", { class: "row" }, captureButton, closeButton));
   const uploadButton = h("button", { type: "button", class: "secondary" }, icon("upload"), "Enviar arquivo");
 
   function render() {
@@ -24,8 +27,8 @@ export function photoPicker({ max, onChange = () => {} }) {
       h("li", { class: "photo" },
         h("img", { src: item.url, alt: `Foto ${index + 1}` }),
         h("button", {
-          type: "button", class: "secondary", "aria-label": `Remover a foto ${index + 1}`,
-          onclick: () => remove(index),
+          type: "button", class: "secondary", "aria-label": `Descartar a foto ${index + 1}`,
+          onclick: () => remove(item),
         }, icon("trash")))));
     empty.hidden = items.length > 0;
     onChange(items.length);
@@ -42,9 +45,17 @@ export function photoPicker({ max, onChange = () => {} }) {
     render();
   }
 
-  function remove(index) {
-    URL.revokeObjectURL(items[index].url);
-    items = items.filter((_, position) => position !== index);
+  async function remove(item) {
+    const { confirmed } = await confirmDialog({
+      title: "Descartar esta foto?",
+      message: "A foto será removida da lista. Você pode adicionar outra depois.",
+      confirmLabel: "Descartar foto",
+      cancelLabel: "Manter foto",
+      danger: true,
+    });
+    if (!confirmed) return;
+    URL.revokeObjectURL(item.url);
+    items = items.filter((other) => other !== item);
     message.replaceChildren();
     render();
   }
@@ -57,9 +68,7 @@ export function photoPicker({ max, onChange = () => {} }) {
   function stopCamera() {
     closeCamera(stream, video);
     stream = null;
-    video.hidden = true;
-    captureButton.hidden = true;
-    closeButton.hidden = true;
+    cameraBox.hidden = true;
     cameraButton.hidden = false;
   }
 
@@ -75,9 +84,7 @@ export function photoPicker({ max, onChange = () => {} }) {
       return;
     }
     message.replaceChildren();
-    video.hidden = false;
-    captureButton.hidden = false;
-    closeButton.hidden = false;
+    cameraBox.hidden = false;
     cameraButton.hidden = true;
   });
   captureButton.addEventListener("click", async () => {
@@ -92,8 +99,8 @@ export function photoPicker({ max, onChange = () => {} }) {
   });
 
   const element = h("div", { class: "stack" },
-    h("div", { class: "row" }, cameraButton, captureButton, closeButton, uploadButton, input),
-    video,
+    h("div", { class: "row" }, cameraButton, uploadButton, input),
+    cameraBox,
     message,
     empty,
     list);

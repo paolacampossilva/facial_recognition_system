@@ -39,7 +39,14 @@ export function recognizeView(root) {
   const heading = pageHead("Reconhecimento", "Envie uma foto para saber quem é a pessoa.");
   const output = h("div", { "aria-live": "polite" }, waiting());
   const submit = h("button", { type: "button", disabled: true }, "Reconhecer");
-  const picker = photoPicker({ max: 1, onChange: (count) => { submit.disabled = count === 0; } });
+  // A new or removed photo makes the old result stale.
+  const picker = photoPicker({
+    max: 1,
+    onChange: (count) => {
+      submit.disabled = count === 0;
+      output.replaceChildren(waiting());
+    },
+  });
 
   async function recognize() {
     setBusy(submit, true);
@@ -69,7 +76,7 @@ export function recognizeView(root) {
     }
     root.replaceChildren(h("div", { class: "page" }, heading,
       h("div", { class: "grid" },
-        card("Foto", "Pela câmera ou por arquivo.", picker.element,
+        card("Foto", "Pela câmera ou por arquivo. Use uma foto de frente, com um só rosto e boa luz.", picker.element,
           h("div", { class: "form-actions" }, submit)),
         card("Resultado", null, output))));
   }

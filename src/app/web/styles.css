@@ -45,6 +45,7 @@ a { color: var(--accent-ink); }
 .icon--scan-face { --icon: url("assets/icons/scan-face.svg"); }
 .icon--menu { --icon: url("assets/icons/menu.svg"); }
 .icon--lock { --icon: url("assets/icons/lock.svg"); }
+.icon--x { --icon: url("assets/icons/x.svg"); }
 [data-goes="dark"] > .theme-btn__icon { --icon: url("assets/icons/moon.svg"); }
 [data-goes="light"] > .theme-btn__icon { --icon: url("assets/icons/sun.svg"); }
 
@@ -156,6 +157,13 @@ input[type="text"][aria-invalid="true"] { border-color: var(--danger); }
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700;
 }
+.tips {
+  padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--ink-soft); font-size: 13px;
+}
+.tips summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.tips ul { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-left: 18px; }
+
 .privacy {
   display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px;
   border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink-soft); font-size: 13px;
@@ -222,7 +230,9 @@ button .spinner { margin-right: 0; }
 
 /* ---- photos, result and people ---------------------------------------------------------- */
 
-.camera { width: 100%; border-radius: var(--radius); background: var(--bg-2); }
+.camera-box { display: flex; flex-direction: column; gap: 10px; }
+/* The preview is mirrored like a mirror; the captured photo is not. */
+.camera { width: 100%; border-radius: var(--radius); background: var(--bg-2); transform: scaleX(-1); }
 .photos {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px;
   margin: 0; padding: 0; list-style: none;

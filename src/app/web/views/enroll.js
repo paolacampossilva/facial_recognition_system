@@ -18,6 +18,14 @@ const STEPS = [
   "Clique em Cadastrar.",
 ];
 
+const TIPS = [
+  "Só uma pessoa em cada foto, com o rosto inteiro visível e de frente.",
+  "Boa luz no rosto e sem contraluz (evite janela ou lâmpada atrás da pessoa).",
+  "Sem óculos escuros, boné, máscara ou mão cobrindo o rosto.",
+  "Varie um pouco entre as fotos: ângulo, expressão e distância.",
+  "Foto nítida, sem tremer e sem filtros.",
+];
+
 export function enrollView(root) {
   const feedback = h("div", { "aria-live": "polite" });
   const counter = h("p", { class: "muted", "aria-live": "polite" }, `0 de ${MAX_PHOTOS} fotos`);
@@ -50,7 +58,10 @@ export function enrollView(root) {
     control.removeAttribute("aria-describedby");
   }
 
-  nameInput.addEventListener("input", () => clearError(nameInput, nameError));
+  nameInput.addEventListener("input", () => {
+    clearError(nameInput, nameError);
+    feedback.replaceChildren();
+  });
 
   const form = h("form", { class: "page", novalidate: true },
     pageHead("Cadastro", "Cadastre uma pessoa para que ela possa ser reconhecida."),
@@ -64,7 +75,11 @@ export function enrollView(root) {
         h("ol", { class: "steps" }, STEPS.map((step) => h("li", {}, step))),
         h("p", { class: "privacy" }, icon("lock"),
           "As fotos não são guardadas, só os dados faciais usados no reconhecimento.")),
-      card("Fotos", "Pela câmera ou por arquivo.", photosField, counter)),
+      card("Fotos", "Pela câmera ou por arquivo.",
+        h("details", { class: "tips", open: true },
+          h("summary", {}, "Dicas para boas fotos"),
+          h("ul", {}, TIPS.map((tip) => h("li", {}, tip)))),
+        photosField, counter)),
     feedback,
     h("div", { class: "form-actions" }, submit));
 
