@@ -25,8 +25,13 @@ export function notice(kind, text) {
     h("span", {}, text));
 }
 
-export function emptyState(title, text) {
-  return h("div", { class: "empty-block" }, h("strong", {}, title), text && h("p", { class: "muted" }, text));
+// An empty state with an optional action (a button or link) that leads out of it.
+export function emptyState(title, text, action = null) {
+  return h("div", { class: "empty-block" },
+    h("span", { class: "icon icon--xl icon--users", "aria-hidden": "true" }),
+    h("strong", {}, title),
+    text && h("p", { class: "muted" }, text),
+    action);
 }
 
 export const loading = (text = "Carregando…") =>
@@ -40,3 +45,22 @@ export function setBusy(button, busy) {
   button.querySelector(".spinner")?.remove();
   if (busy) button.prepend(h("span", { class: "spinner", "aria-hidden": "true" }));
 }
+
+// The title of a screen and one line that says what it is for.
+export const pageHead = (title, text) =>
+  h("header", { class: "page-head" }, h("h1", {}, title), text && h("p", { class: "muted" }, text));
+
+// A card: an optional heading with a hint, then the content.
+export const card = (title, hint, ...children) =>
+  h("section", { class: "card" },
+    title && h("div", { class: "card__head" }, h("h2", {}, title), hint && h("p", { class: "muted" }, hint)),
+    ...children);
+
+// The first letter of a name in a circle (decorative: the name is always written next to it).
+export const avatar = (name, large = false) =>
+  h("span", { class: large ? "avatar avatar--lg" : "avatar", "aria-hidden": "true" },
+    Array.from(name.trim())[0]?.toUpperCase() ?? "?");
+
+// A link that looks like a button, for moving to another screen.
+export const linkButton = (href, label, secondary = false) =>
+  h("a", { href, class: secondary ? "button secondary" : "button" }, label);

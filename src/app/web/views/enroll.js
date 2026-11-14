@@ -1,9 +1,10 @@
-// Enrollment tab: a name and 1 to 10 photos, sent to POST /api/persons.
+// Enrollment screen: a name and 1 to 10 photos, sent to POST /api/persons.
 
 import { api } from "../lib/api.js";
+import { refreshCount } from "../lib/counter.js";
 import { clearDraft, keepDraft, setDraft } from "../lib/drafts.js";
-import { h, loading, notice, setBusy } from "../lib/dom.js";
-import { describeError } from "../lib/errors.js";
+import { card, h, icon, loading, notice, pageHead, setBusy } from "../lib/dom.js";
+import { describeError, NAME_REQUIRED, PHOTOS_REQUIRED } from "../lib/errors.js";
 import { photoPicker } from "../lib/photos.js";
 
 const NAME_KEY = "enroll-name";
@@ -11,33 +12,89 @@ const PHOTOS_KEY = "enroll-photos";
 const MAX_PHOTOS = 10;
 const MAX_NAME_LENGTH = 100;
 
+const STEPS = [
+  "Digite o nome da pessoa.",
+  `Adicione de 1 a ${MAX_PHOTOS} fotos do rosto, com ângulos e luz diferentes.`,
+  "Clique em Cadastrar.",
+];
+
+const TIPS = [
+  "Só uma pessoa em cada foto, com o rosto inteiro visível e de frente.",
+  "Boa luz no rosto e sem contraluz (evite janela ou lâmpada atrás da pessoa).",
+  "Sem óculos escuros, boné, máscara ou mão cobrindo o rosto.",
+  "Varie um pouco entre as fotos: ângulo, expressão e distância.",
+  "Foto nítida, sem tremer e sem filtros.",
+];
+
 export function enrollView(root) {
   const feedback = h("div", { "aria-live": "polite" });
+  const counter = h("p", { class: "muted", "aria-live": "polite" }, `0 de ${MAX_PHOTOS} fotos`);
   const nameInput = keepDraft(NAME_KEY, h("input", {
     id: "person-name", type: "text", maxlength: MAX_NAME_LENGTH, autocomplete: "off",
   }));
   const picker = photoPicker({
     max: MAX_PHOTOS,
-    onChange: (count) => setDraft(PHOTOS_KEY, count ? String(count) : ""),
+    onChange: (count) => {
+      counter.textContent = `${count} de ${MAX_PHOTOS} fotos`;
+      setDraft(PHOTOS_KEY, count ? String(count) : "");
+      if (count > 0) clearError(photosField, photosError);
+    },
   });
   const submit = h("button", { type: "submit" }, "Cadastrar");
+  const nameError = h("p", { class: "field-error", id: "person-name-error", role: "alert", hidden: true });
+  const photosError = h("p", { class: "field-error", id: "photos-error", role: "alert", hidden: true });
+  const photosField = h("div", { class: "photos-field" }, picker.element, photosError);
 
-  const form = h("form", { class: "stack", novalidate: true },
-    h("h2", {}, "Cadastrar pessoa"),
-    h("div", { class: "field" },
-      h("label", { for: "person-name" }, "Nome"),
-      nameInput),
-    h("div", { class: "field" },
-      h("span", { class: "label" }, `Fotos (de 1 a ${MAX_PHOTOS})`),
-      picker.element),
+  function showError(control, element, message) {
+    element.textContent = message;
+    element.hidden = false;
+    control.setAttribute("aria-invalid", "true");
+    control.setAttribute("aria-describedby", element.id);
+  }
+
+  function clearError(control, element) {
+    element.hidden = true;
+    control.removeAttribute("aria-invalid");
+    control.removeAttribute("aria-describedby");
+  }
+
+  nameInput.addEventListener("input", () => {
+    clearError(nameInput, nameError);
+    feedback.replaceChildren();
+  });
+
+  const form = h("form", { class: "page", novalidate: true },
+    pageHead("Cadastro", "Cadastre uma pessoa para que ela possa ser reconhecida."),
+    h("div", { class: "grid" },
+      card("Dados da pessoa", null,
+        h("div", { class: "field" },
+          h("label", { for: "person-name" }, "Nome"),
+          nameInput,
+          nameError,
+          h("p", { class: "muted" }, "É o nome que aparece quando a pessoa é reconhecida.")),
+        h("ol", { class: "steps" }, STEPS.map((step) => h("li", {}, step))),
+        h("p", { class: "privacy" }, icon("lock"),
+          "As fotos não são guardadas, só os dados faciais usados no reconhecimento.")),
+      card("Fotos", "Pela câmera ou por arquivo.",
+        h("details", { class: "tips", open: true },
+          h("summary", {}, "Dicas para boas fotos"),
+          h("ul", {}, TIPS.map((tip) => h("li", {}, tip)))),
+        photosField, counter)),
     feedback,
     h("div", { class: "form-actions" }, submit));
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = nameInput.value.trim();
-    if (!name || picker.count() === 0) {
-      feedback.replaceChildren(notice("error", describeError({ status: 422, data: { code: "invalid_request" } })));
+    feedback.replaceChildren();
+    if (!name) showError(nameInput, nameError, NAME_REQUIRED);
+    if (picker.count() === 0) showError(photosField, photosError, PHOTOS_REQUIRED);
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    if (picker.count() === 0) {
+      picker.element.querySelector("button").focus();
       return;
     }
     setBusy(submit, true);
@@ -50,8 +107,10 @@ export function enrollView(root) {
     }
     clearDraft(NAME_KEY, PHOTOS_KEY);
     picker.clear();
+    picker.stop();
     nameInput.value = "";
     feedback.replaceChildren(notice("success", `Cadastro de ${result.data.name} concluído.`));
+    refreshCount();
   });
 
   root.replaceChildren(form);
