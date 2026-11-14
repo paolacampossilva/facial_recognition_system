@@ -243,3 +243,18 @@ def test_every_icon_a_script_asks_for_has_a_css_class() -> None:
     assert asked
     for name in asked:
         assert f".icon--{name} " in styles, name
+
+
+def test_the_enrollment_form_shows_one_error_per_field() -> None:
+    source = code_of(WEB_DIR / "views" / "enroll.js")
+    assert "aria-invalid" in source
+    assert "aria-describedby" in source
+    assert "nameError" in source and "photosError" in source
+    errors = code_of(WEB_DIR / "lib" / "errors.js")
+    assert 'NAME_REQUIRED = "Digite o nome da pessoa."' in errors
+    assert 'PHOTOS_REQUIRED = "Adicione de 1 a 10 fotos."' in errors
+
+
+def test_icons_are_centered_by_a_flex_box_and_not_by_the_text_baseline() -> None:
+    styles = (WEB_DIR / "styles.css").read_text()
+    assert re.search(r"\.icon \{[^}]*display: inline-flex[^}]*align-items: center", styles)
