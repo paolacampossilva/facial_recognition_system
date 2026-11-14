@@ -1,121 +1,45 @@
 """Enrollment tests (spec 002): fakes for the detector and the model, a real in-memory database."""
 
 import logging
-from collections.abc import Iterator
-from io import BytesIO
 from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 from pydantic import ValidationError
 
-from app.core.encoder import FaceEncoder
 from app.core.enrollment import EnrollmentService, find_duplicate
 from app.core.errors import DuplicatePersonError
 from app.core.models import EnrollmentRequest
 from app.storage.models import Gallery
-from app.storage.repository import MEMORY_DATABASE, SqlitePersonRepository
+from app.storage.repository import SqlitePersonRepository
 from facial_recognition_system.preprocessing import (
-    BoundingBox,
-    FaceDetection,
-    FacePreprocessor,
     InvalidImageError,
     MultipleFacesError,
     NoFaceDetectedError,
-    PreprocessingConfig,
 )
 from facial_recognition_system.recognition.strategies import NearestNeighbor
+from tests.app_support import (
+    ANA,
+    ANA_COLOR,
+    BIA_COLOR,
+    CARLA_COLOR,
+    DIMENSION,
+    MODEL_ID,
+    NO_FACE,
+    THRESHOLD,
+    TWO_FACES,
+    build_encoder,
+    photo,
+    request,
+)
 
 pytestmark = pytest.mark.unit
-
-DIMENSION: int = 512
-THRESHOLD: float = 0.766
-MODEL_ID: str = "fake-model"
-# The fake detector reads the width of the photo: one face, no face or two faces.
-ONE_FACE, NO_FACE, TWO_FACES = 100, 101, 102
-ANA_COLOR = (200, 0, 0)
-BIA_COLOR = (0, 200, 0)
-CARLA_COLOR = (0, 0, 200)
-
-
-def unit(seed: int) -> np.ndarray:
-    vector = np.random.default_rng(seed).standard_normal(DIMENSION).astype(np.float32)
-    return vector / np.linalg.norm(vector)
-
-
-def with_cosine(base: np.ndarray, cosine: float, seed: int) -> np.ndarray:
-    """A unit vector whose cosine similarity with `base` is `cosine`."""
-    other = unit(seed)
-    orthogonal = other - (other @ base) * base
-    orthogonal /= np.linalg.norm(orthogonal)
-    return (cosine * base + np.sqrt(1 - cosine**2) * orthogonal).astype(np.float32)
-
-
-def face_box(width: int) -> BoundingBox:
-    return BoundingBox(left=0, top=0, right=width, bottom=100)
-
-
-def detection(width: int) -> FaceDetection:
-    landmarks = tuple((float(index), float(index)) for index in range(5))
-    return FaceDetection(box=face_box(width), probability=0.99, landmarks=landmarks)
-
-
-class ScriptedDetector:
-    """Finds the faces the width of the photo asks for."""
-
-    def detect(self, image: Image.Image) -> list[FaceDetection]:
-        match image.width:
-            case 101:
-                return []
-            case 102:
-                return [detection(51), detection(102)]
-            case _:
-                return [detection(image.width)]
-
-
-class ColorEmbedder:
-    """Gives each solid-color face the vector it was assigned."""
-
-    model_id = MODEL_ID
-
-    def __init__(self, vectors: dict[tuple[int, int, int], np.ndarray]) -> None:
-        self.vectors = vectors
-
-    def embed(self, face: Image.Image) -> np.ndarray:
-        pixel = face.getpixel((0, 0))
-        assert isinstance(pixel, tuple)
-        return self.vectors[(pixel[0], pixel[1], pixel[2])]
-
-
-def photo(color: tuple[int, int, int] = ANA_COLOR, width: int = ONE_FACE) -> bytes:
-    buffer = BytesIO()
-    Image.new("RGB", (width, 100), color).save(buffer, format="PNG")
-    return buffer.getvalue()
-
-
-ANA = unit(1)
-BIA = unit(2)
-VECTORS = {ANA_COLOR: ANA, BIA_COLOR: BIA, CARLA_COLOR: with_cosine(ANA, 0.9, seed=3)}
-
-
-@pytest.fixture
-def repository() -> Iterator[SqlitePersonRepository]:
-    repo = SqlitePersonRepository(MEMORY_DATABASE)
-    yield repo
-    repo.close()
 
 
 def build_service(
     repository: SqlitePersonRepository, threshold: float = THRESHOLD
 ) -> EnrollmentService:
-    preprocessor = FacePreprocessor(ScriptedDetector(), PreprocessingConfig())
-    encoder = FaceEncoder(preprocessor, ColorEmbedder(VECTORS))
-    return EnrollmentService(encoder, repository, threshold)
-
-
-def request(name: str, *photos: bytes) -> EnrollmentRequest:
-    return EnrollmentRequest(name=name, photos=list(photos))
+    return EnrollmentService(build_encoder(), repository, threshold)
 
 
 def test_one_photo_stores_one_embedding_of_512_dimensions(
