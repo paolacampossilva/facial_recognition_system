@@ -14,7 +14,7 @@ A aplicação da Parte 2 cadastra uma pessoa a partir de uma ou mais fotos (seç
 
 | Tabela | Colunas |
 |---|---|
-| `persons` | `id` (chave), `name` (único), `created_at` |
+| `persons` | `id` (chave), `name` (como foi digitado), `name_key` (único, o nome normalizado), `created_at` |
 | `embeddings` | `id` (chave), `person_id` (chave estrangeira para `persons.id`, `ON DELETE CASCADE`), `vector` (float32 como BLOB), `dimension`, `model_id`, `created_at` |
 
 - **A aplicação não guarda fotos**, só embeddings. A foto do cadastro ou do reconhecimento é processada em memória e descartada.
@@ -35,5 +35,5 @@ A aplicação da Parte 2 cadastra uma pessoa a partir de uma ou mais fotos (seç
 - A exclusão de uma pessoa (seção 39 e spec 006) é um único `DELETE` em `persons`. Um teste confere que, depois dele, a tabela `embeddings` não tem nenhuma linha da pessoa.
 - Se a estratégia escolhida no E07 treina um modelo (k-NN ou SVM, D6), ele é refeito em memória a partir do banco ao iniciar a aplicação e depois de cada cadastro ou exclusão, e nunca é salvo em disco. Assim, a exclusão no banco basta para a pessoa sumir do reconhecimento, sem classificador antigo guardando dados dela.
 - Os embeddings do banco são dados biométricos derivados: ficam só no cofre e entram na eliminação ao fim da disciplina ([docs/privacy.md](../privacy.md)).
-- O nome é único na tabela, o que cobre o cadastro duplicado pelo nome. A checagem de que o mesmo rosto já está cadastrado com outro nome é definida na spec do cadastro.
+- O nome é único sem diferenciar maiúsculas nem acentos de caixa, o que cobre o cadastro duplicado pelo nome. A unicidade é da coluna `name_key` (`unicodedata.normalize("NFC", nome).casefold()`), e não de um `COLLATE NOCASE` em `name`: o `NOCASE` do SQLite só ignora maiúsculas ASCII e trataria "Ágata" e "ágata" como pessoas diferentes. Decidido na implementação da #42. A checagem de que o mesmo rosto já está cadastrado com outro nome é definida na spec do cadastro.
 - `sqlite3` é da biblioteca padrão do Python, então não entra dependência nova. Os testes usam um banco em memória (`:memory:`), sem tocar no cofre.
