@@ -809,6 +809,12 @@ Command of each experiment:
 | Paired comparison with E01 | errors, EER difference with paired bootstrap, weight change and cosine ("Fine-tuning" in the analysis) | `python scripts/compare_paired.py --reference configs/E01.yaml --config configs/E04.yaml configs/E06.yaml` |
 | E07 and E08 | comparison strategy and open-set threshold, on private data | `python scripts/run_open_set.py --config configs/E07_E08.yaml` |
 
+To recompute the E02 average similarities of same-person and different-people pairs (0.84 and 0.78, cited in the Portuguese analysis above), after the evaluation:
+
+```bash
+python -c "import json; from pathlib import Path; from facial_recognition_system.experiments import load_experiment_config; from facial_recognition_system.experiments.evaluation import load_experiment_scores; c, _ = load_experiment_config(Path('configs/E02.yaml')); s = load_experiment_scores(c, json.loads(Path('experiments/results/E02.json').read_text())).test; print(f'{s.genuine.mean():.2f} {s.impostor.mean():.2f}')"
+```
+
 E03 and E05 (full fine-tuning of ResNet-50 and FaceNet) were left out (D4 and D5). E07 and E08 only run on the group's machine, with the vault open and the private crops generated first (`python scripts/preprocess_faces.py --input-dir data/private --output-dir faces/private`).
 
 ### Results and analysis
