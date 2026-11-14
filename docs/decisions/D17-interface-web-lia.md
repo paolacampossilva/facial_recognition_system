@@ -20,7 +20,7 @@ Entrada das fotos: webcam pelo navegador (`getUserMedia`, uma captura por clique
 
 Padrões da interface, em `src/app/web/`:
 
-- `tokens.css` único, com tema claro e escuro (`[data-theme]` e `prefers-color-scheme`) e botão de tema.
+- `tokens.css` único, com tema claro e escuro (`[data-theme]` e `prefers-color-scheme`), acento roxo (`--accent`) e botão de tema.
 - Páginas montadas só com nós DOM e `textContent` (helper `h(tag, attrs, ...filhos)`), nunca `innerHTML`.
 - Confirmação por diálogo próprio, nunca `window.confirm`.
 - Toda tela com quatro estados: carregando, vazio, erro e sucesso. Botão de envio desabilitado com indicador durante a chamada. Um só botão primário por tela.
