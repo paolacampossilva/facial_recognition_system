@@ -1,0 +1,91 @@
+/* Design tokens: the only place with colors, shadows, motion and layers. Light and dark theme,
+   violet accent. Dark by system preference and dark by choice must stay identical. */
+
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-2: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --border: #dfe3e8;
+  --border-strong: #c7cdd6;
+  --ink: #12151c;
+  --ink-soft: #3c4350;
+  --muted: #667085;
+  --faint: #98a2b3;
+  --accent: #6d28d9;
+  --accent-ink: #5b21b6;
+  --accent-soft: #f1eafe;
+  --on-accent: #ffffff;
+  --info: #6d28d9;
+  --ok: #157f45;
+  --warn: #9a5b00;
+  --danger: #d1272a;
+  --shadow-sm: 0 1px 1px rgba(15, 23, 42, .05);
+  --shadow: 0 10px 24px rgba(15, 23, 42, .12);
+  --shadow-lg: 0 20px 44px rgba(15, 23, 42, .18);
+  --scrim: rgba(18, 21, 28, .4);
+  --ring: var(--accent);
+  --dur-fast: .12s;
+  --dur: .2s;
+  --z-topbar: 20;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-lg: 14px;
+  --sans: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #14161c;
+    --bg-2: #0e1015;
+    --surface: #1b1e26;
+    --surface-2: #21242d;
+    --border: #2c303a;
+    --border-strong: #3a3f4b;
+    --ink: #eef0f4;
+    --ink-soft: #cdd2db;
+    --muted: #8c93a3;
+    --faint: #656c7a;
+    --accent: #a78bfa;
+    --accent-ink: #c4b5fd;
+    --accent-soft: #2a1f4d;
+    --on-accent: #0e1015;
+    --info: #a78bfa;
+    --ok: #35c778;
+    --warn: #f0a93f;
+    --danger: #ff6a68;
+    --shadow-sm: 0 1px 1px rgba(0, 0, 0, .35);
+    --shadow: 0 16px 34px rgba(0, 0, 0, .45);
+    --shadow-lg: 0 24px 52px rgba(0, 0, 0, .55);
+    --scrim: rgba(0, 0, 0, .6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14161c;
+  --bg-2: #0e1015;
+  --surface: #1b1e26;
+  --surface-2: #21242d;
+  --border: #2c303a;
+  --border-strong: #3a3f4b;
+  --ink: #eef0f4;
+  --ink-soft: #cdd2db;
+  --muted: #8c93a3;
+  --faint: #656c7a;
+  --accent: #a78bfa;
+  --accent-ink: #c4b5fd;
+  --accent-soft: #2a1f4d;
+  --on-accent: #0e1015;
+  --info: #a78bfa;
+  --ok: #35c778;
+  --warn: #f0a93f;
+  --danger: #ff6a68;
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, .35);
+  --shadow: 0 16px 34px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 24px 52px rgba(0, 0, 0, .55);
+  --scrim: rgba(0, 0, 0, .6);
+}
