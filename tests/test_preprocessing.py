@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -221,6 +222,66 @@ def test_load_image_rejects_non_image_file(tmp_path: Path) -> None:
 def test_load_image_rejects_missing_file(tmp_path: Path) -> None:
     with pytest.raises(InvalidImageError):
         load_image(tmp_path / "missing.jpg")
+
+
+def encoded(image: Image.Image, image_format: str, **options: object) -> bytes:
+    buffer = BytesIO()
+    image.save(buffer, format=image_format, **options)
+    return buffer.getvalue()
+
+
+@pytest.mark.unit
+def test_load_image_accepts_the_bytes_of_an_image() -> None:
+    image = load_image(encoded(Image.new("RGB", (30, 20), RED), "PNG"))
+
+    assert image.mode == "RGB"
+    assert image.size == (30, 20)
+    assert dominant_color(image) == RED
+
+
+@pytest.mark.unit
+def test_load_image_converts_bytes_of_other_modes_to_rgb() -> None:
+    image = load_image(encoded(Image.new("L", (8, 8), 128), "PNG"))
+
+    assert image.mode == "RGB"
+
+
+@pytest.mark.unit
+def test_load_image_applies_exif_orientation_to_bytes() -> None:
+    exif = Image.Exif()
+    exif[0x0112] = 6  # rotate 90 degrees clockwise when displayed
+
+    image = load_image(encoded(Image.new("RGB", (100, 50), RED), "JPEG", exif=exif))
+
+    assert image.size == (50, 100)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("content", [b"", b"plain text", b"\x89PNG\r\n\x1a\n-truncated"])
+def test_load_image_rejects_bytes_that_are_not_an_image(content: bytes) -> None:
+    with pytest.raises(InvalidImageError) as error:
+        load_image(content)
+
+    assert error.value.source == "upload"
+
+
+@pytest.mark.unit
+def test_invalid_image_error_keeps_the_path_it_came_from(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.jpg"
+
+    with pytest.raises(InvalidImageError) as error:
+        load_image(missing)
+
+    assert error.value.source == missing
+
+
+@pytest.mark.unit
+def test_load_image_rejects_an_image_too_large_to_be_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
+    content = encoded(Image.new("RGB", (50, 50), RED), "PNG")
+
+    with pytest.raises(InvalidImageError):
+        load_image(content)
 
 
 @pytest.mark.unit
