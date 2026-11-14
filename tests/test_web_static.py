@@ -258,3 +258,33 @@ def test_the_enrollment_form_shows_one_error_per_field() -> None:
 def test_icons_are_centered_by_a_flex_box_and_not_by_the_text_baseline() -> None:
     styles = (WEB_DIR / "styles.css").read_text()
     assert re.search(r"\.icon \{[^}]*display: inline-flex[^}]*align-items: center", styles)
+
+
+def test_discarding_a_photo_asks_for_confirmation_with_a_danger_button() -> None:
+    source = code_of(WEB_DIR / "lib" / "photos.js")
+    assert "confirmDialog(" in source
+    assert 'confirmLabel: "Descartar foto"' in source
+    assert 'cancelLabel: "Manter foto"' in source
+    assert "danger: true" in source
+
+
+def test_camera_buttons_are_highlighted_and_the_preview_is_mirrored() -> None:
+    source = code_of(WEB_DIR / "lib" / "photos.js")
+    assert re.search(r'captureButton = h\("button", \{ type: "button" \}', source)  # primary style
+    assert re.search(r'closeButton = h\("button", \{[^}]*class: "danger"', source)
+    styles = (WEB_DIR / "styles.css").read_text()
+    assert re.search(r"\.camera \{[^}]*transform: scaleX\(-1\)", styles)
+
+
+def test_the_page_has_a_favicon_that_exists() -> None:
+    html = (WEB_DIR / "index.html").read_text()
+    match = re.search(r'<link rel="icon"[^>]*href="([^"]+)"', html)
+    assert match
+    assert (WEB_DIR / match.group(1)).is_file()
+
+
+def test_the_enrollment_screen_gives_tips_for_good_photos() -> None:
+    source = code_of(WEB_DIR / "views" / "enroll.js")
+    assert "Dicas para boas fotos" in source
+    assert "TIPS" in source
+    assert "um só rosto" in code_of(WEB_DIR / "views" / "recognize.js")

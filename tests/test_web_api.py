@@ -195,7 +195,14 @@ def test_each_error_maps_to_its_status_and_code(error: Exception, status: int, c
     assert body.code == code
 
 
-STATIC_PATHS: list[str] = ["/", "/app.js", "/styles.css", "/tokens.css", "/assets/icons/sun.svg"]
+STATIC_PATHS: list[str] = [
+    "/",
+    "/app.js",
+    "/styles.css",
+    "/tokens.css",
+    "/assets/icons/sun.svg",
+    "/assets/favicon.svg",
+]
 
 
 @pytest.mark.parametrize("path", STATIC_PATHS)
