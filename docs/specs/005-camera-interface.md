@@ -51,7 +51,7 @@ JSON, mesma origem. Modelos de entrada e saída são Pydantic, os mesmos dos ser
 | `POST /api/recognitions` | multipart: 1 `photo` | `RecognitionResult` (spec 003) |
 | `DELETE /api/persons/{id}` | | `DeletionResult` (spec 006) |
 
-Erro: `{code, message}`, com o status HTTP da tabela.
+Erro: `{code, message}`, com o status HTTP da tabela. Só o `duplicate_person` traz também `reason` (`name` ou `similarity`) e `person_name` (a pessoa que já está cadastrada), para a interface escolher a mensagem.
 
 | Erro do serviço | `code` | HTTP | Mensagem para a pessoa |
 |---|---|---|---|
