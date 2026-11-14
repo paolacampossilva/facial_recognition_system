@@ -14,7 +14,7 @@ A aplicação precisa cadastrar uma pessoa a partir de uma ou mais fotos (seçã
 
 - **R1.** Receber um nome e de 1 a 10 fotos. Cada foto passa pelo pipeline da [spec 001](001-face-detection.md), vira um embedding de 512 dimensões com o modelo da D16 (E06) e é gravada no banco.
 - **R2.** O cadastro é **atômico**: se qualquer foto falhar, nada é gravado. O erro é o da spec 001, sem indicar qual foto falhou (a interface pede para conferir as fotos).
-- **R3.** O nome é obrigatório, sem espaços nas pontas, com no máximo 100 caracteres, e **único sem diferenciar maiúsculas de minúsculas**. A D12 define o nome como único, mas sem diferenciar maiúsculas não está nela: a implementação (#42) usa `COLLATE NOCASE` na coluna `persons.name`, e a D12 é atualizada com esse motivo.
+- **R3.** O nome é obrigatório, sem espaços nas pontas, com no máximo 100 caracteres, e **único sem diferenciar maiúsculas de minúsculas, com ou sem acento** ("Ágata" e "ágata" são a mesma pessoa). A D12 define o nome como único, mas sem diferenciar maiúsculas não está nela: a implementação (#42) guarda uma chave `persons.name_key` única (o nome normalizado com `casefold`), porque o `COLLATE NOCASE` do SQLite só ignora maiúsculas ASCII. A D12 foi atualizada com esse motivo.
 - **R4.** **Duplicidade por similaridade:** se o rosto do cadastro novo é parecido demais com o de uma pessoa já cadastrada (similaridade ≥ threshold da configuração), o cadastro é recusado e informa o nome da pessoa existente, para ninguém ser cadastrada duas vezes com nomes diferentes.
 - **R5.** As fotos não são gravadas. Só os embeddings, com o `model_id` (D12).
 - **R6.** O cadastro vale para o reconhecimento seguinte sem reiniciar a aplicação.
