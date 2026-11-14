@@ -123,7 +123,7 @@ def test_colors_come_only_from_tokens() -> None:
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", styles)
     assert not re.search(r"\brgba?\(", styles)
     # Only local aliases (the icon of a button, the color of a notice) may be declared here.
-    declared = set(re.findall(r"(--[\w-]+):", styles))
+    declared = set(re.findall(r"(?:^|[{;])\s*(--[\w-]+)\s*:", styles, flags=re.MULTILINE))
     assert declared <= LOCAL_ALIASES, declared - LOCAL_ALIASES
     for script in scripts():
         assert not re.search(r"#[0-9a-fA-F]{6}\b", code_of(script)), script.name
@@ -187,3 +187,59 @@ def test_theme_module_chooses_labels_and_survives_blocked_storage() -> None:
         ["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_the_shell_has_a_272px_sidebar_that_turns_off_canvas_below_860px() -> None:
+    tokens = (WEB_DIR / "tokens.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text()
+    html = (WEB_DIR / "index.html").read_text()
+    assert theme_block(tokens, ":root")["--sidebar-w"] == "272px"
+    assert "@media (max-width: 860px)" in styles
+    assert "body.sidebar-open .sidebar" in styles
+    assert 'id="sidebar"' in html
+    assert 'id="menu-toggle"' in html
+    assert 'aria-expanded="false"' in html
+    assert 'aria-controls="sidebar"' in html
+    assert 'aria-label="Abrir o menu"' in html
+
+
+def test_the_off_canvas_sidebar_is_inert_and_closes_with_escape() -> None:
+    shell = code_of(WEB_DIR / "lib" / "shell.js")
+    assert "sidebar.inert" in shell
+    assert '"Escape"' in shell
+    assert "toggle.focus()" in shell
+
+
+def test_every_screen_sets_the_document_title() -> None:
+    app = code_of(WEB_DIR / "app.js")
+    assert "document.title" in app
+    labels = re.findall(r'label: "([^"]+)"', app)
+    assert labels == ["Cadastro", "Reconhecimento", "Pessoas cadastradas"]
+
+
+def test_each_screen_has_a_page_title_and_the_menu_shows_the_people_count() -> None:
+    for view in ("enroll", "recognize", "persons"):
+        source = code_of(WEB_DIR / "views" / f"{view}.js")
+        assert "pageHead(" in source or 'h("h1"' in source, view
+    assert "countBadge" in code_of(WEB_DIR / "app.js")
+
+
+def test_icons_used_by_the_css_exist_and_every_icon_file_is_used() -> None:
+    styles = (WEB_DIR / "styles.css").read_text()
+    used = set(re.findall(r'url\("assets/icons/([\w-]+)\.svg"\)', styles))
+    present = {path.stem for path in (WEB_DIR / "assets" / "icons").glob("*.svg")}
+    assert used == present
+
+
+def test_every_icon_a_script_asks_for_has_a_css_class() -> None:
+    styles = (WEB_DIR / "styles.css").read_text()
+    asked: set[str] = set()
+    for script in scripts():
+        source = code_of(script)
+        asked |= set(re.findall(r'icon\("([\w-]+)"\)', source))
+        asked |= set(re.findall(r'icon: "([\w-]+)"', source))
+        asked |= set(re.findall(r"icon--([a-z][\w-]*)", source))
+    asked.discard("xl")  # size modifier, not an icon
+    assert asked
+    for name in asked:
+        assert f".icon--{name} " in styles, name
