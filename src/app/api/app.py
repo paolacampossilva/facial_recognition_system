@@ -13,10 +13,11 @@ from starlette.types import Scope
 from app.api.errors import to_error_response
 from app.api.ports import Services
 from app.api.routes import build_router
+from app.config import Settings
 
 logger = logging.getLogger(__name__)
 
-# TODO(#48): move to the Settings class of the configuration module (spec 007).
+# Part of the code, not of the configuration (spec 007, R8).
 WEB_DIR: Path = Path(__file__).resolve().parent.parent / "web"
 
 WEB_HEADERS: dict[str, str] = {
@@ -48,18 +49,19 @@ def handle_error(_: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=body.model_dump(exclude_none=True))
 
 
-def create_app(services: Services, threshold: float, web_dir: Path = WEB_DIR) -> FastAPI:
+def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) -> FastAPI:
     """Builds the application around the given services and serves the interface from `web_dir`.
 
     Args:
         services: The enrollment, recognition, deletion and person-list services.
-        threshold: The similarity the services accept as the same person, which the interface
-            shows on the result (it does not change what the services decide).
+        settings: The configuration (spec 007). The API uses the upload limit and hands the
+            threshold to the interface, which shows it on the result (it does not change what the
+            services decide).
         web_dir: Folder with the static interface.
     """
     application = FastAPI(title="Face recognition", docs_url=None, redoc_url=None)
     application.state.services = services
-    application.state.threshold = threshold
+    application.state.settings = settings
     application.include_router(build_router())
     application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)

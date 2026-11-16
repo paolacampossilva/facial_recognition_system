@@ -13,37 +13,44 @@ import threading
 import webbrowser
 from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Literal
 
 import uvicorn
 from pydantic import BaseModel, Field, ValidationError
 
-from app.core.errors import LaunchError
+from app.config import DEFAULT_PORT, MAX_PORT, MIN_PORT, Settings, load_settings
+from app.core.errors import ConfigError, LaunchError
 
-# TODO(#48): the port moves to the Settings class of the configuration module (spec 007).
 HOST: str = "127.0.0.1"
-DEFAULT_PORT: int = 8000
-MIN_PORT: int = 1024
-MAX_PORT: int = 65535
 APP_IMPORT_PATH: str = "app.main:app"
 BROWSER_DELAY_SECONDS: float = 1.0
 SOURCE_DIR: Path = Path(__file__).resolve().parent
 
 
 class LaunchOptions(BaseModel):
-    """What the person asked for on the command line."""
+    """What the person asked for on the command line, over the configuration (spec 007)."""
 
     port: int = Field(default=DEFAULT_PORT, ge=MIN_PORT, le=MAX_PORT)
     open_browser: bool = True
     reload: bool = False
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
 
-def parse_options(argv: Sequence[str] | None = None) -> LaunchOptions:
-    """Reads the command line. Exits with a usage message when an option is not valid."""
+def parse_options(
+    argv: Sequence[str] | None = None, settings: Settings | None = None
+) -> LaunchOptions:
+    """Reads the command line. Exits with a usage message when an option is not valid.
+
+    Args:
+        argv: The arguments, without the program name. None reads `sys.argv`.
+        settings: The configuration, which gives the default port; `--port` wins over it.
+    """
+    settings = settings or Settings()
     parser = argparse.ArgumentParser(
         prog="python -m app", description="Starts the face recognition web application."
     )
     parser.add_argument(
-        "--port", type=int, default=DEFAULT_PORT, help="port (default: %(default)s)"
+        "--port", type=int, default=settings.port, help="port (default: %(default)s)"
     )
     parser.add_argument(
         "--no-browser", action="store_true", help="do not open the browser automatically"
@@ -54,7 +61,10 @@ def parse_options(argv: Sequence[str] | None = None) -> LaunchOptions:
     arguments = parser.parse_args(argv)
     try:
         return LaunchOptions(
-            port=arguments.port, open_browser=not arguments.no_browser, reload=arguments.reload
+            port=arguments.port,
+            open_browser=not arguments.no_browser,
+            reload=arguments.reload,
+            log_level=settings.log_level,
         )
     except ValidationError:
         parser.error(f"--port must be between {MIN_PORT} and {MAX_PORT}")
@@ -103,6 +113,7 @@ def run(
         port=options.port,
         reload=options.reload,
         reload_dirs=reload_dirs,
+        log_level=options.log_level.lower(),
     )
 
 
@@ -113,10 +124,18 @@ def main(
 ) -> int:
     """Edge of the command line: runs the application and turns a launch failure into a message.
 
+    The configuration is read before anything starts, so a wrong value stops here with the name of
+    the variable instead of a traceback from inside the server (spec 007, R6).
+
     Returns:
         The exit code: 0 when the server ran and stopped, 1 when it could not start.
     """
-    options = parse_options(argv)
+    try:
+        settings = load_settings()
+    except ConfigError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    options = parse_options(argv, settings)
     try:
         run(options, serve=serve, open_browser=open_browser)
     except LaunchError as error:

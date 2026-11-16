@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.api.app import create_app
 from app.api.errors import to_error_response
-from app.api.routes import MAX_UPLOAD_BYTES
+from app.config import Settings
 from app.core.errors import (
     DuplicatePersonError,
     EmptyGalleryError,
@@ -31,7 +31,9 @@ ODD_FILE: bytes = b"xxx"
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(create_app(FakeServices(), THRESHOLD), raise_server_exceptions=False)
+    return TestClient(
+        create_app(FakeServices(), Settings(threshold=THRESHOLD)), raise_server_exceptions=False
+    )
 
 
 def photo(content: bytes = EVEN_FILE, name: str = "a.jpg") -> tuple[str, tuple[str, bytes, str]]:
@@ -128,7 +130,7 @@ def test_a_missing_photo_field_is_a_validation_error(client: TestClient) -> None
 
 
 def test_a_file_over_the_limit_is_a_validation_error(client: TestClient) -> None:
-    big = b"x" * (MAX_UPLOAD_BYTES + 1)
+    big = b"x" * (Settings().max_upload_bytes + 1)
     response = client.post("/api/persons", data={"name": "Ana"}, files=[photo(big)])
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
@@ -185,7 +187,10 @@ class ExplodingServices(FakeServices):
 
 
 def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None:
-    client = TestClient(create_app(ExplodingServices(), THRESHOLD), raise_server_exceptions=False)
+    client = TestClient(
+        create_app(ExplodingServices(), Settings(threshold=THRESHOLD)),
+        raise_server_exceptions=False,
+    )
     response = client.get("/api/persons")
     assert response.status_code == 500
     assert response.json() == {"code": "internal_error", "message": "Unexpected error"}

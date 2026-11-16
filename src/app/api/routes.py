@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, Request, UploadFile, status
 
 from app.api.ports import Services
+from app.config import Settings
 from app.core.errors import UploadTooLargeError
 from app.core.models import (
     ClientConfig,
@@ -15,15 +16,12 @@ from app.core.models import (
     RecognitionResult,
 )
 
-# TODO(#48): move to the Settings class of the configuration module (spec 007).
-MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
 
-
-async def read_upload(upload: UploadFile) -> bytes:
-    """Reads an uploaded file into memory, refusing files over the size limit."""
-    content = await upload.read(MAX_UPLOAD_BYTES + 1)
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise UploadTooLargeError(MAX_UPLOAD_BYTES)
+async def read_upload(upload: UploadFile, limit_bytes: int) -> bytes:
+    """Reads an uploaded file into memory, refusing files over the configured size limit."""
+    content = await upload.read(limit_bytes + 1)
+    if len(content) > limit_bytes:
+        raise UploadTooLargeError(limit_bytes)
     return content
 
 
@@ -34,13 +32,16 @@ def build_router() -> APIRouter:
     def services_of(request: Request) -> Services:
         return request.app.state.services
 
+    def settings_of(request: Request) -> Settings:
+        return request.app.state.settings
+
     @router.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @router.get("/config")
     def config(request: Request) -> ClientConfig:
-        return ClientConfig(threshold=request.app.state.threshold)
+        return ClientConfig(threshold=settings_of(request).threshold)
 
     @router.get("/persons")
     def list_persons(request: Request) -> list[PersonSummary]:
@@ -52,7 +53,8 @@ def build_router() -> APIRouter:
         name: Annotated[str, Form()],
         photos: Annotated[list[UploadFile], File()],
     ) -> EnrollmentResult:
-        contents = [await read_upload(photo) for photo in photos]
+        limit = settings_of(request).max_upload_bytes
+        contents = [await read_upload(photo, limit) for photo in photos]
         enrollment = EnrollmentRequest(name=name, photos=contents)
         return services_of(request).enrollment.enroll(enrollment)
 
@@ -60,7 +62,7 @@ def build_router() -> APIRouter:
     async def recognize(
         request: Request, photo: Annotated[UploadFile, File()]
     ) -> RecognitionResult:
-        content = await read_upload(photo)
+        content = await read_upload(photo, settings_of(request).max_upload_bytes)
         return services_of(request).recognition.recognize(content)
 
     @router.delete("/persons/{person_id}")
