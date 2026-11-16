@@ -36,3 +36,5 @@ pydantic-settings==2.16.2
 pytest==9.1.1
 ruff==0.17.1
 pre-commit==4.7.0
+# Teste e2e da interface: usa o Google Chrome instalado, sem baixar outro navegador
+playwright==1.64.1

@@ -141,7 +141,10 @@ Os testes levam um marcador: `unit` (rápidos, sem rede, GPU nem modelo real, co
 ```bash
 pytest -m unit
 pytest -m integration
+pytest -m e2e
 ```
+
+Os testes `e2e` (`tests/test_e2e.py`) abrem a interface no **Google Chrome sem janela** (Playwright) e fazem o fluxo cadastro → reconhecimento → desconhecido → exclusão, os erros de foto e de duplicidade, a câmera (a falsa do próprio Chrome), o tema e o menu. O servidor é a aplicação real com o banco em memória e um modelo roteirizado no lugar da rede neural, então eles rodam sem GPU nem checkpoint. Qualquer erro no console da página reprova o teste. Sem o Chrome instalado, eles **pulam**.
 
 Os testes de integração **pulam** (não falham) quando falta o insumo: o teste do checkpoint E06 precisa de `checkpoints/E06/best.pt` (ver [Modelo e checkpoint](#modelo-e-checkpoint)), o dos recortes do LFW precisa de `data/public/lfw_crop160`, e os dos serviços (`tests/test_services_integration.py`) usam o MTCNN e o modelo reais em fotos do LFW (`data/public/lfw`, ver [Preparação dos dados](#preparação-dos-dados)), com o E06 se existir ou com os pesos pré-treinados do FaceNet no cache. Só fotos públicas entram nesses testes.
 
@@ -702,7 +705,10 @@ Tests carry a marker: `unit` (fast, no network, GPU or real model, with injected
 ```bash
 pytest -m unit
 pytest -m integration
+pytest -m e2e
 ```
+
+The `e2e` tests (`tests/test_e2e.py`) open the interface in **headless Google Chrome** (Playwright) and run the enrollment → recognition → unknown → deletion flow, the photo and duplicate errors, the camera (Chrome's own fake one), the theme and the menu. The server is the real application with an in-memory database and a scripted model in place of the neural network, so they run without a GPU or checkpoint. Any console error on the page fails the test. Without Chrome installed, they are **skipped**.
 
 Integration tests **skip** (they do not fail) when their input is missing: the E06 checkpoint test needs `checkpoints/E06/best.pt` (see [Model and checkpoint](#model-and-checkpoint)), the LFW crops one needs `data/public/lfw_crop160`, and the service ones (`tests/test_services_integration.py`) use the real MTCNN and model on LFW photos (`data/public/lfw`, see [Data preparation](#data-preparation)), with E06 if present or the cached pretrained FaceNet weights otherwise. Only public photos go into these tests.
 
