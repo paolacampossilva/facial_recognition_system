@@ -100,7 +100,13 @@ def test_the_server_starts_on_the_loopback_address_with_the_given_port() -> None
 
     ((args, kwargs),) = server.calls
     assert args == ("app.main:app",)
-    assert kwargs == {"host": "127.0.0.1", "port": port, "reload": False, "reload_dirs": None}
+    assert kwargs == {
+        "host": "127.0.0.1",
+        "port": port,
+        "reload": False,
+        "reload_dirs": None,
+        "log_level": "info",
+    }
 
 
 def test_the_browser_opens_on_the_right_url() -> None:
@@ -181,3 +187,39 @@ def test_python_dash_m_app_runs_main(monkeypatch: pytest.MonkeyPatch) -> None:
         runpy.run_module("app", run_name="__main__")
 
     assert exit_info.value.code == 7
+
+
+def test_an_invalid_configuration_stops_before_the_server_with_the_variable_name(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("FACE_APP_THRESHOLD", "2")
+    server = FakeServer()
+
+    code = main(["--no-browser"], serve=server)
+
+    assert code == 1
+    assert capsys.readouterr().err.startswith("error: invalid configuration: FACE_APP_THRESHOLD")
+    assert server.calls == []
+
+
+def test_the_port_comes_from_the_configuration_and_the_option_wins_over_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    configured, chosen = free_port(), free_port()
+    monkeypatch.setenv("FACE_APP_PORT", str(configured))
+    server = FakeServer()
+
+    main(["--no-browser"], serve=server)
+    main(["--no-browser", "--port", str(chosen)], serve=server)
+
+    assert [kwargs["port"] for _, kwargs in server.calls] == [configured, chosen]
+
+
+def test_the_configured_log_level_reaches_the_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FACE_APP_LOG_LEVEL", "WARNING")
+    server = FakeServer()
+
+    main(["--no-browser", "--port", str(free_port())], serve=server)
+
+    ((_, kwargs),) = server.calls
+    assert kwargs["log_level"] == "warning"

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from app.api.app import WEB_DIR, create_app
+from app.config import Settings
 from app.fakes import FakeServices
 
 pytestmark = pytest.mark.unit
@@ -161,7 +162,7 @@ def test_every_route_the_front_end_calls_exists_in_the_api() -> None:
         re.sub(r"\$\{[^}]+\}", "{person_id}", path)
         for path in re.findall(r'call\(\s*[`"](/[^`"]*)[`"]', source)
     }
-    api_paths = create_app(FakeServices(), 0.766).openapi()["paths"]
+    api_paths = create_app(FakeServices(), Settings()).openapi()["paths"]
     documented = {path.removeprefix("/api") for path in api_paths}
     assert called
     assert called <= documented

@@ -31,6 +31,7 @@ Sistema de **reconhecimento facial** desenvolvido para a disciplina de Inteligê
 - [Aplicação (Parte 2)](#aplicação-parte-2)
   - [Arquitetura](#arquitetura)
   - [Como rodar](#como-rodar)
+  - [Configuração](#configuração)
   - [Como criar o próprio banco](#como-criar-o-próprio-banco)
   - [Modelo e checkpoint](#modelo-e-checkpoint)
   - [Privacidade na aplicação](#privacidade-na-aplicação)
@@ -380,6 +381,7 @@ Rotas (todas sob `/api`):
 | Método e rota | O que faz |
 |---|---|
 | `GET /health` | confere que a aplicação está de pé |
+| `GET /config` | devolve o threshold da configuração, que a interface marca na barra de similaridade |
 | `GET /persons` | lista as pessoas com o número de embeddings de cada uma |
 | `POST /persons` | cadastra (campos `name` e `photos`, multipart) |
 | `POST /recognitions` | reconhece uma foto (campo `photo`, multipart) |
@@ -402,6 +404,28 @@ Isso sobe o servidor e abre o navegador em `http://127.0.0.1:8000`. Opções:
 | `--reload` | reinicia o servidor quando o código muda (desenvolvimento) |
 
 O servidor escuta **só em 127.0.0.1**, de propósito: a aplicação não tem autenticação e guarda dados biométricos, então não há opção para expô-la na rede. Se a porta estiver ocupada, o comando termina com uma mensagem e não sobe nada.
+
+### Configuração
+
+Tudo que muda de uma máquina para outra fica numa configuração externa ([spec 007](docs/specs/007-logging-config.md)), lida de variáveis de ambiente `FACE_APP_` ou de um arquivo `.env` na raiz. Para mudar algo, copie o exemplo e edite só o que precisar:
+
+```bash
+cp .env.example .env
+```
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `FACE_APP_THRESHOLD` | `0.766` | similaridade mínima para "mesma pessoa" (E08, [D08](docs/decisions/D08-threshold-selection.md)) |
+| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | banco SQLite de pessoas e embeddings |
+| `FACE_APP_CHECKPOINT_PATH` | `checkpoints/E06/best.pt` | checkpoint do modelo; vazio usa o FaceNet pré-treinado (E01) |
+| `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` ou `cuda` |
+| `FACE_APP_PORT` | `8000` | porta do servidor (o `--port` vale mais) |
+| `FACE_APP_MAX_UPLOAD_MB` | `10` | tamanho máximo de cada foto |
+| `FACE_APP_LOG_LEVEL` | `INFO` | nível mínimo dos logs |
+
+A variável de ambiente vale mais que o `.env`, e o `.env` vale mais que o padrão. O `.env` fica fora do Git. Um valor inválido, ou uma variável com nome errado no `.env`, faz o `python -m app` terminar com uma mensagem que diz qual variável corrigir, sem subir nada. O endereço 127.0.0.1 não é configurável, de propósito.
+
+Os logs vão só para o terminal (nenhum arquivo de log é gravado) e só registram campos de uma lista permitida: `id` da pessoa, quantidade de embeddings, status e similaridade. Nome, foto, embedding e nome de arquivo nunca aparecem, nem se forem passados por engano.
 
 ### Como criar o próprio banco
 
@@ -497,9 +521,11 @@ facial_recognition_system/
 │   ├── core/                     # cadastro, reconhecimento, exclusão, encoder, modelos e erros
 │   ├── storage/                  # repositório SQLite (pessoas e embeddings)
 │   ├── web/                      # interface: SPA em HTML, CSS e JS puro
+│   ├── config.py                 # Settings: configuração externa (spec 007)
 │   ├── embedder.py               # TorchFaceEmbedder (checkpoint do E06)
 │   ├── fakes.py                  # serviços falsos para testes
-│   └── launcher.py               # python -m app
+│   ├── launcher.py               # python -m app
+│   └── logs.py                   # logs só com campos permitidos (spec 007)
 ├── src/facial_recognition_system/
 │   ├── data/                     # splits por identidade, pares e leakage
 │   ├── evaluation/               # métricas, threshold, comparação pareada e gráficos
@@ -510,6 +536,7 @@ facial_recognition_system/
 │   └── training/                 # loops de fine-tuning e cabeças de loss
 ├── tests/
 ├── .github/                      # template de PR e workflow das issues
+├── .env.example                  # variáveis da configuração, com os padrões
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # configuração do ruff e do pytest
@@ -565,6 +592,7 @@ facial_recognition_system/
 - [Application (Part 2)](#application-part-2)
   - [Architecture](#architecture)
   - [How to run](#how-to-run)
+  - [Configuration](#configuration)
   - [Creating your own database](#creating-your-own-database)
   - [Model and checkpoint](#model-and-checkpoint)
   - [Privacy in the application](#privacy-in-the-application)
@@ -872,6 +900,7 @@ Routes (all under `/api`):
 | Method and route | What it does |
 |---|---|
 | `GET /health` | checks that the application is up |
+| `GET /config` | returns the configured threshold, which the interface marks on the similarity bar |
 | `GET /persons` | lists the people with each one's number of embeddings |
 | `POST /persons` | enrolls (fields `name` and `photos`, multipart) |
 | `POST /recognitions` | recognizes one photo (field `photo`, multipart) |
@@ -894,6 +923,28 @@ This starts the server and opens the browser at `http://127.0.0.1:8000`. Options
 | `--reload` | restarts the server when the code changes (development) |
 
 The server listens **only on 127.0.0.1**, on purpose: the application has no authentication and holds biometric data, so there is no option to expose it on the network. If the port is busy, the command exits with a message and starts nothing.
+
+### Configuration
+
+Everything that changes from one machine to another lives in an external configuration ([spec 007](docs/specs/007-logging-config.md)), read from `FACE_APP_` environment variables or from a `.env` file at the root. To change something, copy the example and edit only what you need:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | What for |
+|---|---|---|
+| `FACE_APP_THRESHOLD` | `0.766` | minimum similarity for "same person" (E08, [D08](docs/decisions/D08-threshold-selection.md)) |
+| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | SQLite database of people and embeddings |
+| `FACE_APP_CHECKPOINT_PATH` | `checkpoints/E06/best.pt` | model checkpoint; empty uses the pretrained FaceNet (E01) |
+| `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` or `cuda` |
+| `FACE_APP_PORT` | `8000` | server port (`--port` wins over it) |
+| `FACE_APP_MAX_UPLOAD_MB` | `10` | maximum size of each photo |
+| `FACE_APP_LOG_LEVEL` | `INFO` | minimum log level |
+
+An environment variable wins over `.env`, and `.env` wins over the default. `.env` stays out of Git. An invalid value, or a misspelled variable in `.env`, makes `python -m app` exit with a message naming the variable to fix, without starting anything. The 127.0.0.1 address is not configurable, on purpose.
+
+Logs go only to the terminal (no log file is written) and only record fields from an allow list: the person's `id`, the number of embeddings, the status and the similarity. Names, photos, embeddings and file names never appear, even if passed by mistake.
 
 ### Creating your own database
 
@@ -989,9 +1040,11 @@ facial_recognition_system/
 │   ├── core/                     # enrollment, recognition, deletion, encoder, models and errors
 │   ├── storage/                  # SQLite repository (people and embeddings)
 │   ├── web/                      # interface: single-page app in plain HTML, CSS and JS
+│   ├── config.py                 # Settings: external configuration (spec 007)
 │   ├── embedder.py               # TorchFaceEmbedder (E06 checkpoint)
 │   ├── fakes.py                  # fake services for tests
-│   └── launcher.py               # python -m app
+│   ├── launcher.py               # python -m app
+│   └── logs.py                   # logs with allowed fields only (spec 007)
 ├── src/facial_recognition_system/
 │   ├── data/                     # identity splits, pairs and leakage
 │   ├── evaluation/               # metrics, threshold, paired comparison and plots
@@ -1002,6 +1055,7 @@ facial_recognition_system/
 │   └── training/                 # fine-tuning loops and loss heads
 ├── tests/
 ├── .github/                      # PR template and issue workflow
+├── .env.example                  # configuration variables, with their defaults
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pyproject.toml                # ruff and pytest configuration
