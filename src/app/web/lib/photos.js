@@ -9,6 +9,9 @@ import { CAMERA_UNAVAILABLE } from "./errors.js";
 export function photoPicker({ max, onChange = () => {} }) {
   let items = [];
   let stream = null;
+  // Bumped by every stop: a camera that finishes opening after the person left (or closed it) is
+  // turned off at once instead of staying on with nobody seeing it.
+  let cameraTicket = 0;
 
   const list = h("ul", { class: "photos", "aria-label": "Fotos escolhidas" });
   const empty = h("div", { class: "photos-empty" }, icon("camera"), "As fotos escolhidas aparecem aqui.");
@@ -66,6 +69,7 @@ export function photoPicker({ max, onChange = () => {} }) {
   }
 
   function stopCamera() {
+    cameraTicket += 1;
     closeCamera(stream, video);
     stream = null;
     cameraBox.hidden = true;
@@ -77,12 +81,19 @@ export function photoPicker({ max, onChange = () => {} }) {
       message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
       return;
     }
+    const ticket = cameraTicket;
+    let opened;
     try {
-      stream = await openCamera(video);
+      opened = await openCamera(video);
     } catch {
-      message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
+      if (ticket === cameraTicket) message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
       return;
     }
+    if (ticket !== cameraTicket) {
+      closeCamera(opened, video);
+      return;
+    }
+    stream = opened;
     message.replaceChildren();
     cameraBox.hidden = false;
     cameraButton.hidden = true;
