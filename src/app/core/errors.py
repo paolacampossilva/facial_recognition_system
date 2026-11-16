@@ -50,6 +50,10 @@ class CorruptEmbeddingError(AppError):
         self.embedding_id = embedding_id
 
 
+class ConfigError(AppError):
+    """The configuration is invalid: a value out of range or an unknown `.env` line (spec 007)."""
+
+
 class LaunchError(AppError):
     """The application cannot start (for instance, its port is already in use)."""
 
