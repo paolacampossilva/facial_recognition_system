@@ -15,6 +15,7 @@ from facial_recognition_system.preprocessing.errors import (
 )
 from facial_recognition_system.preprocessing.normalization import Normalization, to_tensor
 from facial_recognition_system.preprocessing.pipeline import (
+    DetectedFace,
     FacePreprocessor,
     FaceSelection,
     PreprocessingConfig,
@@ -24,6 +25,7 @@ from facial_recognition_system.preprocessing.pipeline import (
 __all__ = [
     "AlignmentMode",
     "BoundingBox",
+    "DetectedFace",
     "FaceDetection",
     "FaceDetector",
     "FacePreprocessor",
