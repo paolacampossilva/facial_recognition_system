@@ -7,10 +7,12 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 from starlette.types import Scope
 
 from app.api.errors import to_error_response
+from app.api.guard import LOCAL_HOSTS, SameOriginOnly
 from app.api.ports import Services
 from app.api.routes import build_router
 from app.config import Settings
@@ -66,4 +68,7 @@ def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) 
     application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)
     application.mount("/", WebFiles(directory=web_dir, html=True), name="web")
+    # The last one added is the outermost, so the Host is checked before the Origin.
+    application.add_middleware(SameOriginOnly)
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=LOCAL_HOSTS)
     return application

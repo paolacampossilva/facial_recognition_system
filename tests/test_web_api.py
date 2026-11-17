@@ -27,12 +27,15 @@ pytestmark = pytest.mark.unit
 THRESHOLD: float = 0.766
 EVEN_FILE: bytes = b"xx"
 ODD_FILE: bytes = b"xxx"
+LOOPBACK: str = "http://127.0.0.1"
 
 
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(
-        create_app(FakeServices(), Settings(threshold=THRESHOLD)), raise_server_exceptions=False
+        create_app(FakeServices(), Settings(threshold=THRESHOLD)),
+        base_url=LOOPBACK,
+        raise_server_exceptions=False,
     )
 
 
@@ -189,6 +192,7 @@ class ExplodingServices(FakeServices):
 def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None:
     client = TestClient(
         create_app(ExplodingServices(), Settings(threshold=THRESHOLD)),
+        base_url=LOOPBACK,
         raise_server_exceptions=False,
     )
     response = client.get("/api/persons")
@@ -246,3 +250,59 @@ def test_the_page_is_portuguese_and_has_no_inline_script_or_style(client: TestCl
     assert "<style" not in html
     assert "style=" not in html
     assert "<script>" not in html
+
+
+def test_a_request_for_another_host_name_is_refused(client: TestClient) -> None:
+    """A DNS-rebinding page reaches the server under its own name, which is not loopback."""
+    response = client.get("/api/persons", headers={"Host": "attacker.example"})
+
+    assert response.status_code == 400
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.1:8123", "localhost:9000"])
+def test_the_loopback_names_are_accepted_with_any_port(client: TestClient, host: str) -> None:
+    assert client.get("/api/health", headers={"Host": host}).status_code == 200
+
+
+def test_a_post_from_another_site_is_refused_and_enrolls_nobody(client: TestClient) -> None:
+    response = client.post(
+        "/api/persons",
+        data={"name": "Ana"},
+        files=[photo()],
+        headers={"Origin": "http://attacker.example"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "forbidden_origin"
+    assert client.get("/api/persons").json() == []
+
+
+def test_a_delete_from_another_site_is_refused(client: TestClient) -> None:
+    enroll(client, "Ana")
+
+    response = client.delete("/api/persons/1", headers={"Origin": "http://attacker.example"})
+
+    assert response.status_code == 403
+    assert [person["name"] for person in client.get("/api/persons").json()] == ["Ana"]
+
+
+def test_an_opaque_origin_is_refused(client: TestClient) -> None:
+    """A sandboxed frame sends `Origin: null`."""
+    response = client.post(
+        "/api/persons", data={"name": "Ana"}, files=[photo()], headers={"Origin": "null"}
+    )
+
+    assert response.status_code == 403
+
+
+def test_the_applications_own_page_may_post_on_any_port() -> None:
+    client = TestClient(create_app(FakeServices(), Settings(threshold=THRESHOLD)))
+
+    response = client.post(
+        "/api/persons",
+        data={"name": "Ana"},
+        files=[photo()],
+        headers={"Host": "127.0.0.1:8123", "Origin": "http://127.0.0.1:8123"},
+    )
+
+    assert response.status_code == 201
