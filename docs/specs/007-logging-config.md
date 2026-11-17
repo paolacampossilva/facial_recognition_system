@@ -1,6 +1,6 @@
 # Spec 007: configuração externa e logs
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-11-16
 - **Dona:** Valentina
 - **Issue:** #41, #103 (vários rostos: `FACE_APP_MIN_FACE_PX` e `face_count`)

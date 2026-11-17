@@ -1,6 +1,6 @@
 # Spec 001: detecção facial
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-10-28
 - **Dona:** Paola
 - **Issue:** #35, #103 (vários rostos no reconhecimento)

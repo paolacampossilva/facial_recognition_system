@@ -1,6 +1,6 @@
 # Spec 003: reconhecimento facial
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-10-28
 - **Dona:** Paola
 - **Issue:** #37, #103 (vários rostos)

@@ -1,6 +1,6 @@
 # Spec 002: cadastro de pessoa
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-10-28
 - **Dona:** Paola
 - **Issue:** #36

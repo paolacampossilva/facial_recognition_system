@@ -21,7 +21,7 @@ Cada uma é dona de uma fatia vertical (escreve a spec, implementa, testa e docu
 
 ## Situação inicial (16/11)
 
-- Specs 001 a 004 e 006 escritas pela Paola e já na `dev` (PR #98), falta a revisão cruzada.
+- Specs 001 a 004 e 006 escritas pela Paola e já na `dev` (PR #98), revisadas pela Valentina.
 - Faltam a spec 005 (camera-interface, agora da Paola, que faz a interface) e a 007 (logging-config), da Valentina.
 - Decisões herdadas da Parte 1: D12 (SQLite, só embeddings, sem fotos), D15 (só as duas aparecem no vídeo) e o modelo escolhido na D16. A D13 (Streamlit) foi substituída pela [D17](decisions/D17-interface-web-lia.md) (FastAPI e front-end web, três abas).
 - A `main` está na tag `parte-1` (`5430219`).
@@ -30,7 +30,7 @@ Cada uma é dona de uma fatia vertical (escreve a spec, implementa, testa e docu
 
 | | Paola | Valentina |
 |---|---|---|
-| Specs | 001 a 004 e 006 (na `dev`, falta a revisão cruzada) e 005 | 007 |
+| Specs | 001 a 004 e 006 (na `dev`, revisadas pela Valentina) e 005 | 007 |
 | Código | `src/app/core/` (`EnrollmentService`, `RecognitionService`, `DeletionService`, modelos Pydantic, exceções), `src/app/storage/` (SQLite), carga do modelo da D16, interface inteira: API FastAPI e `src/app/web/` (abas Cadastro, Reconhecimento e Pessoas cadastradas) | `Settings` e `.env.example`, logs sem dados pessoais |
 | Testes | unitários com detector e modelo fake, integração com o modelo real em imagens públicas, contrato da API e CSP | e2e da interface (Chrome sem interface: cadastro, reconhecimento, desconhecido, exclusão; falha se houver erro de console), testes do `Settings` |
 | Entrega | README com arquitetura (diagrama) e como criar o próprio banco, roteiro do vídeo 2, metade do vídeo 2 (grava e apresenta) | Anexo B item por item, auditoria do histórico Git (`git log --all --stat`), metade do vídeo 2 (grava e apresenta), edição e exportação |
