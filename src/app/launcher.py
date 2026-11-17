@@ -19,7 +19,8 @@ import uvicorn
 from pydantic import BaseModel, Field, ValidationError
 
 from app.config import DEFAULT_PORT, MAX_PORT, MIN_PORT, Settings, load_settings
-from app.core.errors import ConfigError, LaunchError
+from app.core.errors import AppError, ConfigError, LaunchError, ModelLoadError
+from app.embedder import TRAIN_HINT, pick_device
 from app.logs import uvicorn_log_config
 
 HOST: str = "127.0.0.1"
@@ -81,6 +82,24 @@ def port_is_free(port: int) -> bool:
     return True
 
 
+def check_model_setup(settings: Settings) -> None:
+    """Catches the usual first-run mistakes before the server starts and loads the model.
+
+    The server calls the application factory itself and shows any error it raises as a traceback,
+    so the two mistakes a person is likely to make are checked here, where they become a message.
+
+    Raises:
+        ModelLoadError: The device is not available, or the configured checkpoint does not exist.
+    """
+    pick_device(settings.device)
+    checkpoint = settings.checkpoint_path
+    if checkpoint is not None and not checkpoint.is_file():
+        raise ModelLoadError(
+            f"checkpoint not found at {checkpoint}; {TRAIN_HINT}, "
+            f"or leave FACE_APP_CHECKPOINT_PATH empty to use the pretrained FaceNet"
+        )
+
+
 def run(
     options: LaunchOptions,
     serve: Callable[..., None] = uvicorn.run,
@@ -131,7 +150,8 @@ def main(
     the variable instead of a traceback from inside the server (spec 007, R6).
 
     Returns:
-        The exit code: 0 when the server ran and stopped, 1 when it could not start.
+        The exit code: 0 when the server ran and stopped, 1 when it could not start (a wrong
+        setting, a missing model or a port in use).
     """
     try:
         settings = load_settings()
@@ -140,8 +160,9 @@ def main(
         return 1
     options = parse_options(argv, settings)
     try:
+        check_model_setup(settings)
         run(options, serve=serve, open_browser=open_browser)
-    except LaunchError as error:
+    except AppError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

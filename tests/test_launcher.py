@@ -7,10 +7,19 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import torch
 
 from app import launcher
-from app.core.errors import LaunchError
-from app.launcher import LaunchOptions, main, parse_options, port_is_free, run
+from app.config import Settings
+from app.core.errors import LaunchError, ModelLoadError
+from app.launcher import (
+    LaunchOptions,
+    check_model_setup,
+    main,
+    parse_options,
+    port_is_free,
+    run,
+)
 from app.logs import uvicorn_log_config
 from tests.app_support import free_port
 
@@ -46,6 +55,12 @@ def busy_port() -> Iterator[int]:
         holder.bind(("127.0.0.1", 0))
         holder.listen()
         yield holder.getsockname()[1]
+
+
+@pytest.fixture(autouse=True)
+def pretrained_model(default_configuration: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests start no real server, so they must not need the E06 checkpoint on disk."""
+    monkeypatch.setenv("FACE_APP_CHECKPOINT_PATH", "")
 
 
 def test_the_defaults_are_port_8000_with_the_browser_and_without_reload() -> None:
@@ -221,3 +236,46 @@ def test_the_configured_log_level_reaches_the_server(monkeypatch: pytest.MonkeyP
 
     ((_, kwargs),) = server.calls
     assert kwargs["log_level"] == "warning"
+
+
+def test_a_missing_checkpoint_stops_before_the_server_with_how_to_train_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    missing = tmp_path / "E06" / "best.pt"
+    monkeypatch.setenv("FACE_APP_CHECKPOINT_PATH", str(missing))
+    server = FakeServer()
+
+    code = main(["--no-browser", "--port", str(free_port())], serve=server)
+
+    printed = capsys.readouterr().err
+    assert code == 1
+    assert printed.startswith(f"error: checkpoint not found at {missing}")
+    assert "scripts/train.py" in printed
+    assert "Traceback" not in printed
+    assert server.calls == []
+
+
+def test_a_model_that_fails_to_load_inside_the_server_is_a_message_too(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def failing_server(*args: object, **kwargs: object) -> None:
+        raise ModelLoadError("model.pt is not a valid FaceNet checkpoint (RuntimeError)")
+
+    code = main(["--no-browser", "--port", str(free_port())], serve=failing_server)
+
+    assert code == 1
+    assert "is not a valid FaceNet checkpoint" in capsys.readouterr().err
+
+
+def test_an_existing_checkpoint_and_the_pretrained_model_pass_the_check(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "best.pt"
+    checkpoint.write_bytes(b"weights")
+
+    check_model_setup(Settings(checkpoint_path=checkpoint, device="cpu"))
+    check_model_setup(Settings(checkpoint_path=None, device="cpu"))
+
+
+@pytest.mark.skipif(torch.cuda.is_available(), reason="this computer has a GPU")
+def test_asking_for_cuda_without_a_gpu_is_refused_before_the_server_starts() -> None:
+    with pytest.raises(ModelLoadError, match="no GPU"):
+        check_model_setup(Settings(checkpoint_path=None, device="cuda"))
