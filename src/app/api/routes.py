@@ -3,6 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 
 from app.api.ports import Services
 from app.config import Settings
@@ -59,14 +60,16 @@ def build_router() -> APIRouter:
         limit = settings_of(request).max_upload_bytes
         contents = [await read_upload(photo, limit) for photo in photos]
         enrollment = EnrollmentRequest(name=name, photos=contents)
-        return services_of(request).enrollment.enroll(enrollment)
+        # Reading the photos is async, but the model and the database are not: they run on a
+        # worker thread so a slow enrollment does not freeze every other request.
+        return await run_in_threadpool(services_of(request).enrollment.enroll, enrollment)
 
     @router.post("/recognitions")
     async def recognize(
         request: Request, photo: Annotated[UploadFile, File()]
     ) -> RecognitionResult:
         content = await read_upload(photo, settings_of(request).max_upload_bytes)
-        return services_of(request).recognition.recognize(content)
+        return await run_in_threadpool(services_of(request).recognition.recognize, content)
 
     @router.delete("/persons/{person_id}")
     def delete_person(request: Request, person_id: int) -> DeletionResult:

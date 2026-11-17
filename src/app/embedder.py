@@ -84,7 +84,7 @@ class TorchFaceEmbedder:
     def embed(self, face: Image.Image) -> np.ndarray:
         """Returns the embedding of a face crop: a float32 vector of 512 values with unit norm."""
         tensor = self._embedder.preprocess(face).unsqueeze(0).to(self._device)
-        # One pass at a time: the API calls this from a thread pool and one GPU has no use for more.
+        # One pass at a time: the API calls this from worker threads and a GPU gains nothing more.
         with self._lock, torch.no_grad():
             output = self._embedder(tensor)
         return output[0].cpu().numpy().astype(np.float32)

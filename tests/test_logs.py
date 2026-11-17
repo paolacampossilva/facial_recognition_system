@@ -2,14 +2,11 @@
 
 import logging
 import sys
-import threading
-import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
 
 import pytest
-import uvicorn
 
 from app.api.app import create_app
 from app.config import Settings
@@ -18,7 +15,7 @@ from app.core.enrollment import EnrollmentService
 from app.core.recognition import RecognitionService
 from app.logs import APP_LOGGER, AllowListFormatter, configure_logging, uvicorn_log_config
 from app.storage.repository import SqlitePersonRepository
-from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, free_port, photo, request
+from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, photo, request, serving
 
 pytestmark = pytest.mark.unit
 
@@ -137,26 +134,13 @@ def test_an_unexpected_error_never_prints_its_message_through_the_server_logger(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     configure_logging("INFO")
-    port = free_port()
-    config = uvicorn.Config(
-        create_app(ExplodingServices(), Settings(threshold=THRESHOLD)),  # type: ignore[arg-type]
-        host="127.0.0.1",
-        port=port,
-        log_level="info",
-        log_config=uvicorn_log_config(),
-    )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 10
-    while not server.started and time.monotonic() < deadline:
-        time.sleep(0.05)
-    try:
-        with pytest.raises(urllib.error.HTTPError) as response:
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/api/persons")  # noqa: S310
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10)
+    application = create_app(ExplodingServices(), Settings(threshold=THRESHOLD))  # type: ignore[arg-type]
+
+    with (
+        serving(application, log_level="info", log_config=uvicorn_log_config()) as url,
+        pytest.raises(urllib.error.HTTPError) as response,
+    ):
+        urllib.request.urlopen(f"{url}/api/persons")  # noqa: S310
 
     printed = capsys.readouterr().err
     assert response.value.code == 500

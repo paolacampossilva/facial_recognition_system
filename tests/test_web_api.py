@@ -3,6 +3,9 @@
 import asyncio
 import json
 import logging
+import threading
+import time
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -19,13 +22,14 @@ from app.core.errors import (
     PersonNotFoundError,
     UploadTooLargeError,
 )
-from app.core.models import MAX_PHOTOS
+from app.core.models import MAX_PHOTOS, RecognitionResult, RecognitionStatus
 from app.fakes import FakeServices
 from facial_recognition_system.preprocessing.errors import (
     InvalidImageError,
     MultipleFacesError,
     NoFaceDetectedError,
 )
+from tests.app_support import serving
 
 pytestmark = pytest.mark.unit
 
@@ -390,3 +394,48 @@ def test_more_photos_than_the_limit_are_refused_before_any_is_read(client: TestC
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
     assert client.get("/api/persons").json() == []
+
+
+SLOW_SECONDS: float = 1.0
+BOUNDARY: str = "testboundary"
+
+
+class SlowRecognition:
+    """Services whose recognition takes a second, as a real model can."""
+
+    @property
+    def recognition(self) -> "SlowRecognition":
+        return self
+
+    def recognize(self, image: bytes) -> RecognitionResult:
+        time.sleep(SLOW_SECONDS)
+        return RecognitionResult(status=RecognitionStatus.UNKNOWN, person_name=None, similarity=0.1)
+
+
+def post_a_photo(url: str) -> None:
+    body = (
+        f'--{BOUNDARY}\r\nContent-Disposition: form-data; name="photo"; filename="a.jpg"\r\n'
+        f"Content-Type: image/jpeg\r\n\r\nxx\r\n--{BOUNDARY}--\r\n"
+    ).encode()
+    request = urllib.request.Request(  # noqa: S310
+        f"{url}/api/recognitions",
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={BOUNDARY}"},
+    )
+    urllib.request.urlopen(request).read()  # noqa: S310
+
+
+def test_a_slow_recognition_does_not_block_the_other_requests() -> None:
+    """The model runs on a worker thread, so the server keeps answering while it works."""
+    application = create_app(SlowRecognition(), Settings(threshold=THRESHOLD))  # type: ignore[arg-type]
+
+    with serving(application) as url:
+        slow = threading.Thread(target=post_a_photo, args=(url,))
+        slow.start()
+        time.sleep(0.2)  # the recognition is running by now
+        started = time.monotonic()
+        urllib.request.urlopen(f"{url}/api/health").read()  # noqa: S310
+        waited = time.monotonic() - started
+        slow.join()
+
+    assert waited < SLOW_SECONDS / 2
