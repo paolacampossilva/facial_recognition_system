@@ -10,6 +10,7 @@ from app.core.errors import (
     DuplicatePersonError,
     EmptyGalleryError,
     PersonNotFoundError,
+    TooManyPhotosError,
     UploadTooLargeError,
 )
 from facial_recognition_system.preprocessing.errors import (
@@ -65,7 +66,9 @@ def to_error_response(error: Exception) -> tuple[int, ErrorResponse]:
             code="person_not_found", message="Person not found"
         )
     # pydantic's ValidationError is a ValueError; RequestValidationError covers bad route input.
-    if isinstance(error, ValueError | RequestValidationError | UploadTooLargeError):
+    if isinstance(
+        error, ValueError | RequestValidationError | UploadTooLargeError | TooManyPhotosError
+    ):
         return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(
             code="invalid_request", message="Invalid name or photos"
         )

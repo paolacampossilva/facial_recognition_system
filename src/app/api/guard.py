@@ -22,6 +22,7 @@ from app.core.models import MAX_PHOTOS
 LOCAL_HOSTS: list[str] = ["127.0.0.1", "localhost"]
 SAFE_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
 API_PREFIX: str = "/api/"
+ENROLLMENT_PATH: str = "/api/persons"  # the only route that takes more than one photo
 # What the multipart framing and the name add to the photos themselves.
 BODY_MARGIN_BYTES: int = 64 * 1024
 # Names and recognition results must not be cached or sniffed by the browser.
@@ -56,7 +57,9 @@ class SameOriginOnly:
 
 
 class UploadSizeLimit:
-    """Refuses a request whose declared body is bigger than the photos of one enrollment can be.
+    """Refuses a request whose declared body is bigger than the photos the route can take.
+
+    An enrollment takes up to ten photos and a recognition takes one.
 
     Starlette parses the whole multipart body, and keeps every part, before a route reads the first
     one, so the per-photo limit alone only acts after everything was stored. A browser always sends
@@ -65,13 +68,16 @@ class UploadSizeLimit:
 
     def __init__(self, app: ASGIApp, max_photo_bytes: int) -> None:
         self._app = app
-        self._max_body_bytes = max_photo_bytes * MAX_PHOTOS + BODY_MARGIN_BYTES
         self._max_photo_bytes = max_photo_bytes
+
+    def _max_body_bytes(self, path: str) -> int:
+        photos = MAX_PHOTOS if path == ENROLLMENT_PATH else 1
+        return self._max_photo_bytes * photos + BODY_MARGIN_BYTES
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and scope["path"].startswith(API_PREFIX):
             declared = Headers(scope=scope).get("content-length", "0")
-            if declared.isdigit() and int(declared) > self._max_body_bytes:
+            if declared.isdigit() and int(declared) > self._max_body_bytes(scope["path"]):
                 status, body = to_error_response(UploadTooLargeError(self._max_photo_bytes))
                 await respond(send, status, body)
                 return

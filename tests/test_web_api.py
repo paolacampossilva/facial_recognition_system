@@ -17,6 +17,7 @@ from app.core.errors import (
     DuplicatePersonError,
     EmptyGalleryError,
     PersonNotFoundError,
+    TooManyPhotosError,
     UploadTooLargeError,
 )
 from app.core.models import MAX_PHOTOS
@@ -218,6 +219,7 @@ def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None
         (PersonNotFoundError(1), 404, "person_not_found"),
         (ValueError("bad"), 422, "invalid_request"),
         (UploadTooLargeError(1), 422, "invalid_request"),
+        (TooManyPhotosError(10), 422, "invalid_request"),
         (RuntimeError("boom"), 500, "internal_error"),
     ],
 )
@@ -340,8 +342,10 @@ def test_the_pages_of_the_interface_are_not_marked_no_store(client: TestClient) 
     assert client.get("/").headers["cache-control"] == "no-cache"
 
 
-async def run_asgi(app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> list[Message]:
-    """Calls an ASGI app with a POST to /api/persons and returns what it sent back."""
+async def run_asgi(
+    app: ASGIApp, headers: list[tuple[bytes, bytes]], path: str = "/api/persons"
+) -> list[Message]:
+    """Calls an ASGI app with a POST to `path` and returns what it sent back."""
     sent: list[Message] = []
 
     async def receive() -> Message:
@@ -350,7 +354,7 @@ async def run_asgi(app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> list[Mes
     async def send(message: Message) -> None:
         sent.append(message)
 
-    scope = {"type": "http", "method": "POST", "path": "/api/persons", "headers": headers}
+    scope = {"type": "http", "method": "POST", "path": path, "headers": headers}
     await app(scope, receive, send)
     return sent
 
@@ -369,6 +373,26 @@ def test_a_body_declared_bigger_than_ten_photos_is_refused_before_it_is_read() -
     assert reached == []
     assert sent[0]["status"] == 422
     assert json.loads(sent[1]["body"])["code"] == "invalid_request"
+
+
+def test_a_recognition_takes_one_photo_so_ten_photos_of_body_are_refused() -> None:
+    reached: list[bool] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        reached.append(True)
+
+    one_mib = 1024 * 1024
+    guard = UploadSizeLimit(downstream, max_photo_bytes=one_mib)
+    ten_photos = str(one_mib * MAX_PHOTOS).encode()
+
+    enrollment = asyncio.run(run_asgi(guard, [(b"content-length", ten_photos)]))
+    recognition = asyncio.run(
+        run_asgi(guard, [(b"content-length", ten_photos)], path="/api/recognitions")
+    )
+
+    assert reached == [True]  # only the enrollment got through
+    assert recognition[0]["status"] == 422
+    assert enrollment == []
 
 
 def test_a_body_inside_the_limit_reaches_the_route() -> None:

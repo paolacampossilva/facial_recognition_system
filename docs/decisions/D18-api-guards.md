@@ -15,7 +15,7 @@ Quatro regras na borda da API (`src/app/api/guard.py`), todas sem configuração
 - **Host.** Só `127.0.0.1` e `localhost` (com qualquer porta, já que `--port` escolhe a porta). Outro valor devolve 400. Isso fecha o DNS rebinding.
 - **Origin.** Um POST ou DELETE que traz `Origin` só passa se ele for a própria página (`http://<Host>`). Outro valor, inclusive `null`, devolve 403 com o código `forbidden_origin`. O navegador sempre manda `Origin` num POST entre sites, então uma página de fora não consegue omiti-lo. Uma requisição sem `Origin` (um script, o `curl`, os testes) passa, porque não é um navegador agindo em nome de uma página.
 - **Cache.** Toda resposta de `/api` leva `Cache-Control: no-store` e `X-Content-Type-Options: nosniff`, para nomes e resultados não ficarem no cache do navegador.
-- **Tamanho do corpo.** Um corpo declarado maior que 10 fotos do tamanho máximo (mais uma margem de 64 KiB) é recusado com o mesmo 422 `invalid_request` do upload grande demais, antes de o Starlette ler e guardar tudo. Mais de 10 fotos no cadastro também é recusado antes de ler qualquer uma.
+- **Tamanho do corpo.** Um corpo declarado maior que as fotos que a rota aceita (10 no cadastro e 1 no reconhecimento, no tamanho máximo, mais uma margem de 64 KiB) é recusado com o mesmo 422 `invalid_request` do upload grande demais, antes de o Starlette ler e guardar tudo. Mais de 10 fotos no cadastro também é recusado antes de ler qualquer uma.
 
 ## Alternativas consideradas
 
