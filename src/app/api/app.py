@@ -1,6 +1,8 @@
 """FastAPI application: the JSON routes plus the static web interface, with security headers."""
 
 import logging
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -62,7 +64,12 @@ def handle_error(_: Request, error: Exception) -> JSONResponse:
     )
 
 
-def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) -> FastAPI:
+def create_app(
+    services: Services,
+    settings: Settings,
+    web_dir: Path = WEB_DIR,
+    lifespan: Callable[[FastAPI], AbstractAsyncContextManager[None]] | None = None,
+) -> FastAPI:
     """Builds the application around the given services and serves the interface from `web_dir`.
 
     Args:
@@ -71,8 +78,11 @@ def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) 
             threshold to the interface, which shows it on the result (it does not change what the
             services decide).
         web_dir: Folder with the static interface.
+        lifespan: What runs when the server starts and stops, such as closing the database.
     """
-    application = FastAPI(title="Face recognition", docs_url=None, redoc_url=None)
+    application = FastAPI(
+        title="Face recognition", docs_url=None, redoc_url=None, lifespan=lifespan
+    )
     application.state.services = services
     application.state.settings = settings
     application.include_router(build_router())

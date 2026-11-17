@@ -23,7 +23,7 @@ from app.core.errors import ConfigError, LaunchError
 from app.logs import uvicorn_log_config
 
 HOST: str = "127.0.0.1"
-APP_IMPORT_PATH: str = "app.main:app"
+APP_IMPORT_PATH: str = "app.main:create"
 BROWSER_DELAY_SECONDS: float = 1.0
 SOURCE_DIR: Path = Path(__file__).resolve().parent
 
@@ -110,6 +110,7 @@ def run(
     reload_dirs = [str(SOURCE_DIR)] if options.reload else None
     serve(
         APP_IMPORT_PATH,
+        factory=True,
         host=HOST,
         port=options.port,
         reload=options.reload,

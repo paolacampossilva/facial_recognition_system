@@ -95,8 +95,9 @@ def test_the_server_starts_on_the_loopback_address_with_the_given_port() -> None
     run(LaunchOptions(port=port, open_browser=False), serve=server, open_browser=FakeBrowser())
 
     ((args, kwargs),) = server.calls
-    assert args == ("app.main:app",)
+    assert args == ("app.main:create",)
     assert kwargs == {
+        "factory": True,
         "host": "127.0.0.1",
         "port": port,
         "reload": False,
