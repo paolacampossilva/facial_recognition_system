@@ -2,11 +2,13 @@
 
 from app.api.app import create_app
 from app.config import load_settings
-from app.fakes import FakeServices
 from app.logs import configure_logging
+from app.services import build_services, load_encoder
+from app.storage.repository import SqlitePersonRepository
 
 settings = load_settings()
 configure_logging(settings.log_level)
 
-# TODO(#49): replace the fake services with the real ones and the configured model.
-app = create_app(FakeServices(), settings)
+encoder = load_encoder(settings)
+repository = SqlitePersonRepository(settings.database_path)
+app = create_app(build_services(settings, encoder, repository), settings)
