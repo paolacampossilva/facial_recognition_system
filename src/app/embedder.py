@@ -6,18 +6,20 @@ application starts, and failures surface as `ModelLoadError` for the edge to rep
 
 import threading
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
 from PIL import Image
+from torch import nn
 
 from app.core.errors import ModelLoadError
 from facial_recognition_system.models import FaceEmbedder, build_embedder
-from facial_recognition_system.training import load_checkpoint
 
 # The FaceNet pretrained on VGGFace2, with no fine-tuning (experiment E01).
 PRETRAINED_MODEL_ID: str = "facenet-vggface2"
 TRAIN_HINT: str = "train it with: python scripts/train.py --config configs/E06.yaml"
+CLASSIFIER_PREFIX: str = "logits."
 DEVICE_PREFERENCES: frozenset[str] = frozenset({"auto", "cpu", "cuda"})
 
 
@@ -92,7 +94,16 @@ class TorchFaceEmbedder:
         if not checkpoint.is_file():
             raise ModelLoadError(f"checkpoint not found at {checkpoint}; {TRAIN_HINT}")
         try:
-            load_checkpoint(checkpoint, embedder)
+            saved = torch.load(checkpoint, map_location="cpu", weights_only=True)
+            # Training starts from the pretrained FaceNet, which carries the VGGFace2 classifier
+            # (`logits`). It is not part of the embedding, and the network built here has no such
+            # layer, so the strict load below would refuse it.
+            weights = {
+                name: value
+                for name, value in saved["network"].items()
+                if not name.startswith(CLASSIFIER_PREFIX)
+            }
+            cast(nn.Module, embedder.network).load_state_dict(weights)
         except Exception as error:  # torch's unpickler raises many types on a corrupt file
             raise ModelLoadError(
                 f"{checkpoint} is not a valid FaceNet checkpoint ({type(error).__name__}); "
