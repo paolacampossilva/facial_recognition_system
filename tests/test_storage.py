@@ -2,6 +2,7 @@
 
 import sqlite3
 import stat
+import sys
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -219,7 +220,8 @@ def test_the_database_file_and_its_folder_are_created_and_private(tmp_path: Path
     path = tmp_path / "data" / "private" / "app.db"
     SqlitePersonRepository(path).close()
     assert path.is_file()
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if sys.platform != "win32":  # Windows has no POSIX permission bits
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
 def test_the_data_survives_reopening_the_file(tmp_path: Path) -> None:

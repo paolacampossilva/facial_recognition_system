@@ -36,7 +36,7 @@ def scripts() -> list[Path]:
 
 def code_of(path: Path) -> str:
     """The source without whole-line comments, so notes do not trip the checks."""
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     return "\n".join(line for line in lines if not line.lstrip().startswith("//"))
 
 
@@ -85,14 +85,16 @@ def test_local_storage_is_only_touched_by_the_theme_files() -> None:
 
 def test_the_theme_is_saved_under_the_single_key_theme() -> None:
     for name in THEME_FILES:
-        source = next(script for script in scripts() if script.name == name).read_text()
+        source = next(script for script in scripts() if script.name == name).read_text(
+            encoding="utf-8"
+        )
         assert 'getItem("theme")' in source or 'const KEY = "theme"' in source
 
 
 def test_no_browser_dialogs_and_the_confirmation_is_a_native_dialog() -> None:
     for script in scripts():
         assert not re.search(r"\b(alert|confirm|prompt)\(", code_of(script)), script.name
-    dialogs = (WEB_DIR / "lib" / "dialogs.js").read_text()
+    dialogs = (WEB_DIR / "lib" / "dialogs.js").read_text(encoding="utf-8")
     assert "showModal()" in dialogs
     assert 'role: "alertdialog"' in dialogs
 
@@ -113,14 +115,14 @@ def test_no_script_sets_inline_styles_or_loads_external_urls() -> None:
 
 
 def test_the_page_loads_no_external_resource() -> None:
-    html = (WEB_DIR / "index.html").read_text()
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     assert not re.search(r'(?:src|href)="https?:', html)
     assert html.index("tokens.css") < html.index("styles.css")
     assert 'src="theme-init.js"' in html
 
 
 def test_colors_come_only_from_tokens() -> None:
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", styles)
     assert not re.search(r"\brgba?\(", styles)
     # Only local aliases (the icon of a button, the color of a notice) may be declared here.
@@ -131,7 +133,7 @@ def test_colors_come_only_from_tokens() -> None:
 
 
 def test_dark_by_system_and_dark_by_choice_are_identical() -> None:
-    css = (WEB_DIR / "tokens.css").read_text()
+    css = (WEB_DIR / "tokens.css").read_text(encoding="utf-8")
     by_system = theme_block(css, ':root:not([data-theme="light"])')
     by_choice = theme_block(css, ':root[data-theme="dark"]')
     assert by_system == by_choice
@@ -140,7 +142,7 @@ def test_dark_by_system_and_dark_by_choice_are_identical() -> None:
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_the_accent_is_violet_with_readable_contrast(theme: str) -> None:
-    css = (WEB_DIR / "tokens.css").read_text()
+    css = (WEB_DIR / "tokens.css").read_text(encoding="utf-8")
     tokens = theme_block(css, ":root" if theme == "light" else ':root[data-theme="dark"]')
     low, high = VIOLET_HUE_RANGE
     assert low <= hue_degrees(tokens["--accent"]) <= high
@@ -150,7 +152,7 @@ def test_the_accent_is_violet_with_readable_contrast(theme: str) -> None:
 
 
 def test_danger_is_not_violet() -> None:
-    css = (WEB_DIR / "tokens.css").read_text()
+    css = (WEB_DIR / "tokens.css").read_text(encoding="utf-8")
     for selector in (":root", ':root[data-theme="dark"]'):
         low, high = VIOLET_HUE_RANGE
         assert not low <= hue_degrees(theme_block(css, selector)["--danger"]) <= high
@@ -214,9 +216,9 @@ def test_meter_state_marks_the_limit_and_degrades_without_it() -> None:
 
 
 def test_the_shell_has_a_272px_sidebar_that_turns_off_canvas_below_860px() -> None:
-    tokens = (WEB_DIR / "tokens.css").read_text()
-    styles = (WEB_DIR / "styles.css").read_text()
-    html = (WEB_DIR / "index.html").read_text()
+    tokens = (WEB_DIR / "tokens.css").read_text(encoding="utf-8")
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     assert theme_block(tokens, ":root")["--sidebar-w"] == "272px"
     assert "@media (max-width: 860px)" in styles
     assert "body.sidebar-open .sidebar" in styles
@@ -249,14 +251,14 @@ def test_each_screen_has_a_page_title_and_the_menu_shows_the_people_count() -> N
 
 
 def test_icons_used_by_the_css_exist_and_every_icon_file_is_used() -> None:
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     used = set(re.findall(r'url\("assets/icons/([\w-]+)\.svg"\)', styles))
     present = {path.stem for path in (WEB_DIR / "assets" / "icons").glob("*.svg")}
     assert used == present
 
 
 def test_every_icon_a_script_asks_for_has_a_css_class() -> None:
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     asked: set[str] = set()
     for script in scripts():
         source = code_of(script)
@@ -280,7 +282,7 @@ def test_the_enrollment_form_shows_one_error_per_field() -> None:
 
 
 def test_icons_are_centered_by_a_flex_box_and_not_by_the_text_baseline() -> None:
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert re.search(r"\.icon \{[^}]*display: inline-flex[^}]*align-items: center", styles)
 
 
@@ -296,12 +298,12 @@ def test_camera_buttons_are_highlighted_and_the_preview_is_mirrored() -> None:
     source = code_of(WEB_DIR / "lib" / "photos.js")
     assert re.search(r'captureButton = h\("button", \{[^}]*class: "secondary"', source)
     assert re.search(r'closeButton = h\("button", \{[^}]*class: "danger"', source)
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert re.search(r"\.camera \{[^}]*transform: scaleX\(-1\)", styles)
 
 
 def test_the_page_has_a_favicon_that_exists() -> None:
-    html = (WEB_DIR / "index.html").read_text()
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     match = re.search(r'<link rel="icon"[^>]*href="([^"]+)"', html)
     assert match
     assert (WEB_DIR / match.group(1)).is_file()
@@ -327,11 +329,11 @@ def test_the_similarity_is_shown_as_a_big_percentage_with_the_original_value() -
     source = code_of(WEB_DIR / "views" / "recognize.js")
     assert "formatPercent" in source and "* 100" in source
     assert "Valor original" in source
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert re.search(r"\.meter__percent \{[^}]*font-size: 32px", styles)
 
 
 def test_the_tips_box_has_a_violet_highlight_and_a_violet_title() -> None:
-    styles = (WEB_DIR / "styles.css").read_text()
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert re.search(r"\.tips \{[^}]*border: 1px solid var\(--accent\)", styles)
     assert re.search(r"\.tips summary \{[^}]*color: var\(--accent-ink\)", styles)
