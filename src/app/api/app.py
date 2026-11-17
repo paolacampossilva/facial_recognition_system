@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 from starlette.types import Scope
@@ -25,7 +26,7 @@ from app.api.ports import Services
 from app.api.routes import build_router
 from app.config import Settings
 from app.core.errors import AppError
-from facial_recognition_system.preprocessing import PreprocessingError
+from facial_recognition_system.preprocessing.errors import PreprocessingError
 
 logger = logging.getLogger(__name__)
 
@@ -88,13 +89,15 @@ def create_app(
     application.state.services = services
     application.state.settings = settings
     application.include_router(build_router())
-    # The errors the application raises on purpose (no face, a name taken, an empty gallery) are
-    # answered here, inside the middleware. Anything else reaches the handler of `Exception`,
-    # which Starlette runs outside it and then re-raises, so the server logs it as unexpected.
+    # The expected errors get their own handlers: Starlette answers them inside the middleware and
+    # stops there. The handler of `Exception` runs in the outermost middleware, which re-raises
+    # after answering, so the server logs a traceback; it is kept for the unexpected 500 only.
     application.add_exception_handler(AppError, handle_error)
     application.add_exception_handler(PreprocessingError, handle_error)
-    application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)
+    # A name the request model refuses (empty, too long) is raised while a route builds it.
+    application.add_exception_handler(ValidationError, handle_error)
+    application.add_exception_handler(Exception, handle_error)
     application.mount("/", WebFiles(directory=web_dir, html=True), name="web")
     # The last one added is the outermost: the headers go on every API response, even a refusal,
     # then the Host is checked, then the Origin, then the size of the body.

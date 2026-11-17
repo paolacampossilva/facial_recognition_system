@@ -51,7 +51,48 @@ def test_a_new_database_is_created_empty_with_both_tables_and_the_pragmas_on(
     assert repository.list_persons() == []
     assert rows(repository, "PRAGMA foreign_keys") == [(1,)]
     assert rows(repository, "PRAGMA secure_delete") == [(1,)]
+    assert rows(repository, "PRAGMA user_version") == [(2,)]
+
+
+def test_the_ids_of_a_deleted_person_are_never_given_to_the_next_one(
+    repository: SqlitePersonRepository,
+) -> None:
+    # Without AUTOINCREMENT, SQLite reuses the largest id after it is deleted: a screen that still
+    # lists "Ana" with id 1 would then delete "Bia", enrolled next with the same id.
+    ana = repository.add_person(person("Ana", 1, 2))
+    ana_embeddings = {
+        embedding_id for (embedding_id,) in rows(repository, "SELECT id FROM embeddings")
+    }
+    repository.delete_person(ana.id)
+
+    bia = repository.add_person(person("Bia", 3, 4))
+
+    assert bia.id != ana.id
+    bia_embeddings = {
+        embedding_id for (embedding_id,) in rows(repository, "SELECT id FROM embeddings")
+    }
+    assert bia_embeddings.isdisjoint(ana_embeddings)
+
+
+def test_an_older_database_file_keeps_its_own_version(tmp_path: Path) -> None:
+    path = tmp_path / "app.db"
+    with sqlite3.connect(path) as old:
+        old.executescript(
+            "CREATE TABLE persons (id INTEGER PRIMARY KEY, name TEXT NOT NULL,"
+            " name_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL);"
+            "CREATE TABLE embeddings (id INTEGER PRIMARY KEY, person_id INTEGER NOT NULL"
+            " REFERENCES persons (id) ON DELETE CASCADE, vector BLOB NOT NULL,"
+            " dimension INTEGER NOT NULL, model_id TEXT NOT NULL, created_at TEXT NOT NULL);"
+            "PRAGMA user_version = 1;"
+        )
+    old.close()
+
+    repository = SqlitePersonRepository(path)
+
+    # `CREATE TABLE IF NOT EXISTS` leaves the old tables as they were, so the file must not claim
+    # the current schema (the D12 asks to delete a database of an older version).
     assert rows(repository, "PRAGMA user_version") == [(1,)]
+    repository.close()
 
 
 def test_a_vector_comes_back_as_float32_with_its_dimension_and_model(

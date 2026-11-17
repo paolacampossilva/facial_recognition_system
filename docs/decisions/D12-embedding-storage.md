@@ -22,6 +22,7 @@ A aplicação da Parte 2 cadastra uma pessoa a partir de uma ou mais fotos (seç
 - **Toda conexão** liga `PRAGMA foreign_keys = ON`, senão o SQLite ignora o cascade, e `PRAGMA secure_delete = ON`, para o conteúdo apagado ser sobrescrito com zeros no arquivo em vez de ficar em páginas livres.
 - O vetor é gravado com `numpy.ndarray.astype(float32).tobytes()` e lido com `numpy.frombuffer`, com a dimensão conferida na leitura. Sem `pickle`.
 - Cada embedding guarda o `model_id` do modelo que o gerou. A aplicação só compara com embeddings do modelo configurado, porque vetores de modelos diferentes não estão no mesmo espaço.
+- **Os ids nunca são reaproveitados** (`INTEGER PRIMARY KEY AUTOINCREMENT` nas duas tabelas). Sem isso, o SQLite dá a uma pessoa nova o id da última excluída, e uma tela que ainda lista a pessoa excluída apagaria a nova ao clicar em "Excluir". O `PRAGMA user_version` diz a versão do esquema (2) e só é gravado quando o arquivo é criado. Um banco de uma versão anterior não é migrado: a aplicação ainda não guardou dados reais, então ele deve ser apagado com a aplicação parada.
 
 ## Alternativas consideradas
 
