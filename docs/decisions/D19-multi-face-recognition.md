@@ -1,6 +1,6 @@
 # D19: reconhecimento de vários rostos numa imagem
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-11-17
 - **Dona:** Paola
 
