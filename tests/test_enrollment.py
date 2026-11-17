@@ -1,6 +1,9 @@
 """Enrollment tests (spec 002): fakes for the detector and the model, a real in-memory database."""
 
+import contextlib
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +14,7 @@ from app.core.enrollment import EnrollmentService, find_duplicate
 from app.core.errors import DuplicatePersonError
 from app.core.models import EnrollmentRequest
 from app.storage.models import Gallery
-from app.storage.repository import SqlitePersonRepository
+from app.storage.repository import MEMORY_DATABASE, SqlitePersonRepository
 from facial_recognition_system.preprocessing import (
     InvalidImageError,
     MultipleFacesError,
@@ -211,3 +214,37 @@ def test_find_duplicate_names_the_owner_of_the_best_match_among_all_new_photos()
 
     assert find_duplicate(gallery, new, 0.8) == "Bia"
     assert find_duplicate(gallery, new, 0.95) is None
+
+
+class RacingRepository(SqlitePersonRepository):
+    """Makes two enrollments reach the duplicate check at the same moment, as a busy server can."""
+
+    def __init__(self) -> None:
+        super().__init__(MEMORY_DATABASE)
+        self._meeting = threading.Barrier(2, timeout=0.5)
+
+    def gallery(self, model_id: str) -> Gallery:
+        # With the service lock, one request is alone here and the barrier times out: the other
+        # one is waiting for the lock.
+        with contextlib.suppress(threading.BrokenBarrierError):
+            self._meeting.wait()
+        return super().gallery(model_id)
+
+
+def test_two_simultaneous_enrollments_of_the_same_face_store_only_one() -> None:
+    repository = RacingRepository()
+    service = build_service(repository)
+
+    def enroll(name: str) -> str:
+        try:
+            service.enroll(request(name, photo(ANA_COLOR)))
+        except DuplicatePersonError:
+            return "duplicate"
+        return "enrolled"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = sorted(pool.map(enroll, ["Ana", "Ana Maria"]))
+
+    assert outcomes == ["duplicate", "enrolled"]
+    assert len(repository.list_persons()) == 1
+    repository.close()
