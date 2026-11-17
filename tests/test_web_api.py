@@ -3,10 +3,12 @@
 import asyncio
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx2 import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.api.app import create_app
@@ -206,6 +208,57 @@ def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None
     assert response.json() == {"code": "internal_error", "message": "Unexpected error"}
     assert "hunter2" not in response.text
     assert "Ana Souza" not in response.text
+
+
+def recognize(client: TestClient, content: bytes = EVEN_FILE):
+    return client.post("/api/recognitions", files={"photo": ("a.jpg", content, "image/jpeg")})
+
+
+EXPECTED_ERRORS: dict[str, tuple[Callable[[TestClient], Response], int, str]] = {
+    "no-face": (lambda client: enroll(client, "sem-rosto"), 422, "no_face_detected"),
+    "two-faces": (lambda client: enroll(client, "varios-rostos"), 422, "multiple_faces"),
+    "not-an-image": (lambda client: enroll(client, "invalida"), 422, "invalid_image"),
+    "duplicate": (lambda client: enroll(client, "clone"), 409, "duplicate_person"),
+    "empty-name": (lambda client: enroll(client, "   "), 422, "invalid_request"),
+    "too-many-photos": (
+        lambda client: enroll(client, "Ana", photos=MAX_PHOTOS + 1),
+        422,
+        "invalid_request",
+    ),
+    "no-photo": (
+        lambda client: client.post("/api/persons", data={"name": "Ana"}),
+        422,
+        "invalid_request",
+    ),
+    "file-too-big": (
+        lambda client: recognize(client, b"x" * (Settings().max_upload_bytes + 1)),
+        422,
+        "invalid_request",
+    ),
+    "empty-gallery": (recognize, 409, "empty_gallery"),
+    "unknown-id": (lambda client: client.delete("/api/persons/99"), 404, "person_not_found"),
+    "non-numeric-id": (lambda client: client.delete("/api/persons/abc"), 422, "invalid_request"),
+}
+
+
+@pytest.mark.parametrize(
+    ("call", "status", "code"), EXPECTED_ERRORS.values(), ids=EXPECTED_ERRORS.keys()
+)
+def test_an_expected_error_is_answered_without_reaching_the_server(
+    call: Callable[[TestClient], Response], status: int, code: str
+) -> None:
+    """Only the unexpected 500 may reach the server, which logs it as an ERROR with a traceback.
+
+    The default `raise_server_exceptions=True` raises whatever the handlers let escape.
+    """
+    client = TestClient(
+        create_app(FakeServices(), Settings(threshold=THRESHOLD)), base_url=LOOPBACK
+    )
+
+    response = call(client)
+
+    assert response.status_code == status
+    assert response.json()["code"] == code
 
 
 @pytest.mark.parametrize(
