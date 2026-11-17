@@ -505,6 +505,75 @@ def test_a_recognition_that_arrives_after_the_photo_was_removed_is_dropped(open_
     expect(page.get_by_text("Pessoa reconhecida")).to_have_count(0)
 
 
+def test_changing_screen_moves_the_focus_to_its_title(open_page) -> None:
+    """The focus follows the person to the new screen, and the menu keeps its own links."""
+    page, _ = open_page()
+    first_link = page.locator("#menu a").first
+    first_link.evaluate("(link) => { link.dataset.mark = 'same-node'; }")
+
+    page.locator("#menu").get_by_role("link", name="Reconhecimento").click()
+
+    expect(page.locator("h1")).to_have_text("Reconhecimento")
+    expect(page.locator("h1")).to_be_focused()
+    expect(first_link).to_have_attribute("data-mark", "same-node")
+    expect(page.locator("#menu a[aria-current=page]")).to_have_count(1)
+
+
+def test_removing_a_photo_hands_the_focus_to_a_neighbor(open_page) -> None:
+    page, _ = open_page()
+    page.locator("input[type=file]").set_input_files(
+        [png(ANA_COLOR, "ana.png"), png(BIA_COLOR, "bia.png")]
+    )
+    expect(page.get_by_text("2 de 10 fotos")).to_be_visible()
+
+    page.get_by_role("button", name="Descartar a foto 1").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Descartar foto").click()
+    expect(page.get_by_text("1 de 10 fotos")).to_be_visible()
+    expect(page.get_by_role("button", name="Descartar a foto 1")).to_be_focused()
+
+    page.get_by_role("button", name="Descartar a foto 1").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Descartar foto").click()
+    expect(page.get_by_role("button", name="Enviar arquivo")).to_be_focused()
+
+
+def test_the_camera_buttons_pass_the_focus_along(open_page) -> None:
+    page, _ = open_page(camera=True)
+
+    open_camera(page)
+    expect(page.get_by_role("button", name="Capturar foto")).to_be_focused()
+    expect(page.locator("video.camera")).to_have_attribute("aria-label", "Prévia da câmera")
+
+    page.get_by_role("button", name="Fechar a câmera").click()
+    expect(page.get_by_role("button", name="Usar a câmera")).to_be_focused()
+
+
+def test_deleting_a_person_moves_the_focus_to_the_title(open_page) -> None:
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Pessoas cadastradas")
+
+    page.get_by_role("button", name="Excluir Ana").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Excluir Ana").click()
+
+    expect(page.get_by_text("Nenhuma pessoa cadastrada.")).to_be_visible()
+    expect(page.locator("h1")).to_be_focused()
+
+
+def test_the_form_describes_its_fields_for_a_screen_reader(open_page) -> None:
+    page, _ = open_page()
+
+    expect(page.locator("#person-name")).to_have_attribute("aria-required", "true")
+    photos = page.get_by_role("group", name="Fotos da pessoa")
+    expect(photos).to_be_visible()
+
+    page.get_by_role("button", name="Cadastrar").click()
+
+    expect(photos).to_have_attribute("aria-describedby", "photos-error")
+    expect(photos).not_to_have_attribute("aria-invalid", "true")
+    expect(page.locator("#person-name")).to_have_attribute("aria-invalid", "true")
+
+
 def test_a_denied_camera_keeps_the_file_upload(open_page) -> None:
     """A13: without permission, the message shows and a file still works."""
     page, _ = open_page()

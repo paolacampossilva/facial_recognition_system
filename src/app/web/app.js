@@ -28,10 +28,29 @@ const routeFromHash = () => {
   return ROUTES.find((route) => route.path === name) ?? ROUTES[0];
 };
 
+// The links are built once and only marked, so the focus stays on the one the person used.
+const menuLinks = ROUTES.map((route) =>
+  h("a", { href: `#/${route.path}` }, icon(route.icon), route.label, route.path === "pessoas" && countBadge));
+menu.replaceChildren(...menuLinks);
+
 function paintMenu(active) {
-  menu.replaceChildren(...ROUTES.map((route) =>
-    h("a", { href: `#/${route.path}`, "aria-current": route === active ? "page" : null },
-      icon(route.icon), route.label, route.path === "pessoas" && countBadge)));
+  ROUTES.forEach((route, index) => {
+    if (route === active) menuLinks[index].setAttribute("aria-current", "page");
+    else menuLinks[index].removeAttribute("aria-current");
+  });
+}
+
+// After a change of screen the focus goes to its title, so a screen reader announces where the
+// person is and the keyboard continues from there. Not on the first load: nothing was asked yet.
+let firstScreen = true;
+
+function focusTitle() {
+  const title = root.querySelector("h1");
+  if (title && !firstScreen) {
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
+  }
+  firstScreen = false;
 }
 
 async function go(next) {
@@ -47,6 +66,7 @@ async function go(next) {
   root.replaceChildren();
   try {
     current = { route: next, dispose: next.view(root) };
+    focusTitle();
   } catch {
     // A screen that fails to build must not leave a blank page that blocks every later visit.
     root.replaceChildren(h("div", { class: "page" }, notice("error", "Algo deu errado. Tente de novo")));

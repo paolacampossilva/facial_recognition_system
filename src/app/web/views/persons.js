@@ -13,6 +13,7 @@ export function personsView(root) {
   const summary = h("p", { class: "muted" }, "Quem pode ser reconhecido neste computador.");
   const feedback = h("div", { "aria-live": "polite" });
   const content = h("div", {});
+  const title = h("h1", { tabindex: "-1" }, "Pessoas cadastradas");
   // `alive` goes false when the person leaves the screen; `loads` numbers the list requests so that
   // only the last one paints.
   let alive = true;
@@ -35,6 +36,7 @@ export function personsView(root) {
       ? notice("success", `Cadastro de ${person.name} excluído.`)
       : notice("error", describeError(result)));
     await load(); // also updates the menu count
+    title.focus(); // the button of the removed person is gone
   }
 
   const item = (person) => h("li", { class: "person" },
@@ -70,7 +72,7 @@ export function personsView(root) {
   }
 
   root.replaceChildren(h("div", { class: "page" },
-    h("header", { class: "page-head" }, h("h1", {}, "Pessoas cadastradas"), summary),
+    h("header", { class: "page-head" }, title, summary),
     feedback, content));
   load();
   return () => {

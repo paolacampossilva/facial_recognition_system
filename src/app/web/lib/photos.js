@@ -18,7 +18,9 @@ export function photoPicker({ max, onChange = () => {} }) {
   const list = h("ul", { class: "photos", "aria-label": "Fotos escolhidas" });
   const empty = h("div", { class: "photos-empty" }, icon("camera"), "As fotos escolhidas aparecem aqui.");
   const message = h("div", { "aria-live": "polite" });
-  const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true });
+  const video = h("video", {
+    class: "camera", autoplay: true, playsinline: true, muted: true, "aria-label": "Prévia da câmera",
+  });
   video.muted = true; // the attribute alone does not always set the property
   const input = h("input", { type: "file", accept: "image/*", multiple: max > 1, hidden: true });
   const cameraButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Usar a câmera");
@@ -61,9 +63,13 @@ export function photoPicker({ max, onChange = () => {} }) {
     });
     if (!confirmed) return;
     URL.revokeObjectURL(item.url);
+    const position = items.indexOf(item);
     items = items.filter((other) => other !== item);
     message.replaceChildren();
     render();
+    // The button that had the focus is gone: hand it to the neighbor photo, or to the upload button.
+    const buttons = list.querySelectorAll("button");
+    (buttons[Math.min(position, buttons.length - 1)] ?? uploadButton).focus();
   }
 
   function discard() {
@@ -108,6 +114,7 @@ export function photoPicker({ max, onChange = () => {} }) {
       message.replaceChildren();
       cameraBox.hidden = false;
       cameraButton.hidden = true;
+      captureButton.focus(); // the button the person used is now hidden
     } catch {
       if (current()) message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
     } finally {
@@ -125,7 +132,10 @@ export function photoPicker({ max, onChange = () => {} }) {
     if (ticket !== cameraTicket) return; // the camera was closed while the frame was being saved
     if (blob) add(blob, "camera.jpg");
   });
-  closeButton.addEventListener("click", stopCamera);
+  closeButton.addEventListener("click", () => {
+    stopCamera();
+    cameraButton.focus(); // the button that was clicked is hidden now
+  });
   uploadButton.addEventListener("click", () => input.click());
   input.addEventListener("change", () => {
     for (const file of input.files) add(file, file.name);

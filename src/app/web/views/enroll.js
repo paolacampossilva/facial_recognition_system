@@ -32,6 +32,7 @@ export function enrollView(root) {
   const counter = h("p", { class: "muted", "aria-live": "polite" }, `0 de ${MAX_PHOTOS} fotos`);
   const nameInput = keepDraft(NAME_KEY, h("input", {
     id: "person-name", type: "text", maxlength: MAX_NAME_LENGTH, autocomplete: "off",
+    "aria-required": "true",
   }));
   const picker = photoPicker({
     max: MAX_PHOTOS,
@@ -44,12 +45,14 @@ export function enrollView(root) {
   const submit = h("button", { type: "submit" }, "Cadastrar");
   const nameError = h("p", { class: "field-error", id: "person-name-error", role: "alert", hidden: true });
   const photosError = h("p", { class: "field-error", id: "photos-error", role: "alert", hidden: true });
-  const photosField = h("div", { class: "photos-field" }, picker.element, photosError);
+  const photosField = h("div", { class: "photos-field", role: "group", "aria-label": "Fotos da pessoa" },
+    picker.element, photosError);
 
   function showError(control, element, message) {
     element.textContent = message;
     element.hidden = false;
-    control.setAttribute("aria-invalid", "true");
+    // aria-invalid is for form controls: on the photos group only the description applies.
+    if (control instanceof HTMLInputElement) control.setAttribute("aria-invalid", "true");
     control.setAttribute("aria-describedby", element.id);
   }
 

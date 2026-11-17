@@ -37,5 +37,5 @@ export const api = {
     }),
   recognize: (photo) =>
     call("/recognitions", { method: "POST", body: formWith([["photo", photo.blob, photo.name]]) }),
-  deletePerson: (id) => call(`/persons/${id}`, { method: "DELETE" }),
+  deletePerson: (id) => call(`/persons/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
