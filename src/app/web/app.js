@@ -67,8 +67,9 @@ async function go(next) {
   try {
     current = { route: next, dispose: next.view(root) };
     focusTitle();
-  } catch {
+  } catch (error) {
     // A screen that fails to build must not leave a blank page that blocks every later visit.
+    console.error(error);
     root.replaceChildren(h("div", { class: "page" }, notice("error", "Algo deu errado. Tente de novo")));
   }
 }
