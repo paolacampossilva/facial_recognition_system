@@ -3,8 +3,8 @@
 - **Status:** Em revisão
 - **Data:** 2026-11-16
 - **Dona:** Valentina
-- **Issue:** #41
-- **Relacionadas:** [003](003-face-recognition.md), [004](004-unknown-person.md), [005](005-camera-interface.md), [006](006-person-deletion.md), [D08](../decisions/D08-threshold-selection.md), [D12](../decisions/D12-embedding-storage.md), [D16](../decisions/D16-chosen-model.md), [D17](../decisions/D17-interface-web-lia.md), [privacy.md](../privacy.md)
+- **Issue:** #41, #103 (vários rostos: `FACE_APP_MIN_FACE_PX` e `face_count`)
+- **Relacionadas:** [001](001-face-detection.md), [003](003-face-recognition.md), [004](004-unknown-person.md), [005](005-camera-interface.md), [006](006-person-deletion.md), [D08](../decisions/D08-threshold-selection.md), [D12](../decisions/D12-embedding-storage.md), [D16](../decisions/D16-chosen-model.md), [D17](../decisions/D17-interface-web-lia.md), [privacy.md](../privacy.md)
 
 ## Problema
 
@@ -25,6 +25,7 @@ O que muda de uma máquina para outra (o caminho do banco e do checkpoint, a GPU
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu`, `cuda` | onde o modelo roda. `auto` usa a GPU quando existe |
 | `FACE_APP_PORT` | `8000` | 1024 a 65535 | porta do servidor local |
 | `FACE_APP_MAX_UPLOAD_MB` | `10` | 1 a 50 | tamanho máximo de cada foto enviada (spec 005, R14) |
+| `FACE_APP_MIN_FACE_PX` | `80` | 20 a 500 | menor lado, em pixels, que a caixa de um rosto precisa ter para entrar no reconhecimento (spec 001, R7). Provisório: o threshold foi medido com rostos grandes (D19) |
 | `FACE_APP_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` | nível mínimo dos logs |
 
 - **R3.** Ordem de precedência: variável de ambiente, depois o arquivo `.env` na raiz do repositório, depois o padrão da tabela. Na linha de comando, `--port` vale mais que todos.
@@ -39,13 +40,14 @@ O que muda de uma máquina para outra (o caminho do banco e do checkpoint, a GPU
 - **R9.** Os logs vão só para o terminal (stderr). A aplicação não grava arquivo de log, para não criar mais um arquivo com dados da aplicação a proteger e apagar ao fim da disciplina (privacy.md).
 - **R10.** Formato de cada linha: `hora nível módulo: mensagem campo=valor ...`, por exemplo `14:02:31 INFO app.core.enrollment: person enrolled person_id=3 embedding_count=4`.
 - **R11.** **Nunca vão para o log:** nome de pessoa, foto (bytes ou conteúdo), embedding, nome de arquivo enviado (o nome do arquivo pode ser o nome da pessoa) e o conteúdo do banco.
-- **R12.** Para a R11 não depender de cada chamada, o formatador só escreve os campos extras de uma **lista permitida**: `person_id`, `embedding_count`, `deleted_embeddings`, `status` e `similarity`. Qualquer outro campo passado em `extra` é descartado. Um campo novo só entra no log depois de entrar na lista, com revisão.
+- **R12.** Para a R11 não depender de cada chamada, o formatador só escreve os campos extras de uma **lista permitida**: `person_id`, `embedding_count`, `deleted_embeddings`, `status`, `similarity` e `face_count`. Qualquer outro campo passado em `extra` é descartado. Um campo novo só entra no log depois de entrar na lista, com revisão.
 - **R13.** O que cada serviço registra, em `INFO`:
 
 | Evento | Campos |
 |---|---|
 | cadastro concluído (spec 002) | `person_id`, `embedding_count` |
-| reconhecimento (specs 003 e 004) | `status`, `similarity` |
+| reconhecimento, uma linha por imagem (specs 003 e 004) | `face_count` |
+| reconhecimento, uma linha por rosto (specs 003 e 004) | `status`, `similarity` (nunca o nome) |
 | exclusão (spec 006) | `person_id`, `deleted_embeddings` |
 
 - **R14.** As rotas da API não registram nada além do log de acesso do servidor (método, caminho e status, em que o caminho só tem o `id`, nunca um nome). Um erro inesperado (500) é registrado em `ERROR` com o traceback, para depuração, e a resposta não vaza detalhe interno (spec 005, A20).
@@ -67,6 +69,8 @@ O que muda de uma máquina para outra (o caminho do banco e do checkpoint, a GPU
 | A11 | um registro de log com `extra={"name": "Ana", "person_id": 3}` | é formatado | a linha tem `person_id=3` e não tem "Ana" |
 | A12 | cadastro, reconhecimento e exclusão de "Ana Teste" com os serviços reais e um modelo fake | os logs formatados são inspecionados | contêm os campos da R13 e não contêm "Ana" nem números do embedding |
 | A13 | `FACE_APP_LOG_LEVEL=WARNING` | um cadastro é feito | nenhuma linha `INFO` aparece |
+| A14 | `FACE_APP_MIN_FACE_PX=10` ou `FACE_APP_MIN_FACE_PX=600` | a configuração é carregada | lança `ConfigError` com o nome da variável |
+| A15 | uma imagem com três rostos, um deles desconhecido | o reconhecimento é feito | o log tem `face_count=3` e uma linha por rosto com `status` e `similarity`, sem nenhum nome |
 
 ## Interface
 
@@ -78,6 +82,7 @@ class Settings(BaseSettings):  # src/app/config.py, prefixo FACE_APP_, lê o .en
     device: Literal["auto", "cpu", "cuda"] = "auto"
     port: int = 8000
     max_upload_mb: int = 10
+    min_face_px: int = 80  # menor lado da caixa de um rosto no reconhecimento (spec 001, R7)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @property
@@ -103,5 +108,5 @@ Exceção nova: `ConfigError`, herdando de `AppError`. `create_app` passa a rece
 
 ## Testes
 
-- **Unitários** (`tests/test_config.py` e `tests/test_logs.py`): A1 a A6, A10, A11 e A13 com `monkeypatch` no ambiente e um `.env` numa pasta temporária; A7 e A8 com o servidor fake do `test_launcher.py`; A9 com o `TestClient`; A12 com os serviços reais, o repositório em memória e o modelo fake de `tests/app_support.py`.
+- **Unitários** (`tests/test_config.py` e `tests/test_logs.py`): A1 a A6, A10, A11, A13 e A14 com `monkeypatch` no ambiente e um `.env` numa pasta temporária; A7 e A8 com o servidor fake do `test_launcher.py`; A9 com o `TestClient`; A12 e A15 com os serviços reais, o repositório em memória e o modelo fake de `tests/app_support.py`.
 - **E2E** (#50): roda a aplicação com uma `Settings` de teste (banco temporário, porta livre), sem ler o `.env` de quem roda.
