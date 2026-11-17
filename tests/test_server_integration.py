@@ -18,7 +18,7 @@ import pytest
 from app.api.app import create_app
 from app.config import Settings
 from app.core.models import RecognitionResult, RecognitionStatus
-from app.launcher import wait_for_server
+from app.launcher import open_when_ready, wait_for_server
 from app.logs import APP_LOGGER, configure_logging, uvicorn_log_config
 from tests.app_support import THRESHOLD, free_port, serving
 
@@ -134,3 +134,32 @@ def test_wait_for_server_returns_true_once_the_health_route_answers() -> None:
 
 def test_wait_for_server_gives_up_when_nothing_listens() -> None:
     assert wait_for_server(free_port(), timeout=0.6) is False
+
+
+def test_wait_for_server_ignores_a_proxy_in_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """On a network with `http_proxy` set, the probe of this very computer must not use it."""
+    monkeypatch.setenv("http_proxy", f"http://127.0.0.1:{free_port()}")
+    monkeypatch.setenv("HTTP_PROXY", f"http://127.0.0.1:{free_port()}")
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    server = HTTPServer(("127.0.0.1", 0), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    answered = wait_for_server(server.server_address[1], timeout=5)
+
+    server.shutdown()
+    assert answered is True
+
+
+def test_when_the_server_never_answers_the_person_is_told_where_to_go(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    opened: list[str] = []
+
+    open_when_ready(8123, opened.append, lambda port: False)
+
+    assert opened == []
+    assert "http://127.0.0.1:8123" in capsys.readouterr().err

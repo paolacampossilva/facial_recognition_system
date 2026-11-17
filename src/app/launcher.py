@@ -104,6 +104,10 @@ def check_model_setup(settings: Settings) -> None:
         )
 
 
+# The probe talks to this very computer, so it must never go through a proxy from the environment.
+LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def wait_for_server(port: int, timeout: float = READY_TIMEOUT_SECONDS) -> bool:
     """Waits until the server answers its health route.
 
@@ -114,7 +118,7 @@ def wait_for_server(port: int, timeout: float = READY_TIMEOUT_SECONDS) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(url, timeout=1) as response:  # noqa: S310
+            with LOCAL_OPENER.open(url, timeout=1) as response:
                 if response.status == 200:
                     return True
         except OSError:  # nothing is listening yet, or it is still starting
@@ -127,8 +131,11 @@ def open_when_ready(
     port: int, open_browser: Callable[[str], object], wait: Callable[[int], bool]
 ) -> None:
     """Opens the browser on the application once the server answers, and never before."""
+    url = f"http://{HOST}:{port}"
     if wait(port):
-        open_browser(f"http://{HOST}:{port}")
+        open_browser(url)
+    else:
+        print(f"warning: the server did not answer in time, open {url} yourself", file=sys.stderr)
 
 
 def run(
