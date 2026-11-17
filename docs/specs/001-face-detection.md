@@ -18,9 +18,9 @@ Todo fluxo da aplicação (cadastro e reconhecimento) começa com uma imagem que
 - **R4.** Respeitar a orientação EXIF das fotos de celular.
 - **R5.** Não gravar a imagem nem o recorte em disco. Tudo é processado em memória e descartado (D12).
 - **R6.** Para o reconhecimento, existe um segundo caminho, `process_all`, que **não rejeita** vários rostos: devolve o recorte 160×160 e a caixa de cada rosto da imagem. Ele usa a mesma detecção, a mesma probabilidade mínima (0,9), o mesmo recorte (`crop`, margem 0) e a mesma orientação EXIF do caminho estrito, para o threshold da Parte 1 continuar valendo (D19). A seleção (`strict`, `center`, `largest`) não afeta o `process_all`, e o caminho estrito do cadastro não muda.
-- **R7.** O `process_all` ignora rostos pequenos demais: o **menor lado da caixa** precisa ser de pelo menos `min_face_px` pixels (configuração `FACE_APP_MIN_FACE_PX`, spec 007, padrão 80). O threshold foi medido em fotos com um rosto grande (E08), e um rosto pequeno ampliado para 160×160 perde detalhe. O valor é provisório (D19).
-- **R8.** O `process_all` devolve no máximo `max_faces` rostos (20), os de maior área, para uma foto de grupo muito grande não gerar centenas de embeddings.
-- **R9.** As caixas saem em **pixels da imagem depois da orientação EXIF** (as mesmas coordenadas do detector) e a lista sai ordenada da esquerda para a direita (pelo lado esquerdo da caixa, e pelo topo em caso de empate).
+- **R7.** O `process_all` ignora rostos pequenos demais: o **menor lado da caixa já limitada à imagem** (R9) precisa ser de pelo menos `min_face_px` pixels (configuração `FACE_APP_MIN_FACE_PX`, spec 007, padrão 80). O threshold foi medido em fotos com um rosto grande (E08), e um rosto pequeno ampliado para 160×160 perde detalhe. O valor é provisório (D19).
+- **R8.** O `process_all` devolve no máximo `max_faces` rostos (20), os de maior área **da caixa já limitada à imagem** (R9), para uma foto de grupo muito grande não gerar centenas de embeddings.
+- **R9.** As caixas saem em **pixels da imagem depois da orientação EXIF**, no mesmo referencial do detector, mas **arredondadas para inteiros e limitadas à imagem**: `0 <= left < right <= largura` e `0 <= top < bottom <= altura`. O detector pode devolver uma caixa fracionária ou que passa da borda (o `BoundingBox` não limita nada, só o `crop_face` limita ao recortar), então o `process_all` faz as duas coisas **antes** de medir (R7, R8) e de devolver. Uma caixa que fica sem área depois de limitada é ignorada. A lista sai ordenada da esquerda para a direita (pelo lado esquerdo da caixa, e pelo topo em caso de empate).
 - **R10.** Se não sobra nenhum rosto (nenhum acima de 0,9, ou todos pequenos demais), o `process_all` lança `NoFaceDetectedError`, o mesmo erro do caminho estrito.
 
 ## Critérios de aceitação
@@ -42,6 +42,7 @@ Todo fluxo da aplicação (cadastro e reconhecimento) começa com uma imagem que
 | A13 | uma imagem com 25 rostos acima de 0,9 | `process_all` com `max_faces=20` | devolve os 20 de maior área, ordenados da esquerda para a direita |
 | A14 | uma imagem com dois rostos | o caminho estrito (`process`) | continua lançando `MultipleFacesError` (A4 não muda: o cadastro segue estrito) |
 | A15 | uma foto de celular com orientação EXIF rotacionada e vários rostos | `process_all` | as caixas estão na orientação correta, a mesma em que o navegador mostra a foto |
+| A16 | o detector devolve uma caixa fracionária que passa da borda (por exemplo `left=-7,4` e `right=largura+3,2`) | `process_all` | a caixa sai com inteiros dentro da imagem (`left=0`, `right=largura`), e o tamanho mínimo e o máximo de rostos usam essa caixa limitada |
 
 ## Interface
 
@@ -50,7 +51,7 @@ Reaproveita o que já existe em `src/facial_recognition_system/preprocessing/`: 
 ```python
 @dataclass(frozen=True)
 class DetectedFace:
-    box: BoundingBox  # pixels da imagem depois da EXIF
+    box: BoundingBox  # pixels da imagem depois da EXIF, inteiros e dentro da imagem (R9)
     probability: float
     crop: Image.Image  # 160×160 RGB
 

@@ -46,7 +46,7 @@ Dada uma imagem, a aplicação precisa dizer, para cada rosto que ela tem, se el
 | A16 | uma imagem com um rosto grande e um rosto menor que o tamanho mínimo | reconhece | só o rosto grande aparece na lista |
 | A17 | uma imagem em que o único rosto é menor que o tamanho mínimo | reconhece | propaga `NoFaceDetectedError` |
 | A18 | uma imagem com 25 rostos | reconhece | a lista tem os 20 de maior área (spec 001, R8) |
-| A19 | qualquer reconhecimento com sucesso | a resposta é inspecionada | traz a largura e a altura da imagem (depois da EXIF) e, para cada rosto, a caixa em pixels dessa imagem |
+| A19 | qualquer reconhecimento com sucesso | a resposta é inspecionada | traz a largura e a altura da imagem (depois da EXIF) e, para cada rosto, a caixa em pixels dessa imagem, com `0 <= left < right <= image_width` e `0 <= top < bottom <= image_height` |
 
 ## Interface
 
@@ -62,7 +62,7 @@ class RecognitionResult(BaseModel):  # a decisão sobre um rosto (spec 004)
     similarity: float  # cosseno com a foto mais parecida da galeria
 
 
-class FaceBox(BaseModel):  # pixels da imagem depois da EXIF
+class FaceBox(BaseModel):  # pixels da imagem depois da EXIF, dentro da imagem (spec 001, R9)
     left: int
     top: int
     right: int
