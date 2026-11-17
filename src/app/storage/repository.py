@@ -21,6 +21,7 @@ from app.storage.models import Gallery, NewPerson
 MEMORY_DATABASE: str = ":memory:"
 SCHEMA_VERSION: int = 1
 PRIVATE_FILE_MODE: int = 0o600  # biometric data: only the owner reads the file
+PRIVATE_FOLDER_MODE: int = 0o700
 
 SCHEMA: str = """
 CREATE TABLE IF NOT EXISTS persons (
@@ -67,7 +68,10 @@ class SqlitePersonRepository:
         self._lock = threading.Lock()
         target = str(database_path)
         if target != MEMORY_DATABASE:
-            Path(target).parent.mkdir(parents=True, exist_ok=True)
+            Path(target).parent.mkdir(mode=PRIVATE_FOLDER_MODE, parents=True, exist_ok=True)
+            # Create the file private before SQLite does: SQLite would create it with the umask
+            # (usually readable by others), and its journal file copies the mode of the database.
+            os.close(os.open(target, os.O_CREAT | os.O_RDWR, PRIVATE_FILE_MODE))
         self._connection = sqlite3.connect(target, check_same_thread=False)
         # Without these two PRAGMAs the cascade is ignored and deleted content stays in the file.
         self._connection.execute("PRAGMA foreign_keys = ON")
@@ -75,7 +79,7 @@ class SqlitePersonRepository:
         self._connection.executescript(SCHEMA)
         self._connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         if target != MEMORY_DATABASE:
-            os.chmod(target, PRIVATE_FILE_MODE)
+            os.chmod(target, PRIVATE_FILE_MODE)  # also tightens a file an older version created
 
     def add_person(self, new: NewPerson) -> PersonSummary:
         """Stores a person and all their embeddings in one transaction.

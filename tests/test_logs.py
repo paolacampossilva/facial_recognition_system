@@ -95,3 +95,21 @@ def test_configuring_twice_does_not_duplicate_the_lines(
     logging.getLogger("app.core.test").info("once")
 
     assert capsys.readouterr().err.count("once") == 1
+
+
+PERSONAL_MESSAGE: str = "database /private/data.db password=hunter2 Ana Souza"
+
+
+def test_a_traceback_names_the_exception_but_never_its_message() -> None:
+    try:
+        raise RuntimeError(PERSONAL_MESSAGE)
+    except RuntimeError:
+        record = record_with()
+        record.exc_info = sys.exc_info()
+
+    text = AllowListFormatter().format(record)
+
+    assert text.endswith("RuntimeError")
+    assert "Traceback (most recent call last):" in text
+    assert "Ana Souza" not in text
+    assert "hunter2" not in text

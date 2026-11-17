@@ -16,7 +16,6 @@ from scripts.check_private_files import find_violation, main
         "docs/architecture.png",
         "docs/pipeline.svg",
         "docs/participant_photo_guide.pdf",
-        "docs/report/final_report.docx",
         "data/README.md",
         "data/splits/lfw_test_pairs.csv",
     ],
@@ -49,6 +48,10 @@ def test_allowed_files_pass(path: str) -> None:
         "notes/consent_addendum.docx",
         "planilha_controle.xlsx",
         "experiments/results/Report.PDF",
+        "docs/termo_assinado_P11.pdf",
+        "docs/controle_participantes.xlsx",
+        "docs/report/final_report.docx",
+        "docs/other/participant_photo_guide.pdf",
     ],
 )
 def test_private_or_biometric_files_are_blocked(path: str) -> None:
@@ -56,8 +59,12 @@ def test_private_or_biometric_files_are_blocked(path: str) -> None:
 
 
 @pytest.mark.unit
-def test_document_outside_docs_reports_reason() -> None:
-    assert find_violation("termo_P11.pdf") == "PDF, Word and Excel files are only allowed in docs/"
+def test_a_document_that_is_not_on_the_allow_list_says_how_to_allow_it() -> None:
+    reason = find_violation("docs/termo_assinado_P11.pdf")
+
+    assert reason is not None
+    assert "ALLOWED_DOCUMENTS" in reason
+    assert "scripts/check_private_files.py" in reason
 
 
 @pytest.mark.unit

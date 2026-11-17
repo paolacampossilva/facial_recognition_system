@@ -34,6 +34,14 @@ class UploadTooLargeError(AppError):
         self.limit_bytes = limit_bytes
 
 
+class TooManyPhotosError(AppError):
+    """An enrollment came with more photos than the application accepts."""
+
+    def __init__(self, limit: int) -> None:
+        super().__init__(f"at most {limit} photos per enrollment")
+        self.limit = limit
+
+
 class PersonNotFoundError(AppError):
     """No enrolled person has this id."""
 

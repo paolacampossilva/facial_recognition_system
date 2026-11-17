@@ -27,10 +27,12 @@ const TIPS = [
 ];
 
 export function enrollView(root) {
+  let alive = true; // false once the person left the screen while a request was running
   const feedback = h("div", { "aria-live": "polite" });
   const counter = h("p", { class: "muted", "aria-live": "polite" }, `0 de ${MAX_PHOTOS} fotos`);
   const nameInput = keepDraft(NAME_KEY, h("input", {
     id: "person-name", type: "text", maxlength: MAX_NAME_LENGTH, autocomplete: "off",
+    "aria-required": "true",
   }));
   const picker = photoPicker({
     max: MAX_PHOTOS,
@@ -43,12 +45,14 @@ export function enrollView(root) {
   const submit = h("button", { type: "submit" }, "Cadastrar");
   const nameError = h("p", { class: "field-error", id: "person-name-error", role: "alert", hidden: true });
   const photosError = h("p", { class: "field-error", id: "photos-error", role: "alert", hidden: true });
-  const photosField = h("div", { class: "photos-field" }, picker.element, photosError);
+  const photosField = h("div", { class: "photos-field", role: "group", "aria-label": "Fotos da pessoa" },
+    picker.element, photosError);
 
   function showError(control, element, message) {
     element.textContent = message;
     element.hidden = false;
-    control.setAttribute("aria-invalid", "true");
+    // aria-invalid is for form controls: on the photos group only the description applies.
+    if (control instanceof HTMLInputElement) control.setAttribute("aria-invalid", "true");
     control.setAttribute("aria-describedby", element.id);
   }
 
@@ -100,6 +104,15 @@ export function enrollView(root) {
     setBusy(submit, true);
     feedback.replaceChildren(loading("Cadastrando…"));
     const result = await api.enroll(name, picker.files());
+    if (!alive) {
+      // The person left while the request ran; the enrollment still happened, so the draft and
+      // the menu count must follow, but the screen is not theirs to write on anymore.
+      if (result.ok) {
+        clearDraft(NAME_KEY, PHOTOS_KEY);
+        refreshCount();
+      }
+      return;
+    }
     setBusy(submit, false);
     if (!result.ok) {
       feedback.replaceChildren(notice("error", describeError(result)));
@@ -114,5 +127,8 @@ export function enrollView(root) {
   });
 
   root.replaceChildren(form);
-  return () => picker.dispose();
+  return () => {
+    alive = false;
+    picker.dispose();
+  };
 }

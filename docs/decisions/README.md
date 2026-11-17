@@ -47,3 +47,4 @@ Se um valor mudar durante a implementação, o ADR é atualizado com o motivo, e
 | D15 | Quem aparece no vídeo | Juntas | [D15-video-participants.md](D15-video-participants.md) |
 | D16 | Modelo escolhido para a aplicação | Juntas | [D16-chosen-model.md](D16-chosen-model.md) |
 | D17 | Interface web (FastAPI e JS puro) | Paola | [D17-interface-web-lia.md](D17-interface-web-lia.md) |
+| D18 | A API só atende a própria página | Paola | [D18-api-guards.md](D18-api-guards.md) |

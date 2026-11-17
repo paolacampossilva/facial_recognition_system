@@ -337,3 +337,9 @@ def test_the_tips_box_has_a_violet_highlight_and_a_violet_title() -> None:
     styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
     assert re.search(r"\.tips \{[^}]*border: 1px solid var\(--accent\)", styles)
     assert re.search(r"\.tips summary \{[^}]*color: var\(--accent-ink\)", styles)
+
+
+def test_a_person_id_is_encoded_in_the_url() -> None:
+    source = code_of(WEB_DIR / "lib" / "api.js")
+
+    assert "encodeURIComponent(id)" in source

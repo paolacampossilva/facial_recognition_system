@@ -3,7 +3,7 @@
 
 import { countBadge, refreshCount } from "./lib/counter.js";
 import { confirmLeave } from "./lib/drafts.js";
-import { h, icon } from "./lib/dom.js";
+import { h, icon, notice } from "./lib/dom.js";
 import { initShell } from "./lib/shell.js";
 import { initTheme } from "./lib/theme.js";
 import { enrollView } from "./views/enroll.js";
@@ -28,25 +28,71 @@ const routeFromHash = () => {
   return ROUTES.find((route) => route.path === name) ?? ROUTES[0];
 };
 
+// The links are built once and only marked, so the focus stays on the one the person used.
+const menuLinks = ROUTES.map((route) =>
+  h("a", { href: `#/${route.path}` }, icon(route.icon), route.label, route.path === "pessoas" && countBadge));
+menu.replaceChildren(...menuLinks);
+
 function paintMenu(active) {
-  menu.replaceChildren(...ROUTES.map((route) =>
-    h("a", { href: `#/${route.path}`, "aria-current": route === active ? "page" : null },
-      icon(route.icon), route.label, route.path === "pessoas" && countBadge)));
+  ROUTES.forEach((route, index) => {
+    if (route === active) menuLinks[index].setAttribute("aria-current", "page");
+    else menuLinks[index].removeAttribute("aria-current");
+  });
 }
 
-async function show() {
-  const next = routeFromHash();
+// After a change of screen the focus goes to its title, so a screen reader announces where the
+// person is and the keyboard continues from there. Not on the first load: nothing was asked yet.
+let firstScreen = true;
+
+function focusTitle() {
+  const title = root.querySelector("h1");
+  if (title && !firstScreen) {
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
+  }
+  firstScreen = false;
+}
+
+async function go(next) {
   if (current?.route === next) return;
   if (current && !(await confirmLeave())) {
     location.hash = `#/${current.route.path}`;
     return;
   }
   current?.dispose?.();
-  current = { route: next, dispose: null };
+  current = null;
   document.title = `${next.label} · ${PRODUCT}`;
   paintMenu(next);
   root.replaceChildren();
-  current.dispose = next.view(root);
+  try {
+    current = { route: next, dispose: next.view(root) };
+    focusTitle();
+  } catch (error) {
+    // A screen that fails to build must not leave a blank page that blocks every later visit.
+    console.error(error);
+    root.replaceChildren(h("div", { class: "page" }, notice("error", "Algo deu errado. Tente de novo")));
+  }
+}
+
+// One navigation at a time: the browser's Back and Forward do not wait for the "leave without
+// saving" dialog, so a second change that arrives meanwhile is handled right after the first.
+let navigating = false;
+let queued = false;
+
+async function show() {
+  if (navigating) {
+    queued = true;
+    return;
+  }
+  navigating = true;
+  try {
+    do {
+      queued = false;
+      await go(routeFromHash());
+    } while (queued);
+  } finally {
+    navigating = false;
+  }
 }
 
 initTheme(document.getElementById("theme"));

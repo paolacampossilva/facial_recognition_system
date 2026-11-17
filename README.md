@@ -375,7 +375,7 @@ flowchart LR
 | API | `src/app/api/` | rotas, portas dos serviços (`Protocol`) e tradução de qualquer erro para um corpo único com código estável (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
 | Serviços | `src/app/core/` | `EnrollmentService`, `RecognitionService` (com a função pura `decide`), `DeletionService`, `FaceEncoder`, modelos Pydantic e exceções |
 | Modelo | `src/app/embedder.py` | `TorchFaceEmbedder`, carrega o checkpoint uma vez, na inicialização |
-| Montagem | `src/app/services.py`, `src/app/main.py` | `build_services` liga os serviços reais ao encoder e ao repositório, com a `Settings` |
+| Montagem | `src/app/services.py`, `src/app/main.py` | `build_services` liga os serviços reais ao encoder e ao repositório, com a `Settings`; `main.create` é a fábrica que o servidor chama e o banco fecha ao parar |
 | Armazenamento | `src/app/storage/` | repositório SQLite: pessoas e embeddings, nunca fotos ([D12](docs/decisions/D12-embedding-storage.md)) |
 | Inicialização | `src/app/launcher.py` | `python -m app` |
 | Fakes | `src/app/fakes.py` | serviços falsos para testar a API e a interface sem modelo |
@@ -450,13 +450,14 @@ O modelo da aplicação é o **E06**: FaceNet (VGGFace2) com fine-tuning parcial
 python scripts/train.py --config configs/E06.yaml
 ```
 
-O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). O `model_id` dos embeddings vira `facenet-vggface2-E06`, com o nome da pasta do experimento: embeddings de pesos diferentes não estão no mesmo espaço, e misturá-los num banco só faria o reconhecimento errar sem dar erro nenhum. Sem o checkpoint, a aplicação falha na inicialização com uma mensagem dizendo como treiná-lo.
+O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). O `model_id` dos embeddings vira `facenet-vggface2-E06-` mais 8 caracteres do hash do arquivo (por exemplo `facenet-vggface2-E06-3fa9c1d2`), com o nome da pasta do experimento: refazer o `best.pt` muda o hash e o banco deixa de misturar os embeddings antigos. Embeddings de pesos diferentes não estão no mesmo espaço, e misturá-los num banco só faria o reconhecimento errar sem dar erro nenhum. Sem o checkpoint, a aplicação falha na inicialização com uma mensagem dizendo como treiná-lo.
 
 ### Privacidade na aplicação
 
 - **Nenhuma foto é guardada.** O banco tem só o embedding de cada cadastro, e a foto enviada para reconhecer também é descartada.
 - **Exclusão em cascata** ([spec 006](docs/specs/006-person-deletion.md)): excluir uma pessoa apaga o registro e os embeddings numa transação. O SQLite roda com `secure_delete`, para o conteúdo apagado não ficar no arquivo, e o arquivo do banco é criado com permissão `0600` no Linux e no macOS (só o dono lê; o Windows não tem esse tipo de permissão).
 - **Só local.** O servidor escuta em 127.0.0.1 e a interface não carrega nada de fora (a política de segurança do navegador, CSP, só permite recursos da própria aplicação).
+- **Só a própria página fala com a API.** Como a aplicação não tem login, a API recusa um `Host` que não seja `127.0.0.1` ou `localhost` (contra DNS rebinding) e um POST ou DELETE cujo `Origin` não seja a página da aplicação (contra um formulário de outro site), como explica a [D18](docs/decisions/D18-api-guards.md).
 - **Logs sem dados pessoais:** registram contagens e status, não nomes nem fotos.
 - O banco e o checkpoint ficam fora do GitHub (ver [Privacidade e LGPD](#privacidade-e-lgpd)).
 
@@ -485,7 +486,7 @@ Ficam **fora do GitHub** e são processados apenas localmente:
 
 Tudo isso fica num cofre VeraCrypt no notebook da RTX 4060, ligado ao projeto por junções em `data/private/`, `faces/private/`, `embeddings/private/` e `checkpoints/private/` (decisão [D10](docs/decisions/D10-hardware.md) e [docs/privacy.md](docs/privacy.md)).
 
-O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para que termos assinados e a planilha de controle não entrem por engano. A aplicação exclui todos os dados de uma pessoa cadastrada (ver [Privacidade na aplicação](#privacidade-na-aplicação)), e os dados privados serão eliminados ao fim da disciplina.
+O [.gitignore](.gitignore) ignora `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos de modelo (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`), fotos e gravações brutas (`*.jpg`, `*.heic`, `*.mp4` e parecidos) e `.env.*` (menos o `.env.example`). Como segunda barreira, o hook de pre-commit [scripts/check_private_files.py](scripts/check_private_files.py) bloqueia fotos, vídeos, checkpoints e bancos em qualquer pasta, mesmo adicionados com `git add -f`, e só aceita PDF, Word e Excel de uma lista fixa de documentos (`ALLOWED_DOCUMENTS`), para que termos assinados e a planilha de controle não entrem por engano. A aplicação exclui todos os dados de uma pessoa cadastrada (ver [Privacidade na aplicação](#privacidade-na-aplicação)), e os dados privados serão eliminados ao fim da disciplina.
 
 Como cada dado é coletado, guardado, excluído e eliminado, e o mapa do checklist do Anexo B, estão em [docs/privacy.md](docs/privacy.md). Regras completas nas seções 12 a 25 e no Anexo B (checklist de entrega) de [docs/assignment.md](docs/assignment.md).
 
@@ -899,7 +900,7 @@ flowchart LR
 | API | `src/app/api/` | routes, service ports (`Protocol`) and translation of any error into a single body with a stable code (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
 | Services | `src/app/core/` | `EnrollmentService`, `RecognitionService` (with the pure function `decide`), `DeletionService`, `FaceEncoder`, Pydantic models and exceptions |
 | Model | `src/app/embedder.py` | `TorchFaceEmbedder`, loads the checkpoint once, at startup |
-| Wiring | `src/app/services.py`, `src/app/main.py` | `build_services` connects the real services to the encoder and the repository, using `Settings` |
+| Wiring | `src/app/services.py`, `src/app/main.py` | `build_services` connects the real services to the encoder and the repository, using `Settings`; `main.create` is the factory the server calls, and the database closes on stop |
 | Storage | `src/app/storage/` | SQLite repository: people and embeddings, never photos ([D12](docs/decisions/D12-embedding-storage.md)) |
 | Startup | `src/app/launcher.py` | `python -m app` |
 | Fakes | `src/app/fakes.py` | fake services to test the API and the interface without a model |
@@ -974,13 +975,14 @@ The application model is **E06**: FaceNet (VGGFace2) with partial fine-tuning an
 python scripts/train.py --config configs/E06.yaml
 ```
 
-The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). The embeddings' `model_id` becomes `facenet-vggface2-E06`, with the experiment folder's name: embeddings from different weights are not in the same space, and mixing them in one database would make recognition wrong without any error. Without the checkpoint, the application fails at startup with a message saying how to train it.
+The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). The embeddings' `model_id` becomes `facenet-vggface2-E06-` plus 8 characters of the file's hash (for example `facenet-vggface2-E06-3fa9c1d2`), with the experiment folder's name: retraining `best.pt` changes the hash, and the database stops mixing the old embeddings. Embeddings from different weights are not in the same space, and mixing them in one database would make recognition wrong without any error. Without the checkpoint, the application fails at startup with a message saying how to train it.
 
 ### Privacy in the application
 
 - **No photo is stored.** The database holds only each enrollment's embedding, and the photo sent for recognition is also discarded.
 - **Cascade deletion** ([spec 006](docs/specs/006-person-deletion.md), in Portuguese): deleting a person removes the record and the embeddings in one transaction. SQLite runs with `secure_delete`, so deleted content does not stay in the file, and the database file is created with `0600` permissions on Linux and macOS (only the owner can read it; Windows has no such permission bits).
 - **Local only.** The server listens on 127.0.0.1 and the interface loads nothing from outside (the browser security policy, CSP, only allows the application's own resources).
+- **Only the application's own page talks to the API.** Since the application has no login, the API refuses a `Host` that is not `127.0.0.1` or `localhost` (against DNS rebinding) and a POST or DELETE whose `Origin` is not the application's page (against a form on another site), as explained in [D18](docs/decisions/D18-api-guards.md).
 - **Logs without personal data:** they record counts and status, not names or photos.
 - The database and the checkpoint stay out of GitHub (see [Privacy and LGPD](#privacy-and-lgpd)).
 
@@ -1009,7 +1011,7 @@ The following stays **out of GitHub** and is processed only locally:
 
 All of this lives in a VeraCrypt vault on the RTX 4060 laptop, linked to the project through junctions at `data/private/`, `faces/private/`, `embeddings/private/` and `checkpoints/private/` (decision [D10](docs/decisions/D10-hardware.md) and [docs/privacy.md](docs/privacy.md)).
 
-The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files in `docs/`, so signed consent forms and the control spreadsheet are not committed by mistake. The application deletes all data of an enrolled person (see [Privacy in the application](#privacy-in-the-application)), and private data will be deleted at the end of the course.
+The [.gitignore](.gitignore) ignores `data/private/`, `data/public/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, databases (`*.db`, `*.sqlite`), model weights (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) and saved arrays or classifiers (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`), raw photos and recordings (`*.jpg`, `*.heic`, `*.mp4` and similar) and `.env.*` (except `.env.example`). As a second barrier, the [scripts/check_private_files.py](scripts/check_private_files.py) pre-commit hook blocks photos, videos, checkpoints and databases in any folder, even when added with `git add -f`, and only accepts PDF, Word and Excel files from a fixed list of documents (`ALLOWED_DOCUMENTS`), so signed consent forms and the control spreadsheet are not committed by mistake. The application deletes all data of an enrolled person (see [Privacy in the application](#privacy-in-the-application)), and private data will be deleted at the end of the course.
 
 How each piece of data is collected, stored, deleted and destroyed, and the Annex B checklist map, are in [docs/privacy.md](docs/privacy.md) (in Portuguese). Full rules in sections 12 to 25 and Annex B (delivery checklist) of [docs/assignment.md](docs/assignment.md).
 

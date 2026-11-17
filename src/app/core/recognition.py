@@ -10,6 +10,9 @@ from facial_recognition_system.recognition.strategies import NearestNeighbor
 
 logger = logging.getLogger(__name__)
 
+# Four digits are plenty for a log line, and hide float32 noise such as 0.99999994 for 1.0.
+LOGGED_SIMILARITY_DIGITS: int = 4
+
 
 def decide(similarity: float, person_name: str, threshold: float) -> RecognitionResult:
     """Turns the best match into a result: recognized, or unknown below the threshold.
@@ -63,6 +66,9 @@ class RecognitionService:
         result = decide(float(prediction.scores[0]), prediction.labels[0], self._threshold)
         logger.info(
             "face recognized",
-            extra={"status": result.status.value, "similarity": result.similarity},
+            extra={
+                "status": result.status.value,
+                "similarity": round(result.similarity, LOGGED_SIMILARITY_DIGITS),
+            },
         )
         return result

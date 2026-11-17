@@ -1,6 +1,8 @@
 """Tests of the real embedder: unit tests on a random checkpoint, integration on real weights."""
 
 import os
+import re
+import shutil
 import threading
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
@@ -103,8 +105,39 @@ def test_the_weights_of_the_checkpoint_are_the_ones_in_use(
 def test_the_model_id_comes_from_the_experiment_folder_of_the_checkpoint(
     embedder: TorchFaceEmbedder,
 ) -> None:
-    assert embedder.model_id == "facenet-vggface2-E06"
+    assert re.fullmatch(r"facenet-vggface2-E06-[0-9a-f]{8}", embedder.model_id)
     assert embedder.model_id != PRETRAINED_MODEL_ID  # E06 and E01 vectors must never mix
+
+
+def save_random_checkpoint(path: Path, seed: int) -> None:
+    torch.manual_seed(seed)
+    network = build_embedder("facenet", pretrained=False)
+    save_checkpoint(path, network, nn.Identity(), epoch=1, val_eer=0.01)
+
+
+@pytest.mark.unit
+def test_two_different_checkpoints_in_one_folder_get_different_ids(tmp_path: Path) -> None:
+    """A retrained `best.pt`, or `last.pt` beside it, must not reuse the id of the other weights."""
+    save_random_checkpoint(tmp_path / "E06" / "best.pt", seed=1)
+    save_random_checkpoint(tmp_path / "E06" / "last.pt", seed=2)
+
+    first = TorchFaceEmbedder(tmp_path / "E06" / "best.pt").model_id
+    second = TorchFaceEmbedder(tmp_path / "E06" / "last.pt").model_id
+
+    assert first != second
+    assert first.startswith("facenet-vggface2-E06-")
+    assert second.startswith("facenet-vggface2-E06-")
+
+
+@pytest.mark.unit
+def test_the_same_weights_keep_their_id_wherever_the_file_is_copied(
+    checkpoint: Path, tmp_path: Path
+) -> None:
+    copy = tmp_path / "E06" / "copy.pt"
+    copy.parent.mkdir()
+    shutil.copyfile(checkpoint, copy)
+
+    assert TorchFaceEmbedder(copy).model_id == TorchFaceEmbedder(checkpoint).model_id
 
 
 @pytest.mark.unit
@@ -122,7 +155,7 @@ def test_it_works_inside_the_encoder_and_both_services(
 
     result = RecognitionService(encoder, repository, THRESHOLD).recognize(photo(ANA_COLOR))
 
-    assert repository.gallery("facenet-vggface2-E06").labels == ["Ana"]
+    assert repository.gallery(embedder.model_id).labels == ["Ana"]
     assert repository.gallery(PRETRAINED_MODEL_ID).labels == []
     assert result.status is RecognitionStatus.RECOGNIZED
     assert result.person_name == "Ana"
@@ -273,7 +306,7 @@ def test_the_real_e06_checkpoint_puts_the_same_person_closer(
 ) -> None:
     embedder = TorchFaceEmbedder(E06_CHECKPOINT)
 
-    assert embedder.model_id == "facenet-vggface2-E06"
+    assert re.fullmatch(r"facenet-vggface2-E06-[0-9a-f]{8}", embedder.model_id)
     check_same_person_is_closer(embedder, lfw_faces)
 
 

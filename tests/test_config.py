@@ -44,7 +44,7 @@ def test_the_threshold_comes_from_the_environment_and_reaches_the_api(
 ) -> None:
     monkeypatch.setenv("FACE_APP_THRESHOLD", "0.8")
 
-    client = TestClient(create_app(FakeServices(), load_settings()))
+    client = TestClient(create_app(FakeServices(), load_settings()), base_url="http://127.0.0.1")
 
     assert client.get("/api/config").json() == {"threshold": 0.8}
 
@@ -124,7 +124,11 @@ def test_the_env_example_lists_exactly_the_settings_with_their_defaults() -> Non
 
 def test_a_file_over_the_configured_limit_is_refused() -> None:
     settings = Settings(max_upload_mb=1)
-    client = TestClient(create_app(FakeServices(), settings), raise_server_exceptions=False)
+    client = TestClient(
+        create_app(FakeServices(), settings),
+        base_url="http://127.0.0.1",
+        raise_server_exceptions=False,
+    )
 
     big = b"x" * (settings.max_upload_bytes + 1)
     response = client.post("/api/recognitions", files={"photo": ("a.jpg", big, "image/jpeg")})

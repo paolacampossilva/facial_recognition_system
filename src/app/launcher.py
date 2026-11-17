@@ -10,6 +10,8 @@ import argparse
 import socket
 import sys
 import threading
+import time
+import urllib.request
 import webbrowser
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -19,11 +21,15 @@ import uvicorn
 from pydantic import BaseModel, Field, ValidationError
 
 from app.config import DEFAULT_PORT, MAX_PORT, MIN_PORT, Settings, load_settings
-from app.core.errors import ConfigError, LaunchError
+from app.core.errors import AppError, ConfigError, LaunchError, ModelLoadError
+from app.embedder import TRAIN_HINT, pick_device
+from app.logs import uvicorn_log_config
 
 HOST: str = "127.0.0.1"
-APP_IMPORT_PATH: str = "app.main:app"
-BROWSER_DELAY_SECONDS: float = 1.0
+APP_IMPORT_PATH: str = "app.main:create"
+# Loading the model can take a while, so the browser waits for the server, up to this long.
+READY_TIMEOUT_SECONDS: float = 120.0
+READY_POLL_SECONDS: float = 0.25
 SOURCE_DIR: Path = Path(__file__).resolve().parent
 
 
@@ -80,19 +86,71 @@ def port_is_free(port: int) -> bool:
     return True
 
 
+def check_model_setup(settings: Settings) -> None:
+    """Catches the usual first-run mistakes before the server starts and loads the model.
+
+    The server calls the application factory itself and shows any error it raises as a traceback,
+    so the two mistakes a person is likely to make are checked here, where they become a message.
+
+    Raises:
+        ModelLoadError: The device is not available, or the configured checkpoint does not exist.
+    """
+    pick_device(settings.device)
+    checkpoint = settings.checkpoint_path
+    if checkpoint is not None and not checkpoint.is_file():
+        raise ModelLoadError(
+            f"checkpoint not found at {checkpoint}; {TRAIN_HINT}, "
+            f"or leave FACE_APP_CHECKPOINT_PATH empty to use the pretrained FaceNet"
+        )
+
+
+# The probe talks to this very computer, so it must never go through a proxy from the environment.
+LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def wait_for_server(port: int, timeout: float = READY_TIMEOUT_SECONDS) -> bool:
+    """Waits until the server answers its health route.
+
+    Returns:
+        True once it answered, False if it did not within `timeout` seconds.
+    """
+    url = f"http://{HOST}:{port}/api/health"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with LOCAL_OPENER.open(url, timeout=1) as response:
+                if response.status == 200:
+                    return True
+        except OSError:  # nothing is listening yet, or it is still starting
+            pass
+        time.sleep(READY_POLL_SECONDS)
+    return False
+
+
+def open_when_ready(
+    port: int, open_browser: Callable[[str], object], wait: Callable[[int], bool]
+) -> None:
+    """Opens the browser on the application once the server answers, and never before."""
+    url = f"http://{HOST}:{port}"
+    if wait(port):
+        open_browser(url)
+    else:
+        print(f"warning: the server did not answer in time, open {url} yourself", file=sys.stderr)
+
+
 def run(
     options: LaunchOptions,
     serve: Callable[..., None] = uvicorn.run,
     open_browser: Callable[[str], object] = webbrowser.open,
-    browser_delay: float = BROWSER_DELAY_SECONDS,
+    wait: Callable[[int], bool] = wait_for_server,
 ) -> None:
-    """Starts the server and, after a short delay, opens the browser on it.
+    """Starts the server and opens the browser on it as soon as it answers.
 
     Args:
         options: What the person asked for.
         serve: Starts the server and blocks until it stops (uvicorn's `run`).
         open_browser: Opens a URL in the browser.
-        browser_delay: Seconds to wait before opening the browser, so the server is up.
+        wait: Waits until the server on a port answers; False means it never did.
 
     Raises:
         LaunchError: The port is already in use. Nothing is started.
@@ -102,18 +160,21 @@ def run(
             f"port {options.port} is already in use; close the other process or use --port"
         )
     if options.open_browser:
-        timer = threading.Timer(browser_delay, open_browser, [f"http://{HOST}:{options.port}"])
-        timer.daemon = True
-        timer.start()
+        opener = threading.Thread(
+            target=open_when_ready, args=(options.port, open_browser, wait), daemon=True
+        )
+        opener.start()
     # Watch only the code: the database in data/private changes on every enrollment.
     reload_dirs = [str(SOURCE_DIR)] if options.reload else None
     serve(
         APP_IMPORT_PATH,
+        factory=True,
         host=HOST,
         port=options.port,
         reload=options.reload,
         reload_dirs=reload_dirs,
         log_level=options.log_level.lower(),
+        log_config=uvicorn_log_config(),
     )
 
 
@@ -128,7 +189,8 @@ def main(
     the variable instead of a traceback from inside the server (spec 007, R6).
 
     Returns:
-        The exit code: 0 when the server ran and stopped, 1 when it could not start.
+        The exit code: 0 when the server ran and stopped, 1 when it could not start (a wrong
+        setting, a missing model or a port in use).
     """
     try:
         settings = load_settings()
@@ -137,8 +199,9 @@ def main(
         return 1
     options = parse_options(argv, settings)
     try:
+        check_model_setup(settings)
         run(options, serve=serve, open_browser=open_browser)
-    except LaunchError as error:
+    except AppError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

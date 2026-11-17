@@ -25,7 +25,7 @@ A aplicação precisa de uma interface para cadastrar uma pessoa (seção 37), r
 - **R11.** Excluir uma pessoa pede confirmação num diálogo próprio (nunca `window.confirm`), com o botão nomeado pela ação ("Excluir <nome>") e a opção de cancelar (spec 006, R8). Descartar uma foto escolhida também pede confirmação, com o botão "Descartar foto" e a opção "Manter foto".
 - **R12.** O formulário de cadastro avisa antes de perder o que foi preenchido ("Sair sem salvar?" / "Continuar editando").
 - **R13.** Se a câmera estiver indisponível ou a permissão for negada, a interface mostra a mensagem correspondente e mantém o envio de arquivo funcionando.
-- **R14.** A aplicação roda só na máquina local: o servidor escuta em `127.0.0.1` por padrão e não tem autenticação. O tamanho máximo do upload vem da configuração (spec 007).
+- **R14.** A aplicação roda só na máquina local: o servidor escuta em `127.0.0.1` por padrão e não tem autenticação. O tamanho máximo do upload vem da configuração (spec 007). Como não há login, a API só atende `Host` `127.0.0.1` ou `localhost` e recusa POST e DELETE cujo `Origin` não seja a própria página, e marca as respostas como `no-store` ([D18](../decisions/D18-api-guards.md)).
 
 ### Aparência
 

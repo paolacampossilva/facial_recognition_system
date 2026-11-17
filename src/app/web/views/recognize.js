@@ -65,53 +65,72 @@ function resultPanel(result, threshold) {
 export function recognizeView(root) {
   // The limit marks the bar; without it (the call failed) the bar is shown with no mark.
   let threshold = null;
+  // `alive` goes false when the person leaves the screen; `latest` numbers the recognitions so that
+  // an answer that arrives after the photo changed (or after leaving) is dropped.
+  let alive = true;
+  let latest = 0;
   const heading = pageHead("Reconhecimento", "Envie uma foto para saber quem é a pessoa.");
+  // The page is built once and only what follows the title is replaced, so the title keeps the
+  // focus that the menu gives it when the screen opens.
+  const page = h("div", { class: "page" }, heading);
+  function paint(...nodes) {
+    while (heading.nextSibling) heading.nextSibling.remove();
+    heading.after(...nodes);
+  }
   const output = h("div", { "aria-live": "polite" }, waiting());
   const submit = h("button", { type: "button", disabled: true }, "Reconhecer");
   // A new or removed photo makes the old result stale.
   const picker = photoPicker({
     max: 1,
     onChange: (count) => {
+      latest += 1;
       submit.disabled = count === 0;
       output.replaceChildren(waiting());
     },
   });
 
   async function recognize() {
+    const mine = ++latest;
     setBusy(submit, true);
     output.replaceChildren(loading("Reconhecendo…"));
     const result = await api.recognize(picker.files()[0]);
+    if (!alive) return;
     setBusy(submit, false);
     submit.disabled = picker.count() === 0;
+    if (mine !== latest) return; // the photo was replaced or removed meanwhile: the result is stale
     output.replaceChildren(result.ok ? resultPanel(result.data, threshold) : notice("error", describeError(result)));
   }
 
   async function render() {
-    root.replaceChildren(h("div", { class: "page" }, heading, loading()));
+    paint(loading());
     const [people, config] = await Promise.all([api.listPersons(), api.config()]);
+    if (!alive) return; // the person went to another screen, which owns the page now
     threshold = config.ok ? config.data.threshold : null;
     if (!people.ok) {
       const retry = h("button", { type: "button", class: "secondary" }, "Tentar de novo");
       retry.addEventListener("click", render);
-      root.replaceChildren(h("div", { class: "page" }, heading, notice("error", describeError(people)), retry));
+      paint(notice("error", describeError(people)), retry);
       return;
     }
     setCount(people.data.length);
     if (people.data.length === 0) {
-      root.replaceChildren(h("div", { class: "page" }, heading, card(null, null, emptyState(
+      paint(card(null, null, emptyState(
         "Nenhuma pessoa cadastrada.",
         "Cadastre pelo menos uma pessoa para poder reconhecê-la.",
-        linkButton("#/cadastro", "Ir para o Cadastro")))));
+        linkButton("#/cadastro", "Ir para o Cadastro"))));
       return;
     }
-    root.replaceChildren(h("div", { class: "page" }, heading,
-      h("div", { class: "grid" },
-        card("Foto", "Pela câmera ou por arquivo. Use uma foto de frente, com um só rosto e boa luz.", picker.element,
-          h("div", { class: "form-actions" }, submit)),
-        card("Resultado", null, output))));
+    paint(h("div", { class: "grid" },
+      card("Foto", "Pela câmera ou por arquivo. Use uma foto de frente, com um só rosto e boa luz.", picker.element,
+        h("div", { class: "form-actions" }, submit)),
+      card("Resultado", null, output)));
   }
 
   submit.addEventListener("click", recognize);
+  root.replaceChildren(page);
   render();
-  return () => picker.dispose();
+  return () => {
+    alive = false;
+    picker.dispose();
+  };
 }

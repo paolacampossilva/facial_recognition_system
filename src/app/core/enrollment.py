@@ -1,6 +1,7 @@
 """Enrollment of a person from a name and photos (spec 002)."""
 
 import logging
+import threading
 from collections.abc import Sequence
 
 import numpy as np
@@ -46,6 +47,9 @@ class EnrollmentService:
         self._encoder = encoder
         self._repository = repository
         self._threshold = threshold
+        # Checking for a duplicate and storing the person are two repository calls: without this
+        # lock, two requests for the same face under different names could both pass the check.
+        self._lock = threading.Lock()
 
     def enroll(self, request: EnrollmentRequest) -> EnrollmentResult:
         """Enrolls the person with the embeddings of all the photos.
@@ -59,14 +63,16 @@ class EnrollmentService:
             DuplicatePersonError: The name is taken, or the face is already enrolled under another
                 name (the error carries the name of the person who is already enrolled).
         """
+        # The slow part, embedding the photos, stays outside the lock.
         vectors = [self._encoder.encode(photo) for photo in request.photos]
-        gallery = self._repository.gallery(self._encoder.model_id)
-        existing = find_duplicate(gallery, vectors, self._threshold)
-        if existing is not None:
-            raise DuplicatePersonError(existing, "similarity")
-        person = self._repository.add_person(
-            NewPerson(name=request.name, model_id=self._encoder.model_id, vectors=vectors)
-        )
+        with self._lock:
+            gallery = self._repository.gallery(self._encoder.model_id)
+            existing = find_duplicate(gallery, vectors, self._threshold)
+            if existing is not None:
+                raise DuplicatePersonError(existing, "similarity")
+            person = self._repository.add_person(
+                NewPerson(name=request.name, model_id=self._encoder.model_id, vectors=vectors)
+            )
         logger.info(
             "person enrolled",
             extra={"person_id": person.id, "embedding_count": person.embedding_count},

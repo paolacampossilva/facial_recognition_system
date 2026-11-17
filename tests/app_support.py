@@ -5,9 +5,16 @@ Photos are solid-color PNGs: the color picks the embedding, the width picks how 
 detector finds.
 """
 
+import contextlib
+import socket
+import threading
+import time
+from collections.abc import Iterator
 from io import BytesIO
 
 import numpy as np
+import uvicorn
+from fastapi import FastAPI
 from PIL import Image
 
 from app.core.encoder import FaceEncoder
@@ -103,3 +110,38 @@ def build_encoder(
 
 def request(name: str, *photos: bytes) -> EnrollmentRequest:
     return EnrollmentRequest(name=name, photos=list(photos))
+
+
+def free_port() -> int:
+    """A port nothing listens on right now, for a test server on the loopback address."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+SERVER_START_SECONDS: float = 10
+
+
+@contextlib.contextmanager
+def serving(application: FastAPI, **config: object) -> Iterator[str]:
+    """Runs the application on a free loopback port in a thread and yields its URL.
+
+    Args:
+        application: The application to serve.
+        **config: Extra `uvicorn.Config` options, such as `log_config`.
+    """
+    port = free_port()
+    options: dict[str, object] = {"log_level": "warning", **config}
+    server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port, **options))  # type: ignore[arg-type]
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + SERVER_START_SECONDS
+    while not server.started:
+        if time.monotonic() > deadline:
+            raise TimeoutError("the test server did not start")
+        time.sleep(0.05)
+    try:
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        server.should_exit = True
+        thread.join(timeout=SERVER_START_SECONDS)

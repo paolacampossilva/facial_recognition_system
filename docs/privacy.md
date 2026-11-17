@@ -59,7 +59,7 @@ Todos os termos ficam no cofre da 4060, em `V:\termos`. A Paola manda os termos 
 ## Proteções no repositório
 
 1. **`.gitignore`** ignora `data/private/`, `faces/`, `embeddings/`, `checkpoints/`, `consent/`, bancos (`*.db`, `*.sqlite`), pesos (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`) e arrays ou classificadores salvos (`*.npy`, `*.npz`, `*.pkl`, `*.joblib`).
-2. **Hook de pre-commit** ([scripts/check_private_files.py](../scripts/check_private_files.py)), instalado em cada clone com `pre-commit install`: bloqueia fotos, vídeos, pesos, embeddings e bancos em qualquer pasta, mesmo com `git add -f`, e só aceita PDF, Word e Excel em `docs/`, para termos e planilhas não entrarem por engano. `git commit --no-verify` é proibido.
+2. **Hook de pre-commit** ([scripts/check_private_files.py](../scripts/check_private_files.py)), instalado em cada clone com `pre-commit install`: bloqueia fotos, vídeos, pesos, embeddings e bancos em qualquer pasta, mesmo com `git add -f`, e só aceita PDF, Word e Excel de uma lista fixa de documentos (`ALLOWED_DOCUMENTS`), para termos e planilhas não entrarem por engano. `git commit --no-verify` é proibido.
 3. **Auditoria do histórico** antes de cada entrega: `git log --all --stat` procurando imagens, `.db` e `.pt` (seção 18, Anexo B). Adicionar algo ao `.gitignore` depois não apaga o que já foi enviado.
 
 ## Agentes de IA e serviços externos
@@ -107,7 +107,7 @@ Se um dado privado for parar onde não deveria (um commit, uma conversa de grupo
 | Item | Onde é garantido |
 |---|---|
 | Todas deram consentimento | termos em `V:\termos`, conferidos contra a planilha antes de cada sessão |
-| Termos armazenados de forma privada e fora do GitHub | cofre, hook de pre-commit (PDF, Word e Excel só em `docs/`) |
+| Termos armazenados de forma privada e fora do GitHub | cofre, hook de pre-commit (PDF, Word e Excel só de uma lista fixa de documentos) |
 | Nenhuma foto, embedding, banco ou checkpoint privado no GitHub | `.gitignore`, hook, junções para o cofre |
 | `.gitignore` protege os diretórios privados | [.gitignore](../.gitignore) |
 | Histórico do Git verificado | auditoria antes de cada entrega (#34, #53) |
