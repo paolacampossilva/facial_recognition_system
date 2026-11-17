@@ -27,6 +27,7 @@ const TIPS = [
 ];
 
 export function enrollView(root) {
+  let alive = true; // false once the person left the screen while a request was running
   const feedback = h("div", { "aria-live": "polite" });
   const counter = h("p", { class: "muted", "aria-live": "polite" }, `0 de ${MAX_PHOTOS} fotos`);
   const nameInput = keepDraft(NAME_KEY, h("input", {
@@ -100,6 +101,15 @@ export function enrollView(root) {
     setBusy(submit, true);
     feedback.replaceChildren(loading("Cadastrando…"));
     const result = await api.enroll(name, picker.files());
+    if (!alive) {
+      // The person left while the request ran; the enrollment still happened, so the draft and
+      // the menu count must follow, but the screen is not theirs to write on anymore.
+      if (result.ok) {
+        clearDraft(NAME_KEY, PHOTOS_KEY);
+        refreshCount();
+      }
+      return;
+    }
     setBusy(submit, false);
     if (!result.ok) {
       feedback.replaceChildren(notice("error", describeError(result)));
@@ -114,5 +124,8 @@ export function enrollView(root) {
   });
 
   root.replaceChildren(form);
-  return () => picker.dispose();
+  return () => {
+    alive = false;
+    picker.dispose();
+  };
 }

@@ -41,6 +41,7 @@ from tests.app_support import (
 
 playwright_api = pytest.importorskip("playwright.sync_api")
 Browser = playwright_api.Browser
+Route = playwright_api.Route
 Page = playwright_api.Page
 expect = playwright_api.expect
 
@@ -463,6 +464,45 @@ def test_a_camera_that_goes_away_closes_the_camera_box(open_page) -> None:
     expect(page.locator("video.camera")).to_be_hidden()
     expect(page.get_by_role("button", name="Usar a câmera")).to_be_visible()
     expect(page.get_by_text("Não foi possível usar a câmera. Envie um arquivo")).to_be_visible()
+
+
+def test_a_slow_list_does_not_overwrite_the_screen_the_person_moved_to(open_page) -> None:
+    """The recognition screen waits for the list; if the person leaves, it must not paint over."""
+    page, _ = open_page()
+    held: list[Route] = []
+    page.route(
+        "**/api/persons", lambda route: held.append(route) if not held else route.continue_()
+    )
+
+    page.locator("#menu").get_by_role("link", name="Reconhecimento").click()  # its list is held
+    go_to(page, "Pessoas cadastradas")
+    expect(page.get_by_text("Nenhuma pessoa cadastrada.")).to_be_visible()
+    held[0].continue_()
+    page.wait_for_timeout(300)
+
+    expect(page.locator("h1")).to_have_text("Pessoas cadastradas")
+    expect(page.get_by_role("button", name="Reconhecer")).to_have_count(0)
+
+
+def test_a_recognition_that_arrives_after_the_photo_was_removed_is_dropped(open_page) -> None:
+    """A result for a photo that is no longer there must not replace the empty panel."""
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Reconhecimento")
+    held: list[Route] = []
+    page.route("**/api/recognitions", lambda route: held.append(route))
+
+    recognize(page, png(ANA_COLOR, "ana-again.png"))
+    expect(page.get_by_text("Reconhecendo…")).to_be_visible()
+    page.get_by_role("button", name="Descartar a foto 1").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Descartar foto").click()
+    expect(page.get_by_text("O resultado aparece aqui")).to_be_visible()
+    held[0].continue_()
+    page.wait_for_timeout(500)
+
+    expect(page.get_by_text("O resultado aparece aqui")).to_be_visible()
+    expect(page.get_by_text("Pessoa reconhecida")).to_have_count(0)
 
 
 def test_a_denied_camera_keeps_the_file_upload(open_page) -> None:

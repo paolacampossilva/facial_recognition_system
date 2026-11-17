@@ -13,6 +13,10 @@ export function personsView(root) {
   const summary = h("p", { class: "muted" }, "Quem pode ser reconhecido neste computador.");
   const feedback = h("div", { "aria-live": "polite" });
   const content = h("div", {});
+  // `alive` goes false when the person leaves the screen; `loads` numbers the list requests so that
+  // only the last one paints.
+  let alive = true;
+  let loads = 0;
 
   async function remove(person) {
     const { confirmed } = await confirmDialog({
@@ -23,11 +27,14 @@ export function personsView(root) {
     });
     if (!confirmed) return;
     const result = await api.deletePerson(person.id);
+    if (!alive) {
+      refreshCount(); // the list changed, so the menu count must follow even from another screen
+      return;
+    }
     feedback.replaceChildren(result.ok
       ? notice("success", `Cadastro de ${person.name} excluído.`)
       : notice("error", describeError(result)));
-    await load();
-    refreshCount();
+    await load(); // also updates the menu count
   }
 
   const item = (person) => h("li", { class: "person" },
@@ -39,8 +46,10 @@ export function personsView(root) {
     }, icon("trash"), "Excluir"));
 
   async function load() {
+    const mine = ++loads;
     content.replaceChildren(loading());
     const result = await api.listPersons();
+    if (!alive || mine !== loads) return;
     if (!result.ok) {
       const retry = h("button", { type: "button", class: "secondary" }, "Tentar de novo");
       retry.addEventListener("click", load);
@@ -64,5 +73,7 @@ export function personsView(root) {
     h("header", { class: "page-head" }, h("h1", {}, "Pessoas cadastradas"), summary),
     feedback, content));
   load();
-  return () => {};
+  return () => {
+    alive = false;
+  };
 }

@@ -3,7 +3,7 @@
 
 import { countBadge, refreshCount } from "./lib/counter.js";
 import { confirmLeave } from "./lib/drafts.js";
-import { h, icon } from "./lib/dom.js";
+import { h, icon, notice } from "./lib/dom.js";
 import { initShell } from "./lib/shell.js";
 import { initTheme } from "./lib/theme.js";
 import { enrollView } from "./views/enroll.js";
@@ -34,19 +34,44 @@ function paintMenu(active) {
       icon(route.icon), route.label, route.path === "pessoas" && countBadge)));
 }
 
-async function show() {
-  const next = routeFromHash();
+async function go(next) {
   if (current?.route === next) return;
   if (current && !(await confirmLeave())) {
     location.hash = `#/${current.route.path}`;
     return;
   }
   current?.dispose?.();
-  current = { route: next, dispose: null };
+  current = null;
   document.title = `${next.label} · ${PRODUCT}`;
   paintMenu(next);
   root.replaceChildren();
-  current.dispose = next.view(root);
+  try {
+    current = { route: next, dispose: next.view(root) };
+  } catch {
+    // A screen that fails to build must not leave a blank page that blocks every later visit.
+    root.replaceChildren(h("div", { class: "page" }, notice("error", "Algo deu errado. Tente de novo")));
+  }
+}
+
+// One navigation at a time: the browser's Back and Forward do not wait for the "leave without
+// saving" dialog, so a second change that arrives meanwhile is handled right after the first.
+let navigating = false;
+let queued = false;
+
+async function show() {
+  if (navigating) {
+    queued = true;
+    return;
+  }
+  navigating = true;
+  try {
+    do {
+      queued = false;
+      await go(routeFromHash());
+    } while (queued);
+  } finally {
+    navigating = false;
+  }
 }
 
 initTheme(document.getElementById("theme"));
