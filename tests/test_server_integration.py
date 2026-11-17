@@ -18,6 +18,7 @@ import pytest
 from app.api.app import create_app
 from app.config import Settings
 from app.core.models import FaceBox, FaceResult, RecognitionResponse, RecognitionStatus
+from app.fakes import FakeServices
 from app.launcher import open_when_ready, wait_for_server
 from app.logs import APP_LOGGER, configure_logging, uvicorn_log_config
 from tests.app_support import THRESHOLD, free_port, serving
@@ -88,13 +89,14 @@ class SlowRecognition:
         return RecognitionResponse(image_width=1, image_height=1, faces=[face])
 
 
-def post_a_photo(url: str) -> None:
-    body = (
+def post_a_photo(url: str, content: bytes = b"xx", path: str = "/api/recognitions") -> None:
+    head = (
         f'--{BOUNDARY}\r\nContent-Disposition: form-data; name="photo"; filename="a.jpg"\r\n'
-        f"Content-Type: image/jpeg\r\n\r\nxx\r\n--{BOUNDARY}--\r\n"
+        f"Content-Type: image/jpeg\r\n\r\n"
     ).encode()
+    body = head + content + f"\r\n--{BOUNDARY}--\r\n".encode()
     request = urllib.request.Request(  # noqa: S310
-        f"{url}/api/recognitions",
+        f"{url}{path}",
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={BOUNDARY}"},
     )
@@ -169,3 +171,22 @@ def test_when_the_server_never_answers_the_person_is_told_where_to_go(
 
     assert opened == []
     assert "http://127.0.0.1:8123" in capsys.readouterr().err
+
+
+def test_an_error_the_application_raises_on_purpose_is_not_logged_as_a_crash(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A photo with no face is a normal answer (422), not a traceback in the terminal."""
+    configure_logging("INFO")
+    application = create_app(FakeServices(), Settings(threshold=THRESHOLD))
+
+    with (
+        serving(application, log_level="info", log_config=uvicorn_log_config()) as url,
+        pytest.raises(urllib.error.HTTPError) as response,
+    ):
+        post_a_photo(url, b"sem-rosto", path="/api/recognitions")
+
+    printed = capsys.readouterr().err
+    assert response.value.code == 422
+    assert "Traceback" not in printed
+    assert "Exception in ASGI application" not in printed

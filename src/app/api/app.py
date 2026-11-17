@@ -24,6 +24,8 @@ from app.api.guard import (
 from app.api.ports import Services
 from app.api.routes import build_router
 from app.config import Settings
+from app.core.errors import AppError
+from facial_recognition_system.preprocessing import PreprocessingError
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,11 @@ def create_app(
     application.state.services = services
     application.state.settings = settings
     application.include_router(build_router())
+    # The errors the application raises on purpose (no face, a name taken, an empty gallery) are
+    # answered here, inside the middleware. Anything else reaches the handler of `Exception`,
+    # which Starlette runs outside it and then re-raises, so the server logs it as unexpected.
+    application.add_exception_handler(AppError, handle_error)
+    application.add_exception_handler(PreprocessingError, handle_error)
     application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)
     application.mount("/", WebFiles(directory=web_dir, html=True), name="web")
