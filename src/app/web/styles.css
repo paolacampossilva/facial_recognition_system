@@ -288,7 +288,7 @@ button .spinner { margin-right: 0; }
 
 .faces { display: flex; flex-direction: column; gap: 16px; }
 .faces__photo { position: relative; margin: 0; overflow: hidden; border-radius: var(--radius); background: var(--surface-2); }
-.faces__photo img { display: block; width: 100%; height: auto; }
+.faces__photo img { display: block; width: 100%; height: auto; image-orientation: from-image; }
 .faces__layer { position: absolute; inset: 0; pointer-events: none; }
 /* Each box is placed by the fractions the view sets (--left, --top, --width, --height). */
 .face-box {

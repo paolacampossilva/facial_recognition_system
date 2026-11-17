@@ -6,12 +6,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from app.core.encoder import EncodedFace
 from app.core.enrollment import EnrollmentService
 from app.core.errors import EmptyGalleryError
 from app.core.models import RecognitionStatus
-from app.core.recognition import MAX_FACES, RecognitionService, decide
+from app.core.recognition import MAX_FACES, RecognitionService, decide, decide_faces
 from app.storage.repository import SqlitePersonRepository
-from facial_recognition_system.preprocessing import InvalidImageError, NoFaceDetectedError
+from facial_recognition_system.preprocessing import (
+    BoundingBox,
+    InvalidImageError,
+    NoFaceDetectedError,
+)
 from tests.app_support import (
     ANA,
     ANA_COLOR,
@@ -369,3 +374,29 @@ def test_the_gallery_is_read_once_per_image_and_not_once_per_face() -> None:
 
     assert repository.reads == 1
     repository.close()
+
+
+def test_with_an_empty_gallery_no_face_is_detected_or_embedded(
+    repository: SqlitePersonRepository,
+) -> None:
+    class ForbiddenEncoder:
+        model_id = "fake-model"
+
+        def encode_all(self, *args: object) -> None:
+            raise AssertionError("the faces must not be encoded when nobody is enrolled")
+
+    service = RecognitionService(ForbiddenEncoder(), repository, THRESHOLD, MIN_FACE_PX)  # type: ignore[arg-type]
+
+    with pytest.raises(EmptyGalleryError):
+        service.recognize(group_photo(*[ANA_COLOR] * MAX_FACES))
+
+
+def test_decide_faces_decides_each_face_alone_and_keeps_the_order_and_the_box() -> None:
+    box = BoundingBox(left=10, top=20, right=110, bottom=140)
+    faces = [EncodedFace(box=box, vector=ANA), EncodedFace(box=box, vector=ANA)]
+
+    known, stranger = decide_faces(faces, ["Ana", "Bia"], np.array([0.9, 0.5]), 0.766)
+
+    assert (known.status, known.person_name) == (RecognitionStatus.RECOGNIZED, "Ana")
+    assert (stranger.status, stranger.person_name) == (RecognitionStatus.UNKNOWN, None)
+    assert known.box.model_dump() == {"left": 10, "top": 20, "right": 110, "bottom": 140}

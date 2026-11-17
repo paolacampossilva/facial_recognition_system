@@ -91,10 +91,20 @@ function repeatedPeople(faces) {
 
 // The photo with a box on every face, then one result per face in the same order, left to right.
 function resultPanel(data, photoUrl, threshold) {
-  const photo = h("figure", { class: "faces__photo" },
-    h("img", { src: photoUrl, alt: "Foto enviada para o reconhecimento" }),
-    h("div", { class: "faces__layer" },
-      data.faces.map((face, index) => faceBox(face, index + 1, data.image_width, data.image_height))));
+  const image = h("img", { src: photoUrl, alt: "Foto enviada para o reconhecimento" });
+  const layer = h("div", { class: "faces__layer" },
+    data.faces.map((face, index) => faceBox(face, index + 1, data.image_width, data.image_height)));
+  // The boxes are fractions of the image the server read. If the browser shows the photo at
+  // another size (a different orientation, or it cannot show it at all), a box would sit on the
+  // wrong face, so the layer is taken away and the list below still says everything.
+  const dropLayer = () => layer.remove();
+  image.addEventListener("error", dropLayer);
+  image.addEventListener("load", () => {
+    const sameSize = Math.abs(image.naturalWidth - data.image_width) <= 1
+      && Math.abs(image.naturalHeight - data.image_height) <= 1;
+    if (!sameSize) dropLayer();
+  });
+  const photo = h("figure", { class: "faces__photo" }, image, layer);
   return h("div", { class: "faces", role: "status" },
     photo,
     h("ul", { class: "faces__list" },

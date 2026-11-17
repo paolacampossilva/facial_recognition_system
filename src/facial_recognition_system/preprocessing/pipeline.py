@@ -56,7 +56,10 @@ UPLOAD_SOURCE: str = "upload"
 
 @dataclass(frozen=True)
 class DetectedFace:
-    """One face found by `FacePreprocessor.process_all`: where it is and its crop."""
+    """One face found by `FacePreprocessor.process_all`: where it is and its crop.
+
+    A dataclass, like `FaceDetection`, because it carries a PIL image that nothing validates.
+    """
 
     # In pixels of the image after the EXIF orientation, whole numbers inside the image.
     box: BoundingBox

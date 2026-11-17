@@ -24,7 +24,10 @@ class Embedder(Protocol):
 
 @dataclass(frozen=True)
 class EncodedFace:
-    """The embedding of one face and where the face is (whole pixels inside the image)."""
+    """The embedding of one face and where the face is (whole pixels inside the image).
+
+    A dataclass, not a Pydantic model, because it carries a numpy array that nothing validates.
+    """
 
     box: BoundingBox
     vector: np.ndarray

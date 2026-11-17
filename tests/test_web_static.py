@@ -363,3 +363,13 @@ def test_the_boxes_are_labeled_elements_placed_by_css_variables_and_not_a_canvas
         assert f'setProperty("{variable}"' in source
         assert f"var({variable})" in styles
     assert "canvas" not in source.lower()
+
+
+def test_the_boxes_are_dropped_when_the_photo_does_not_fit_the_size_the_server_read() -> None:
+    """A box on the wrong face would tie a name to the wrong person (spec 005, R32)."""
+    source = code_of(WEB_DIR / "views" / "recognize.js")
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
+
+    assert "naturalWidth" in source and "naturalHeight" in source
+    assert '"error"' in source
+    assert "image-orientation: from-image" in styles

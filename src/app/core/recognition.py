@@ -4,7 +4,7 @@ import logging
 
 import numpy as np
 
-from app.core.encoder import FaceEncoder
+from app.core.encoder import EncodedFace, FaceEncoder
 from app.core.errors import EmptyGalleryError
 from app.core.models import (
     FaceBox,
@@ -44,6 +44,25 @@ def decide(similarity: float, person_name: str, threshold: float) -> Recognition
     )
 
 
+def decide_faces(
+    faces: list[EncodedFace], labels: list[str], scores: np.ndarray, threshold: float
+) -> list[FaceResult]:
+    """Decides each face on its own from its best match, keeping the order and the box.
+
+    Args:
+        faces: The faces of the image, left to right.
+        labels: The owner of the most similar stored photo of each face.
+        scores: The cosine similarity with that photo, for each face.
+        threshold: The lowest similarity accepted as the same person (decision D08).
+    """
+    results: list[FaceResult] = []
+    for face, label, score in zip(faces, labels, scores, strict=True):
+        decision = decide(float(score), label, threshold)
+        box = FaceBox.model_validate(face.box.model_dump())  # whole pixels inside the image
+        results.append(FaceResult(box=box, **decision.model_dump()))
+    return results
+
+
 class RecognitionService:
     """Recognizes every face of a photo by its nearest neighbor in the gallery (decision D16)."""
 
@@ -71,33 +90,25 @@ class RecognitionService:
             NoFaceDetectedError: The image has no usable face (none, or all too small).
             EmptyGalleryError: Nobody is enrolled for the configured model.
         """
-        encoded = self._encoder.encode_all(image, self._min_face_px, MAX_FACES)
+        # The gallery goes first: with nobody enrolled there is nothing to compare, so the
+        # detection and the embeddings of up to 20 faces would be wasted.
         gallery = self._repository.gallery(self._encoder.model_id)
         if not gallery.labels:
             raise EmptyGalleryError()
+        encoded = self._encoder.encode_all(image, self._min_face_px, MAX_FACES)
         vectors = np.stack([face.vector for face in encoded.faces])
         prediction = NearestNeighbor().fit(gallery.embeddings, gallery.labels).predict(vectors)
-        logger.info("image recognized", extra={"face_count": len(encoded.faces)})
+        faces = decide_faces(encoded.faces, prediction.labels, prediction.scores, self._threshold)
 
-        faces: list[FaceResult] = []
-        for face, label, score in zip(
-            encoded.faces, prediction.labels, prediction.scores, strict=True
-        ):
-            decision = decide(float(score), label, self._threshold)
+        logger.info("image recognized", extra={"face_count": len(faces)})
+        for face in faces:
             logger.info(
                 "face recognized",
                 extra={
-                    "status": decision.status.value,
-                    "similarity": round(decision.similarity, LOGGED_SIMILARITY_DIGITS),
+                    "status": face.status.value,
+                    "similarity": round(face.similarity, LOGGED_SIMILARITY_DIGITS),
                 },
             )
-            box = FaceBox(
-                left=int(face.box.left),
-                top=int(face.box.top),
-                right=int(face.box.right),
-                bottom=int(face.box.bottom),
-            )
-            faces.append(FaceResult(box=box, **decision.model_dump()))
         return RecognitionResponse(
             image_width=encoded.width, image_height=encoded.height, faces=faces
         )
