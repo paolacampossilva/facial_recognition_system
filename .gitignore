@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 
 # Packaging
 *.egg-info/
@@ -18,6 +20,13 @@ dist/
 # OS / editor
 .DS_Store
 .vscode/
+.idea/
+
+# Logs and coverage
+*.log
+.coverage
+htmlcov/
+.mypy_cache/
 
 # Private biometric data (LGPD, never versioned)
 data/private/
@@ -28,6 +37,23 @@ consent/
 *.db
 *.sqlite
 *.sqlite3
+
+# Raw photos and recordings (the pre-commit hook blocks them too, even with git add -f)
+*.jpg
+*.jpeg
+*.heic
+*.heif
+*.webp
+*.bmp
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Signed consent forms and participant lists, which live only in the vault
+*assinad*
+*signed*
+*controle*
 
 # Public datasets (downloaded from the official source, never redistributed)
 data/public/
