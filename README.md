@@ -375,6 +375,7 @@ flowchart LR
 | API | `src/app/api/` | rotas, portas dos serviços (`Protocol`) e tradução de qualquer erro para um corpo único com código estável (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
 | Serviços | `src/app/core/` | `EnrollmentService`, `RecognitionService` (com a função pura `decide`), `DeletionService`, `FaceEncoder`, modelos Pydantic e exceções |
 | Modelo | `src/app/embedder.py` | `TorchFaceEmbedder`, carrega o checkpoint uma vez, na inicialização |
+| Montagem | `src/app/services.py`, `src/app/main.py` | `build_services` liga os serviços reais ao encoder e ao repositório, com a `Settings` |
 | Armazenamento | `src/app/storage/` | repositório SQLite: pessoas e embeddings, nunca fotos ([D12](docs/decisions/D12-embedding-storage.md)) |
 | Inicialização | `src/app/launcher.py` | `python -m app` |
 | Fakes | `src/app/fakes.py` | serviços falsos para testar a API e a interface sem modelo |
@@ -528,7 +529,8 @@ facial_recognition_system/
 │   ├── embedder.py               # TorchFaceEmbedder (checkpoint do E06)
 │   ├── fakes.py                  # serviços falsos para testes
 │   ├── launcher.py               # python -m app
-│   └── logs.py                   # logs só com campos permitidos (spec 007)
+│   ├── logs.py                   # logs só com campos permitidos (spec 007)
+│   └── services.py               # monta os serviços reais a partir da Settings
 ├── src/facial_recognition_system/
 │   ├── data/                     # splits por identidade, pares e leakage
 │   ├── evaluation/               # métricas, threshold, comparação pareada e gráficos
@@ -897,6 +899,7 @@ flowchart LR
 | API | `src/app/api/` | routes, service ports (`Protocol`) and translation of any error into a single body with a stable code (`no_face_detected`, `multiple_faces`, `invalid_image`, `duplicate_person`, `empty_gallery`...) |
 | Services | `src/app/core/` | `EnrollmentService`, `RecognitionService` (with the pure function `decide`), `DeletionService`, `FaceEncoder`, Pydantic models and exceptions |
 | Model | `src/app/embedder.py` | `TorchFaceEmbedder`, loads the checkpoint once, at startup |
+| Wiring | `src/app/services.py`, `src/app/main.py` | `build_services` connects the real services to the encoder and the repository, using `Settings` |
 | Storage | `src/app/storage/` | SQLite repository: people and embeddings, never photos ([D12](docs/decisions/D12-embedding-storage.md)) |
 | Startup | `src/app/launcher.py` | `python -m app` |
 | Fakes | `src/app/fakes.py` | fake services to test the API and the interface without a model |
@@ -1050,7 +1053,8 @@ facial_recognition_system/
 │   ├── embedder.py               # TorchFaceEmbedder (E06 checkpoint)
 │   ├── fakes.py                  # fake services for tests
 │   ├── launcher.py               # python -m app
-│   └── logs.py                   # logs with allowed fields only (spec 007)
+│   ├── logs.py                   # logs with allowed fields only (spec 007)
+│   └── services.py               # builds the real services from Settings
 ├── src/facial_recognition_system/
 │   ├── data/                     # identity splits, pairs and leakage
 │   ├── evaluation/               # metrics, threshold, paired comparison and plots

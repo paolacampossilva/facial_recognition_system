@@ -5,6 +5,7 @@ import threading
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -168,6 +169,40 @@ def test_a_checkpoint_of_another_network_is_a_load_error(tmp_path: Path) -> None
     resnet = build_embedder("resnet50", pretrained=False)
     path = tmp_path / "R50" / "best.pt"
     save_checkpoint(path, resnet, nn.Identity(), epoch=1, val_eer=0.5)
+
+    with pytest.raises(ModelLoadError, match="not a valid FaceNet checkpoint"):
+        TorchFaceEmbedder(path)
+
+
+@pytest.mark.unit
+def test_a_checkpoint_trained_from_the_pretrained_facenet_loads_without_its_classifier(
+    tmp_path: Path,
+) -> None:
+    torch.manual_seed(0)
+    network = build_embedder("facenet", pretrained=False)
+    weights = cast(nn.Module, network.network).state_dict()
+    weights["logits.weight"] = torch.zeros(8631, 512)
+    weights["logits.bias"] = torch.zeros(8631)
+    path = tmp_path / "E06" / "best.pt"
+    path.parent.mkdir()
+    torch.save({"epoch": 1, "network": weights}, path)
+
+    loaded = TorchFaceEmbedder(path)
+
+    assert loaded.embed(face(ANA_COLOR)).shape == (DIMENSION,)
+
+
+@pytest.mark.unit
+def test_a_checkpoint_missing_a_layer_of_the_network_is_still_a_load_error(
+    tmp_path: Path,
+) -> None:
+    network = build_embedder("facenet", pretrained=False)
+    weights = cast(nn.Module, network.network).state_dict()
+    del weights["last_linear.weight"]
+    weights["logits.weight"] = torch.zeros(8631, 512)
+    path = tmp_path / "E06" / "best.pt"
+    path.parent.mkdir()
+    torch.save({"epoch": 1, "network": weights}, path)
 
     with pytest.raises(ModelLoadError, match="not a valid FaceNet checkpoint"):
         TorchFaceEmbedder(path)
