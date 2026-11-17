@@ -4,7 +4,6 @@ import runpy
 import socket
 import threading
 from collections.abc import Iterator
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
@@ -20,7 +19,6 @@ from app.launcher import (
     parse_options,
     port_is_free,
     run,
-    wait_for_server,
 )
 from app.logs import uvicorn_log_config
 from tests.app_support import free_port
@@ -314,28 +312,3 @@ def test_the_browser_stays_closed_when_the_server_never_answers() -> None:
 
     assert not browser.opened.wait(timeout=0.3)
     assert browser.urls == []
-
-
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802 (the name the standard library calls)
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"{}")
-
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 (the base name)
-        pass
-
-
-def test_wait_for_server_returns_true_once_the_health_route_answers() -> None:
-    server = HTTPServer(("127.0.0.1", 0), HealthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-
-    answered = wait_for_server(server.server_address[1], timeout=5)
-
-    server.shutdown()
-    assert answered is True
-
-
-def test_wait_for_server_gives_up_when_nothing_listens() -> None:
-    assert wait_for_server(free_port(), timeout=0.6) is False

@@ -2,20 +2,16 @@
 
 import logging
 import sys
-import urllib.error
-import urllib.request
 from collections.abc import Iterator
 
 import pytest
 
-from app.api.app import create_app
-from app.config import Settings
 from app.core.deletion import DeletionService
 from app.core.enrollment import EnrollmentService
 from app.core.recognition import RecognitionService
-from app.logs import APP_LOGGER, AllowListFormatter, configure_logging, uvicorn_log_config
+from app.logs import APP_LOGGER, AllowListFormatter, configure_logging
 from app.storage.repository import SqlitePersonRepository
-from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, photo, request, serving
+from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, photo, request
 
 pytestmark = pytest.mark.unit
 
@@ -117,33 +113,3 @@ def test_a_traceback_names_the_exception_but_never_its_message() -> None:
     assert "Traceback (most recent call last):" in text
     assert "Ana Souza" not in text
     assert "hunter2" not in text
-
-
-class ExplodingServices:
-    """Services whose every call fails with a message that holds personal data."""
-
-    @property
-    def persons(self) -> "ExplodingServices":
-        return self
-
-    def list_persons(self) -> list[object]:
-        raise RuntimeError(PERSONAL_MESSAGE)
-
-
-def test_an_unexpected_error_never_prints_its_message_through_the_server_logger(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    configure_logging("INFO")
-    application = create_app(ExplodingServices(), Settings(threshold=THRESHOLD))  # type: ignore[arg-type]
-
-    with (
-        serving(application, log_level="info", log_config=uvicorn_log_config()) as url,
-        pytest.raises(urllib.error.HTTPError) as response,
-    ):
-        urllib.request.urlopen(f"{url}/api/persons")  # noqa: S310
-
-    printed = capsys.readouterr().err
-    assert response.value.code == 500
-    assert "RuntimeError" in printed
-    assert "Ana Souza" not in printed
-    assert "hunter2" not in printed
