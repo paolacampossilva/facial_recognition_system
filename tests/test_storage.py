@@ -1,5 +1,6 @@
 """Tests of the SQLite repository (D12, specs 002, 003 and 006)."""
 
+import os
 import sqlite3
 import stat
 import sys
@@ -222,6 +223,34 @@ def test_the_database_file_and_its_folder_are_created_and_private(tmp_path: Path
     assert path.is_file()
     if sys.platform != "win32":  # Windows has no POSIX permission bits
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no POSIX permission bits")
+def test_the_database_is_private_from_the_moment_it_is_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With the final chmod turned off, only the creation itself can have made the file private."""
+    monkeypatch.setattr(os, "chmod", lambda *args, **kwargs: None)
+    previous_umask = os.umask(0o000)  # a permissive umask, as the worst case
+    try:
+        path = tmp_path / "data" / "private" / "app.db"
+        SqlitePersonRepository(path).close()
+    finally:
+        os.umask(previous_umask)
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no POSIX permission bits")
+def test_a_database_an_older_version_left_open_to_others_is_made_private(tmp_path: Path) -> None:
+    path = tmp_path / "app.db"
+    sqlite3.connect(path).close()
+    path.chmod(0o644)
+
+    SqlitePersonRepository(path).close()
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
 def test_the_data_survives_reopening_the_file(tmp_path: Path) -> None:
