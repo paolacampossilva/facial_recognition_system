@@ -8,6 +8,7 @@ from app.api.ports import Services
 from app.config import Settings
 from app.core.errors import UploadTooLargeError
 from app.core.models import (
+    MAX_PHOTOS,
     ClientConfig,
     DeletionResult,
     EnrollmentRequest,
@@ -53,6 +54,8 @@ def build_router() -> APIRouter:
         name: Annotated[str, Form()],
         photos: Annotated[list[UploadFile], File()],
     ) -> EnrollmentResult:
+        if len(photos) > MAX_PHOTOS:
+            raise ValueError(f"at most {MAX_PHOTOS} photos per enrollment")
         limit = settings_of(request).max_upload_bytes
         contents = [await read_upload(photo, limit) for photo in photos]
         enrollment = EnrollmentRequest(name=name, photos=contents)

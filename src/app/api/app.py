@@ -12,7 +12,13 @@ from starlette.responses import Response
 from starlette.types import Scope
 
 from app.api.errors import to_error_response
-from app.api.guard import LOCAL_HOSTS, SameOriginOnly
+from app.api.guard import (
+    LOCAL_HOSTS,
+    PRIVATE_HEADERS,
+    ApiResponseHeaders,
+    SameOriginOnly,
+    UploadSizeLimit,
+)
 from app.api.ports import Services
 from app.api.routes import build_router
 from app.config import Settings
@@ -48,7 +54,12 @@ def handle_error(_: Request, error: Exception) -> JSONResponse:
     status_code, body = to_error_response(error)
     if status_code >= 500:
         logger.error("unexpected error", exc_info=error)
-    return JSONResponse(status_code=status_code, content=body.model_dump(exclude_none=True))
+    # Starlette runs the handler of `Exception` outside the middleware, so the headers go here too.
+    return JSONResponse(
+        status_code=status_code,
+        content=body.model_dump(exclude_none=True),
+        headers=PRIVATE_HEADERS,
+    )
 
 
 def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) -> FastAPI:
@@ -68,7 +79,10 @@ def create_app(services: Services, settings: Settings, web_dir: Path = WEB_DIR) 
     application.add_exception_handler(Exception, handle_error)
     application.add_exception_handler(RequestValidationError, handle_error)
     application.mount("/", WebFiles(directory=web_dir, html=True), name="web")
-    # The last one added is the outermost, so the Host is checked before the Origin.
+    # The last one added is the outermost: the headers go on every API response, even a refusal,
+    # then the Host is checked, then the Origin, then the size of the body.
+    application.add_middleware(UploadSizeLimit, max_photo_bytes=settings.max_upload_bytes)
     application.add_middleware(SameOriginOnly)
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=LOCAL_HOSTS)
+    application.add_middleware(ApiResponseHeaders)
     return application

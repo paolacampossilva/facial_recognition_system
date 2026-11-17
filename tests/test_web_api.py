@@ -1,13 +1,17 @@
 """API tests with the fake services: contract, error mapping and security headers (spec 005)."""
 
+import asyncio
+import json
 import logging
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.api.app import create_app
 from app.api.errors import to_error_response
+from app.api.guard import BODY_MARGIN_BYTES, UploadSizeLimit
 from app.config import Settings
 from app.core.errors import (
     DuplicatePersonError,
@@ -15,6 +19,7 @@ from app.core.errors import (
     PersonNotFoundError,
     UploadTooLargeError,
 )
+from app.core.models import MAX_PHOTOS
 from app.fakes import FakeServices
 from facial_recognition_system.preprocessing.errors import (
     InvalidImageError,
@@ -306,3 +311,82 @@ def test_the_applications_own_page_may_post_on_any_port() -> None:
     )
 
     assert response.status_code == 201
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "status"),
+    [("GET", "/api/health", 200), ("GET", "/api/config", 200), ("DELETE", "/api/persons/9", 404)],
+)
+def test_every_api_response_is_marked_private(
+    client: TestClient, method: str, path: str, status: int
+) -> None:
+    response = client.request(method, path)
+
+    assert response.status_code == status
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
+def test_a_refusal_is_marked_private_too(client: TestClient) -> None:
+    response = client.post(
+        "/api/persons", data={"name": "Ana"}, files=[photo()], headers={"Origin": "http://evil"}
+    )
+
+    assert response.status_code == 403
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_the_pages_of_the_interface_are_not_marked_no_store(client: TestClient) -> None:
+    assert client.get("/").headers["cache-control"] == "no-cache"
+
+
+async def run_asgi(app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> list[Message]:
+    """Calls an ASGI app with a POST to /api/persons and returns what it sent back."""
+    sent: list[Message] = []
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    scope = {"type": "http", "method": "POST", "path": "/api/persons", "headers": headers}
+    await app(scope, receive, send)
+    return sent
+
+
+def test_a_body_declared_bigger_than_ten_photos_is_refused_before_it_is_read() -> None:
+    reached: list[bool] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        reached.append(True)
+
+    guard = UploadSizeLimit(downstream, max_photo_bytes=1024)
+    declared = str(1024 * MAX_PHOTOS + BODY_MARGIN_BYTES + 1).encode()
+
+    sent = asyncio.run(run_asgi(guard, [(b"content-length", declared)]))
+
+    assert reached == []
+    assert sent[0]["status"] == 422
+    assert json.loads(sent[1]["body"])["code"] == "invalid_request"
+
+
+def test_a_body_inside_the_limit_reaches_the_route() -> None:
+    reached: list[bool] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        reached.append(True)
+
+    guard = UploadSizeLimit(downstream, max_photo_bytes=1024)
+
+    asyncio.run(run_asgi(guard, [(b"content-length", b"2048")]))
+
+    assert reached == [True]
+
+
+def test_more_photos_than_the_limit_are_refused_before_any_is_read(client: TestClient) -> None:
+    response = enroll(client, "Ana", photos=MAX_PHOTOS + 1)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+    assert client.get("/api/persons").json() == []
