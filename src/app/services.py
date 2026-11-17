@@ -48,7 +48,9 @@ def build_services(
     """Wires the services to the encoder and the repository, with the configured threshold."""
     return RealServices(
         enrollment=EnrollmentService(encoder, repository, settings.threshold),
-        recognition=RecognitionService(encoder, repository, settings.threshold),
+        recognition=RecognitionService(
+            encoder, repository, settings.threshold, settings.min_face_px
+        ),
         deletion=DeletionService(repository),
         persons=repository,
     )

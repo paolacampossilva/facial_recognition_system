@@ -425,6 +425,7 @@ cp .env.example .env
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` ou `cuda` |
 | `FACE_APP_PORT` | `8000` | porta do servidor (o `--port` vale mais) |
 | `FACE_APP_MAX_UPLOAD_MB` | `10` | tamanho máximo de cada foto |
+| `FACE_APP_MIN_FACE_PX` | `80` | menor lado, em pixels, da caixa de um rosto no reconhecimento (rostos menores são ignorados; provisório, [D19](docs/decisions/D19-multi-face-recognition.md)) |
 | `FACE_APP_LOG_LEVEL` | `INFO` | nível mínimo dos logs |
 
 A variável de ambiente vale mais que o `.env`, e o `.env` vale mais que o padrão. O `.env` fica fora do Git. Um valor inválido, ou uma variável com nome errado no `.env`, faz o `python -m app` terminar com uma mensagem que diz qual variável corrigir, sem subir nada. O endereço 127.0.0.1 não é configurável, de propósito.
@@ -950,6 +951,7 @@ cp .env.example .env
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` or `cuda` |
 | `FACE_APP_PORT` | `8000` | server port (`--port` wins over it) |
 | `FACE_APP_MAX_UPLOAD_MB` | `10` | maximum size of each photo |
+| `FACE_APP_MIN_FACE_PX` | `80` | shortest side, in pixels, of a face box in recognition (smaller faces are ignored; provisional, [D19](docs/decisions/D19-multi-face-recognition.md)) |
 | `FACE_APP_LOG_LEVEL` | `INFO` | minimum log level |
 
 An environment variable wins over `.env`, and `.env` wins over the default. `.env` stays out of Git. An invalid value, or a misspelled variable in `.env`, makes `python -m app` exit with a message naming the variable to fix, without starting anything. The 127.0.0.1 address is not configurable, on purpose.

@@ -17,7 +17,7 @@ import pytest
 
 from app.api.app import create_app
 from app.config import Settings
-from app.core.models import RecognitionResult, RecognitionStatus
+from app.core.models import FaceBox, FaceResult, RecognitionResponse, RecognitionStatus
 from app.launcher import open_when_ready, wait_for_server
 from app.logs import APP_LOGGER, configure_logging, uvicorn_log_config
 from tests.app_support import THRESHOLD, free_port, serving
@@ -77,9 +77,15 @@ class SlowRecognition:
     def recognition(self) -> "SlowRecognition":
         return self
 
-    def recognize(self, image: bytes) -> RecognitionResult:
+    def recognize(self, image: bytes) -> RecognitionResponse:
         time.sleep(SLOW_SECONDS)
-        return RecognitionResult(status=RecognitionStatus.UNKNOWN, person_name=None, similarity=0.1)
+        face = FaceResult(
+            box=FaceBox(left=0, top=0, right=1, bottom=1),
+            status=RecognitionStatus.UNKNOWN,
+            person_name=None,
+            similarity=0.1,
+        )
+        return RecognitionResponse(image_width=1, image_height=1, faces=[face])
 
 
 def post_a_photo(url: str) -> None:

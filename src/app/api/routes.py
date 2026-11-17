@@ -15,7 +15,7 @@ from app.core.models import (
     EnrollmentRequest,
     EnrollmentResult,
     PersonSummary,
-    RecognitionResult,
+    RecognitionResponse,
 )
 
 
@@ -67,7 +67,7 @@ def build_router() -> APIRouter:
     @router.post("/recognitions")
     async def recognize(
         request: Request, photo: Annotated[UploadFile, File()]
-    ) -> RecognitionResult:
+    ) -> RecognitionResponse:
         content = await read_upload(photo, settings_of(request).max_upload_bytes)
         return await run_in_threadpool(services_of(request).recognition.recognize, content)
 

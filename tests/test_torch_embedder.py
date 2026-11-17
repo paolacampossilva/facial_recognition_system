@@ -25,7 +25,16 @@ from app.storage.repository import MEMORY_DATABASE, SqlitePersonRepository
 from facial_recognition_system.models import FACE_SIZE, build_embedder
 from facial_recognition_system.preprocessing import FacePreprocessor, PreprocessingConfig
 from facial_recognition_system.training import load_checkpoint, save_checkpoint
-from tests.app_support import ANA_COLOR, BIA_COLOR, THRESHOLD, ScriptedDetector, photo, request
+from tests.app_support import (
+    ANA_COLOR,
+    BIA_COLOR,
+    MIN_FACE_PX,
+    THRESHOLD,
+    ScriptedDetector,
+    only_face,
+    photo,
+    request,
+)
 
 DIMENSION: int = 512
 LFW_CROPS: Path = Path("data/public/lfw_crop160")
@@ -153,7 +162,8 @@ def test_it_works_inside_the_encoder_and_both_services(
     encoder = FaceEncoder(FacePreprocessor(ScriptedDetector(), PreprocessingConfig()), embedder)
     EnrollmentService(encoder, repository, THRESHOLD).enroll(request("Ana", photo(ANA_COLOR)))
 
-    result = RecognitionService(encoder, repository, THRESHOLD).recognize(photo(ANA_COLOR))
+    service = RecognitionService(encoder, repository, THRESHOLD, MIN_FACE_PX)
+    result = only_face(service.recognize(photo(ANA_COLOR)))
 
     assert repository.gallery(embedder.model_id).labels == ["Ana"]
     assert repository.gallery(PRETRAINED_MODEL_ID).labels == []

@@ -98,7 +98,7 @@ export function recognizeView(root) {
     setBusy(submit, false);
     submit.disabled = picker.count() === 0;
     if (mine !== latest) return; // the photo was replaced or removed meanwhile: the result is stale
-    output.replaceChildren(result.ok ? resultPanel(result.data, threshold) : notice("error", describeError(result)));
+    output.replaceChildren(result.ok ? resultPanel(result.data.faces[0], threshold) : notice("error", describeError(result)));
   }
 
   async function render() {

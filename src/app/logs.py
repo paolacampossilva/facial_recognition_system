@@ -20,6 +20,7 @@ ALLOWED_FIELDS: tuple[str, ...] = (
     "deleted_embeddings",
     "status",
     "similarity",
+    "face_count",
 )
 LINE_FORMAT: str = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 TIME_FORMAT: str = "%H:%M:%S"

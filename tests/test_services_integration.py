@@ -29,11 +29,13 @@ from facial_recognition_system.preprocessing import (
     NoFaceDetectedError,
     PreprocessingConfig,
 )
-from tests.app_support import request
+from tests.app_support import only_face, request
 
 pytestmark = pytest.mark.integration
 
 LFW_DIR: Path = Path("data/public/lfw")
+# LFW faces are about 100 px wide; the application default (80) could drop the smaller ones.
+LFW_MIN_FACE_PX: int = 40
 E06_CHECKPOINT: Path = Path("checkpoints/E06/best.pt")
 TORCH_HOME: Path = Path(os.getenv("TORCH_HOME", Path.home() / ".cache" / "torch"))
 PRETRAINED_WEIGHTS: Path = TORCH_HOME / "checkpoints" / "20180402-114759-vggface2.pt"
@@ -94,7 +96,7 @@ def enrollment(encoder: FaceEncoder, repository: SqlitePersonRepository) -> Enro
 
 @pytest.fixture
 def recognition(encoder: FaceEncoder, repository: SqlitePersonRepository) -> RecognitionService:
-    return RecognitionService(encoder, repository, LFW_THRESHOLD)
+    return RecognitionService(encoder, repository, LFW_THRESHOLD, LFW_MIN_FACE_PX)
 
 
 @pytest.fixture
@@ -115,8 +117,8 @@ def test_each_enrolled_person_is_recognized_by_a_new_photo(
 ) -> None:
     enroll_rumsfeld_and_chirac(enrollment)
 
-    first = recognition.recognize(lfw_photo(RUMSFELD, 4))
-    second = recognition.recognize(lfw_photo(CHIRAC, 3))
+    first = only_face(recognition.recognize(lfw_photo(RUMSFELD, 4)))
+    second = only_face(recognition.recognize(lfw_photo(CHIRAC, 3)))
 
     assert (first.status, first.person_name) == (RecognitionStatus.RECOGNIZED, "Rumsfeld")
     assert (second.status, second.person_name) == (RecognitionStatus.RECOGNIZED, "Chirac")
@@ -129,7 +131,7 @@ def test_a_person_who_is_not_enrolled_is_unknown_and_has_no_name(
 ) -> None:
     enroll_rumsfeld_and_chirac(enrollment)
 
-    result = recognition.recognize(lfw_photo(ANNAN, 1))
+    result = only_face(recognition.recognize(lfw_photo(ANNAN, 1)))
 
     assert result.status == RecognitionStatus.UNKNOWN
     assert result.person_name is None
@@ -153,7 +155,6 @@ def test_enrolling_a_face_that_is_already_enrolled_under_another_name_is_refused
     ("bad_photo", "error"),
     [
         pytest.param(blank_photo, NoFaceDetectedError, id="no-face"),
-        pytest.param(two_faces_photo, MultipleFacesError, id="two-faces"),
         pytest.param(lambda: b"not an image", InvalidImageError, id="not-an-image"),
     ],
 )
@@ -175,6 +176,21 @@ def test_a_bad_photo_fails_enrollment_and_recognition_with_its_own_error(
     assert [person.name for person in repository.list_persons()] == ["Rumsfeld"]
 
 
+def test_two_faces_are_refused_by_the_enrollment_but_both_recognized(
+    enrollment: EnrollmentService,
+    recognition: RecognitionService,
+    repository: SqlitePersonRepository,
+) -> None:
+    enroll_rumsfeld_and_chirac(enrollment)
+
+    with pytest.raises(MultipleFacesError):
+        enrollment.enroll(request("Someone", two_faces_photo()))
+    response = recognition.recognize(two_faces_photo())
+
+    assert [face.person_name for face in response.faces] == ["Rumsfeld", "Chirac"]
+    assert [person.name for person in repository.list_persons()] == ["Rumsfeld", "Chirac"]
+
+
 def test_recognition_with_nobody_enrolled_is_the_empty_gallery_error(
     recognition: RecognitionService,
 ) -> None:
@@ -190,7 +206,7 @@ def test_after_deleting_a_person_their_photo_is_unknown_not_someone_else(
     rumsfeld_id, _ = enroll_rumsfeld_and_chirac(enrollment)
 
     deleted = deletion.delete(rumsfeld_id)
-    result = recognition.recognize(lfw_photo(RUMSFELD, 4))
+    result = only_face(recognition.recognize(lfw_photo(RUMSFELD, 4)))
 
     assert deleted.deleted_embeddings == 3
     assert result.status == RecognitionStatus.UNKNOWN

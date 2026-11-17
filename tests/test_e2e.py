@@ -31,6 +31,7 @@ from tests.app_support import (
     ANA_COLOR,
     BIA_COLOR,
     CARLA_COLOR,
+    MIN_FACE_PX,
     NO_FACE,
     THRESHOLD,
     TWO_FACES,
@@ -82,7 +83,7 @@ def server() -> Iterator[str]:
     encoder = build_encoder()
     services = SimpleNamespace(
         enrollment=EnrollmentService(encoder, repository, THRESHOLD),
-        recognition=RecognitionService(encoder, repository, THRESHOLD),
+        recognition=RecognitionService(encoder, repository, THRESHOLD, MIN_FACE_PX),
         deletion=DeletionService(repository),
         persons=repository,
     )

@@ -1,11 +1,12 @@
-"""From the bytes of a photo to a face embedding, shared by enrollment and recognition."""
+"""From the bytes of a photo to face embeddings, shared by enrollment and recognition."""
 
+from dataclasses import dataclass
 from typing import Protocol
 
 import numpy as np
 from PIL import Image
 
-from facial_recognition_system.preprocessing import FacePreprocessor, load_image
+from facial_recognition_system.preprocessing import BoundingBox, FacePreprocessor, load_image
 
 
 class Embedder(Protocol):
@@ -21,8 +22,25 @@ class Embedder(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class EncodedFace:
+    """The embedding of one face and where the face is (whole pixels inside the image)."""
+
+    box: BoundingBox
+    vector: np.ndarray
+
+
+@dataclass(frozen=True)
+class EncodedImage:
+    """Every usable face of an image, left to right, with the size of the oriented image."""
+
+    width: int
+    height: int
+    faces: list[EncodedFace]
+
+
 class FaceEncoder:
-    """Photo bytes in, embedding out: decode, find the single face, embed it."""
+    """Photo bytes in, embeddings out: decode, find the faces, embed them."""
 
     def __init__(self, preprocessor: FacePreprocessor, embedder: Embedder) -> None:
         self._preprocessor = preprocessor
@@ -43,3 +61,25 @@ class FaceEncoder:
         """
         face = self._preprocessor.process(load_image(image))
         return self._embedder.embed(face)
+
+    def encode_all(self, image: bytes, min_face_px: int, max_faces: int) -> EncodedImage:
+        """Returns the embedding and the box of every usable face (spec 001, R6 to R10).
+
+        This is the recognition path: several faces are not an error. Enrollment keeps using
+        `encode`, which accepts exactly one.
+
+        Args:
+            image: The bytes of the photo.
+            min_face_px: Faces whose box has a shorter side than this are ignored.
+            max_faces: How many faces to keep, the biggest ones.
+
+        Raises:
+            InvalidImageError: The bytes are not an image.
+            NoFaceDetectedError: No usable face was found.
+        """
+        oriented = load_image(image)
+        found = self._preprocessor.process_all(oriented, min_face_px, max_faces)
+        faces = [
+            EncodedFace(box=face.box, vector=self._embedder.embed(face.crop)) for face in found
+        ]
+        return EncodedImage(width=oriented.width, height=oriented.height, faces=faces)

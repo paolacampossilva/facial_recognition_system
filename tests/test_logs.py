@@ -11,7 +11,14 @@ from app.core.enrollment import EnrollmentService
 from app.core.recognition import RecognitionService
 from app.logs import APP_LOGGER, AllowListFormatter, configure_logging
 from app.storage.repository import SqlitePersonRepository
-from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, photo, request
+from tests.app_support import (
+    ANA_COLOR,
+    MIN_FACE_PX,
+    THRESHOLD,
+    build_encoder,
+    photo,
+    request,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -60,12 +67,13 @@ def test_enrolling_recognizing_and_deleting_logs_no_name_and_no_embedding(
     EnrollmentService(encoder, repository, THRESHOLD).enroll(
         request("Ana Teste", photo(ANA_COLOR), photo(ANA_COLOR))
     )
-    RecognitionService(encoder, repository, THRESHOLD).recognize(photo(ANA_COLOR))
+    RecognitionService(encoder, repository, THRESHOLD, MIN_FACE_PX).recognize(photo(ANA_COLOR))
     DeletionService(repository).delete(1)
 
     lines = capsys.readouterr().err.splitlines()
     assert [line.split(": ", 1)[1] for line in lines] == [
         "person enrolled person_id=1 embedding_count=2",
+        "image recognized face_count=1",
         "face recognized status=recognized similarity=1.0",
         "person deleted person_id=1 deleted_embeddings=2",
     ]
