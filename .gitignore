@@ -50,11 +50,6 @@ consent/
 *.avi
 *.mkv
 
-# Signed consent forms and participant lists, which live only in the vault
-*assinad*
-*signed*
-*controle*
-
 # Public datasets (downloaded from the official source, never redistributed)
 data/public/
 
