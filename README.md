@@ -450,7 +450,7 @@ O modelo da aplicação é o **E06**: FaceNet (VGGFace2) com fine-tuning parcial
 python scripts/train.py --config configs/E06.yaml
 ```
 
-O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). O `model_id` dos embeddings vira `facenet-vggface2-E06`, com o nome da pasta do experimento: embeddings de pesos diferentes não estão no mesmo espaço, e misturá-los num banco só faria o reconhecimento errar sem dar erro nenhum. Sem o checkpoint, a aplicação falha na inicialização com uma mensagem dizendo como treiná-lo.
+O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). O `model_id` dos embeddings vira `facenet-vggface2-E06-` mais 8 caracteres do hash do arquivo (por exemplo `facenet-vggface2-E06-3fa9c1d2`), com o nome da pasta do experimento: refazer o `best.pt` muda o hash e o banco deixa de misturar os embeddings antigos. Embeddings de pesos diferentes não estão no mesmo espaço, e misturá-los num banco só faria o reconhecimento errar sem dar erro nenhum. Sem o checkpoint, a aplicação falha na inicialização com uma mensagem dizendo como treiná-lo.
 
 ### Privacidade na aplicação
 
@@ -975,7 +975,7 @@ The application model is **E06**: FaceNet (VGGFace2) with partial fine-tuning an
 python scripts/train.py --config configs/E06.yaml
 ```
 
-The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). The embeddings' `model_id` becomes `facenet-vggface2-E06`, with the experiment folder's name: embeddings from different weights are not in the same space, and mixing them in one database would make recognition wrong without any error. Without the checkpoint, the application fails at startup with a message saying how to train it.
+The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). The embeddings' `model_id` becomes `facenet-vggface2-E06-` plus 8 characters of the file's hash (for example `facenet-vggface2-E06-3fa9c1d2`), with the experiment folder's name: retraining `best.pt` changes the hash, and the database stops mixing the old embeddings. Embeddings from different weights are not in the same space, and mixing them in one database would make recognition wrong without any error. Without the checkpoint, the application fails at startup with a message saying how to train it.
 
 ### Privacy in the application
 

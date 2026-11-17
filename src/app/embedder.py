@@ -4,6 +4,7 @@ Loading the model is slow and can fail (no checkpoint, no GPU), so it happens on
 application starts, and failures surface as `ModelLoadError` for the edge to report.
 """
 
+import hashlib
 import threading
 from pathlib import Path
 from typing import cast
@@ -20,7 +21,18 @@ from facial_recognition_system.models import FaceEmbedder, build_embedder
 PRETRAINED_MODEL_ID: str = "facenet-vggface2"
 TRAIN_HINT: str = "train it with: python scripts/train.py --config configs/E06.yaml"
 CLASSIFIER_PREFIX: str = "logits."
+FINGERPRINT_CHARS: int = 8
+HASH_CHUNK_BYTES: int = 1024 * 1024
 DEVICE_PREFERENCES: frozenset[str] = frozenset({"auto", "cpu", "cuda"})
+
+
+def checkpoint_fingerprint(checkpoint: Path) -> str:
+    """The first characters of the SHA-256 of the file: the same weights give the same text."""
+    digest = hashlib.sha256()
+    with checkpoint.open("rb") as weights:
+        while chunk := weights.read(HASH_CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()[:FINGERPRINT_CHARS]
 
 
 def pick_device(preference: str) -> str:
@@ -47,7 +59,9 @@ class TorchFaceEmbedder:
     The `model_id` tells embeddings of different weights apart: the fine-tuned E06 and the
     pretrained E01 are both a FaceNet, but their vectors are not in the same space, so mixing them
     in one gallery would make recognition wrong without any error (decision D12). The id of a
-    checkpoint therefore includes the experiment folder it lives in (`facenet-vggface2-E06`).
+    checkpoint therefore includes the experiment folder it lives in and a fingerprint of the file
+    (`facenet-vggface2-E06-3fa9c1d2`), so a retrained `best.pt`, or another file in the same folder,
+    never shares the id, and so the gallery, of the weights it replaces.
     """
 
     def __init__(
@@ -76,7 +90,8 @@ class TorchFaceEmbedder:
             # The checkpoint holds the whole network, so the pretrained weights are not needed.
             embedder = build_embedder("facenet", pretrained=False)
             self._load_checkpoint(checkpoint, embedder)
-            default_id = f"{PRETRAINED_MODEL_ID}-{checkpoint.resolve().parent.name}"
+            experiment = checkpoint.resolve().parent.name
+            default_id = f"{PRETRAINED_MODEL_ID}-{experiment}-{checkpoint_fingerprint(checkpoint)}"
         self.model_id: str = model_id or default_id
         self._embedder: FaceEmbedder = embedder.to(self._device).eval()
         self._lock = threading.Lock()
