@@ -4,6 +4,7 @@ import runpy
 import socket
 import threading
 from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from app.launcher import (
     parse_options,
     port_is_free,
     run,
+    wait_for_server,
 )
 from app.logs import uvicorn_log_config
 from tests.app_support import free_port
@@ -122,11 +124,16 @@ def test_the_server_starts_on_the_loopback_address_with_the_given_port() -> None
     }
 
 
+def ready(port: int) -> bool:
+    """A server that already answers."""
+    return True
+
+
 def test_the_browser_opens_on_the_right_url() -> None:
     browser = FakeBrowser()
     port = free_port()
 
-    run(LaunchOptions(port=port), serve=FakeServer(), open_browser=browser, browser_delay=0)
+    run(LaunchOptions(port=port), serve=FakeServer(), open_browser=browser, wait=ready)
 
     assert browser.opened.wait(timeout=2)
     assert browser.urls == [f"http://127.0.0.1:{port}"]
@@ -139,7 +146,7 @@ def test_the_browser_stays_closed_with_no_browser() -> None:
         LaunchOptions(port=free_port(), open_browser=False),
         serve=FakeServer(),
         open_browser=browser,
-        browser_delay=0,
+        wait=ready,
     )
 
     assert not browser.opened.wait(timeout=0.2)
@@ -166,7 +173,7 @@ def test_a_busy_port_raises_and_nothing_is_started(busy_port: int) -> None:
     browser = FakeBrowser()
 
     with pytest.raises(LaunchError, match=str(busy_port)):
-        run(LaunchOptions(port=busy_port), serve=server, open_browser=browser, browser_delay=0)
+        run(LaunchOptions(port=busy_port), serve=server, open_browser=browser, wait=ready)
 
     assert server.calls == []
     assert not browser.opened.wait(timeout=0.2)
@@ -279,3 +286,56 @@ def test_an_existing_checkpoint_and_the_pretrained_model_pass_the_check(tmp_path
 def test_asking_for_cuda_without_a_gpu_is_refused_before_the_server_starts() -> None:
     with pytest.raises(ModelLoadError, match="no GPU"):
         check_model_setup(Settings(checkpoint_path=None, device="cuda"))
+
+
+def test_the_browser_waits_until_the_server_answers() -> None:
+    answers = threading.Event()
+    browser = FakeBrowser()
+
+    def wait(port: int) -> bool:
+        return answers.wait(timeout=5)
+
+    run(LaunchOptions(port=free_port()), serve=FakeServer(), open_browser=browser, wait=wait)
+
+    assert not browser.opened.wait(timeout=0.3)  # the model is still loading
+    answers.set()
+    assert browser.opened.wait(timeout=2)
+
+
+def test_the_browser_stays_closed_when_the_server_never_answers() -> None:
+    browser = FakeBrowser()
+
+    run(
+        LaunchOptions(port=free_port()),
+        serve=FakeServer(),
+        open_browser=browser,
+        wait=lambda port: False,
+    )
+
+    assert not browser.opened.wait(timeout=0.3)
+    assert browser.urls == []
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:  # noqa: N802 (the name the standard library calls)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"{}")
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 (the base name)
+        pass
+
+
+def test_wait_for_server_returns_true_once_the_health_route_answers() -> None:
+    server = HTTPServer(("127.0.0.1", 0), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    answered = wait_for_server(server.server_address[1], timeout=5)
+
+    server.shutdown()
+    assert answered is True
+
+
+def test_wait_for_server_gives_up_when_nothing_listens() -> None:
+    assert wait_for_server(free_port(), timeout=0.6) is False

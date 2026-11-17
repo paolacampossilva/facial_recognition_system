@@ -10,6 +10,8 @@ import argparse
 import socket
 import sys
 import threading
+import time
+import urllib.request
 import webbrowser
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -25,7 +27,9 @@ from app.logs import uvicorn_log_config
 
 HOST: str = "127.0.0.1"
 APP_IMPORT_PATH: str = "app.main:create"
-BROWSER_DELAY_SECONDS: float = 1.0
+# Loading the model can take a while, so the browser waits for the server, up to this long.
+READY_TIMEOUT_SECONDS: float = 120.0
+READY_POLL_SECONDS: float = 0.25
 SOURCE_DIR: Path = Path(__file__).resolve().parent
 
 
@@ -100,19 +104,46 @@ def check_model_setup(settings: Settings) -> None:
         )
 
 
+def wait_for_server(port: int, timeout: float = READY_TIMEOUT_SECONDS) -> bool:
+    """Waits until the server answers its health route.
+
+    Returns:
+        True once it answered, False if it did not within `timeout` seconds.
+    """
+    url = f"http://{HOST}:{port}/api/health"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=1) as response:  # noqa: S310
+                if response.status == 200:
+                    return True
+        except OSError:  # nothing is listening yet, or it is still starting
+            pass
+        time.sleep(READY_POLL_SECONDS)
+    return False
+
+
+def open_when_ready(
+    port: int, open_browser: Callable[[str], object], wait: Callable[[int], bool]
+) -> None:
+    """Opens the browser on the application once the server answers, and never before."""
+    if wait(port):
+        open_browser(f"http://{HOST}:{port}")
+
+
 def run(
     options: LaunchOptions,
     serve: Callable[..., None] = uvicorn.run,
     open_browser: Callable[[str], object] = webbrowser.open,
-    browser_delay: float = BROWSER_DELAY_SECONDS,
+    wait: Callable[[int], bool] = wait_for_server,
 ) -> None:
-    """Starts the server and, after a short delay, opens the browser on it.
+    """Starts the server and opens the browser on it as soon as it answers.
 
     Args:
         options: What the person asked for.
         serve: Starts the server and blocks until it stops (uvicorn's `run`).
         open_browser: Opens a URL in the browser.
-        browser_delay: Seconds to wait before opening the browser, so the server is up.
+        wait: Waits until the server on a port answers; False means it never did.
 
     Raises:
         LaunchError: The port is already in use. Nothing is started.
@@ -122,9 +153,10 @@ def run(
             f"port {options.port} is already in use; close the other process or use --port"
         )
     if options.open_browser:
-        timer = threading.Timer(browser_delay, open_browser, [f"http://{HOST}:{options.port}"])
-        timer.daemon = True
-        timer.start()
+        opener = threading.Thread(
+            target=open_when_ready, args=(options.port, open_browser, wait), daemon=True
+        )
+        opener.start()
     # Watch only the code: the database in data/private changes on every enrollment.
     reload_dirs = [str(SOURCE_DIR)] if options.reload else None
     serve(
