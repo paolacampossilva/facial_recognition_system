@@ -12,11 +12,14 @@ export function photoPicker({ max, onChange = () => {} }) {
   // Bumped by every stop: a camera that finishes opening after the person left (or closed it) is
   // turned off at once instead of staying on with nobody seeing it.
   let cameraTicket = 0;
+  // True while a camera is opening: a second click must not open another one.
+  let opening = false;
 
   const list = h("ul", { class: "photos", "aria-label": "Fotos escolhidas" });
   const empty = h("div", { class: "photos-empty" }, icon("camera"), "As fotos escolhidas aparecem aqui.");
   const message = h("div", { "aria-live": "polite" });
   const video = h("video", { class: "camera", autoplay: true, playsinline: true, muted: true });
+  video.muted = true; // the attribute alone does not always set the property
   const input = h("input", { type: "file", accept: "image/*", multiple: max > 1, hidden: true });
   const cameraButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Usar a câmera");
   const captureButton = h("button", { type: "button", class: "secondary" }, icon("camera"), "Capturar foto");
@@ -70,36 +73,56 @@ export function photoPicker({ max, onChange = () => {} }) {
 
   function stopCamera() {
     cameraTicket += 1;
+    opening = false;
+    cameraButton.disabled = false;
     closeCamera(stream, video);
     stream = null;
     cameraBox.hidden = true;
     cameraButton.hidden = false;
   }
 
+  // The camera went away by itself (unplugged, permission taken back): show it, do not keep a frozen box.
+  function watchEnded(opened) {
+    opened.getTracks().forEach((track) => track.addEventListener("ended", () => {
+      if (stream !== opened) return;
+      stopCamera();
+      message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
+    }));
+  }
+
   cameraButton.addEventListener("click", async () => {
+    if (opening || stream) return;
     if (!cameraAvailable()) {
       message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
       return;
     }
+    opening = true;
+    cameraButton.disabled = true;
     const ticket = cameraTicket;
-    let opened;
+    const current = () => ticket === cameraTicket;
     try {
-      opened = await openCamera(video);
+      const opened = await openCamera(video, current);
+      if (!opened) return; // the person left or closed it meanwhile, and it is already off
+      stream = opened;
+      watchEnded(opened);
+      message.replaceChildren();
+      cameraBox.hidden = false;
+      cameraButton.hidden = true;
     } catch {
-      if (ticket === cameraTicket) message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
-      return;
+      if (current()) message.replaceChildren(notice("error", CAMERA_UNAVAILABLE));
+    } finally {
+      // A stop in the meantime already reset this, and a newer opening owns the flag now.
+      if (current()) {
+        opening = false;
+        cameraButton.disabled = false;
+      }
     }
-    if (ticket !== cameraTicket) {
-      closeCamera(opened, video);
-      return;
-    }
-    stream = opened;
-    message.replaceChildren();
-    cameraBox.hidden = false;
-    cameraButton.hidden = true;
   });
   captureButton.addEventListener("click", async () => {
+    if (!stream) return;
+    const ticket = cameraTicket;
     const blob = await captureFrame(video);
+    if (ticket !== cameraTicket) return; // the camera was closed while the frame was being saved
     if (blob) add(blob, "camera.jpg");
   });
   closeButton.addEventListener("click", stopCamera);

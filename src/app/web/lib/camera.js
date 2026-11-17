@@ -3,15 +3,35 @@
 
 export const cameraAvailable = () => Boolean(navigator.mediaDevices?.getUserMedia);
 
-export async function openCamera(video) {
+const stopStream = (stream) => stream?.getTracks().forEach((track) => track.stop());
+
+// Opens the camera into `video`. `isCurrent` says whether the person still wants this opening: when
+// it is no longer current the stream is stopped and null is returned, and `video` is left alone.
+// Any failure after the camera was granted stops its stream too, so no camera stays on unseen.
+export async function openCamera(video, isCurrent = () => true) {
   const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-  video.srcObject = stream;
-  await video.play();
+  if (!isCurrent()) {
+    stopStream(stream);
+    return null;
+  }
+  try {
+    video.srcObject = stream;
+    await video.play();
+  } catch (error) {
+    stopStream(stream);
+    if (video.srcObject === stream) video.srcObject = null;
+    throw error;
+  }
+  if (!isCurrent()) {
+    stopStream(stream);
+    if (video.srcObject === stream) video.srcObject = null;
+    return null;
+  }
   return stream;
 }
 
 export function closeCamera(stream, video) {
-  stream?.getTracks().forEach((track) => track.stop());
+  stopStream(stream);
   video.srcObject = null;
 }
 

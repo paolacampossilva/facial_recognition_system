@@ -418,6 +418,53 @@ def test_a_camera_still_opening_when_leaving_is_turned_off(open_page) -> None:
     assert camera_states(page, streams=1) == ["ended"]
 
 
+def test_a_double_click_on_the_camera_button_opens_one_camera(open_page) -> None:
+    """R27: two clicks before the camera opens must not leave a second stream on with no owner."""
+    page, _ = open_page(camera=True)
+    track_camera(page, delay_ms=500)
+
+    page.evaluate(
+        "() => { const button = [...document.querySelectorAll('button')]"
+        ".find((item) => item.textContent.includes('Usar a câmera'));"
+        " button.click(); button.click(); }"
+    )
+    expect(page.locator("video.camera")).to_be_visible()
+    page.get_by_role("button", name="Fechar a câmera").click()
+
+    assert camera_states(page, streams=1) == ["ended"]
+
+
+def test_a_camera_that_cannot_play_is_turned_off(open_page) -> None:
+    """R27: when the video refuses to play after the camera was granted, the stream is stopped."""
+    page, _ = open_page(camera=True)
+    track_camera(page)
+    page.evaluate(
+        "() => { HTMLMediaElement.prototype.play = () =>"
+        " Promise.reject(new DOMException('refused', 'NotAllowedError')); }"
+    )
+
+    page.get_by_role("button", name="Usar a câmera").click()
+
+    expect(page.get_by_text("Não foi possível usar a câmera. Envie um arquivo")).to_be_visible()
+    assert camera_states(page, streams=1) == ["ended"]
+
+
+def test_a_camera_that_goes_away_closes_the_camera_box(open_page) -> None:
+    """A device that ends by itself (unplugged, permission revoked) leaves no frozen preview."""
+    page, _ = open_page(camera=True)
+    track_camera(page)
+    open_camera(page)
+
+    page.evaluate(
+        "() => window.streams[0].getTracks().forEach((track) => {"
+        " track.stop(); track.dispatchEvent(new Event('ended')); })"
+    )
+
+    expect(page.locator("video.camera")).to_be_hidden()
+    expect(page.get_by_role("button", name="Usar a câmera")).to_be_visible()
+    expect(page.get_by_text("Não foi possível usar a câmera. Envie um arquivo")).to_be_visible()
+
+
 def test_a_denied_camera_keeps_the_file_upload(open_page) -> None:
     """A13: without permission, the message shows and a file still works."""
     page, _ = open_page()
