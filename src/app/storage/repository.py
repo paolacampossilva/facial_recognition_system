@@ -19,19 +19,20 @@ from app.core.models import DeletionResult, PersonSummary
 from app.storage.models import Gallery, NewPerson
 
 MEMORY_DATABASE: str = ":memory:"
-SCHEMA_VERSION: int = 1
+# 2: AUTOINCREMENT, so the id of a deleted person or embedding is never given to another one.
+SCHEMA_VERSION: int = 2
 PRIVATE_FILE_MODE: int = 0o600  # biometric data: only the owner reads the file
 PRIVATE_FOLDER_MODE: int = 0o700
 
 SCHEMA: str = """
 CREATE TABLE IF NOT EXISTS persons (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     name_key TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS embeddings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     person_id INTEGER NOT NULL REFERENCES persons (id) ON DELETE CASCADE,
     vector BLOB NOT NULL,
     dimension INTEGER NOT NULL,
@@ -76,8 +77,12 @@ class SqlitePersonRepository:
         # Without these two PRAGMAs the cascade is ignored and deleted content stays in the file.
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._connection.execute("PRAGMA secure_delete = ON")
+        new_file = self._connection.execute("PRAGMA user_version").fetchone()[0] == 0
         self._connection.executescript(SCHEMA)
-        self._connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        # Stamped only on a new file: `CREATE TABLE IF NOT EXISTS` does not change an older one,
+        # so an older file keeps its own version instead of claiming the current schema.
+        if new_file:
+            self._connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         if target != MEMORY_DATABASE:
             os.chmod(target, PRIVATE_FILE_MODE)  # also tightens a file an older version created
 
