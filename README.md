@@ -455,7 +455,7 @@ O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). 
 ### Privacidade na aplicação
 
 - **Nenhuma foto é guardada.** O banco tem só o embedding de cada cadastro, e a foto enviada para reconhecer também é descartada.
-- **Exclusão em cascata** ([spec 006](docs/specs/006-person-deletion.md)): excluir uma pessoa apaga o registro e os embeddings numa transação. O SQLite roda com `secure_delete`, para o conteúdo apagado não ficar no arquivo, e o arquivo do banco é criado com permissão `0600` (só o dono lê).
+- **Exclusão em cascata** ([spec 006](docs/specs/006-person-deletion.md)): excluir uma pessoa apaga o registro e os embeddings numa transação. O SQLite roda com `secure_delete`, para o conteúdo apagado não ficar no arquivo, e o arquivo do banco é criado com permissão `0600` no Linux e no macOS (só o dono lê; o Windows não tem esse tipo de permissão).
 - **Só local.** O servidor escuta em 127.0.0.1 e a interface não carrega nada de fora (a política de segurança do navegador, CSP, só permite recursos da própria aplicação).
 - **Logs sem dados pessoais:** registram contagens e status, não nomes nem fotos.
 - O banco e o checkpoint ficam fora do GitHub (ver [Privacidade e LGPD](#privacidade-e-lgpd)).
@@ -979,7 +979,7 @@ The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). 
 ### Privacy in the application
 
 - **No photo is stored.** The database holds only each enrollment's embedding, and the photo sent for recognition is also discarded.
-- **Cascade deletion** ([spec 006](docs/specs/006-person-deletion.md), in Portuguese): deleting a person removes the record and the embeddings in one transaction. SQLite runs with `secure_delete`, so deleted content does not stay in the file, and the database file is created with `0600` permissions (only the owner can read it).
+- **Cascade deletion** ([spec 006](docs/specs/006-person-deletion.md), in Portuguese): deleting a person removes the record and the embeddings in one transaction. SQLite runs with `secure_delete`, so deleted content does not stay in the file, and the database file is created with `0600` permissions on Linux and macOS (only the owner can read it; Windows has no such permission bits).
 - **Local only.** The server listens on 127.0.0.1 and the interface loads nothing from outside (the browser security policy, CSP, only allows the application's own resources).
 - **Logs without personal data:** they record counts and status, not names or photos.
 - The database and the checkpoint stay out of GitHub (see [Privacy and LGPD](#privacy-and-lgpd)).
