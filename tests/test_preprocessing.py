@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from facial_recognition_system.preprocessing import (
     AlignmentMode,
     BoundingBox,
+    DetectedFace,
     FaceDetection,
     FacePreprocessor,
     FaceSelection,
@@ -304,3 +305,196 @@ def test_imagenet_normalization_uses_channel_statistics() -> None:
 
     assert tensor[0, 0, 0].item() == pytest.approx((1.0 - 0.485) / 0.229, rel=1e-5)
     assert tensor[1, 0, 0].item() == pytest.approx(-0.456 / 0.224, rel=1e-5)
+
+
+MIN_FACE_PX = 80
+MAX_FACES = 20
+
+
+def group_image() -> Image.Image:
+    """600x300 image for the boxes of a group photo; each face is 100 px wide."""
+    return Image.new("RGB", (600, 300), BLUE)
+
+
+def faces_in(
+    detections: list[FaceDetection], image: Image.Image | None = None
+) -> list[DetectedFace]:
+    preprocessor = FacePreprocessor(FakeDetector(detections), PreprocessingConfig())
+    return preprocessor.process_all(image or group_image(), MIN_FACE_PX, MAX_FACES)
+
+
+@pytest.mark.unit
+def test_process_all_with_no_face_raises_the_same_error_as_process() -> None:
+    with pytest.raises(NoFaceDetectedError):
+        faces_in([])
+
+
+@pytest.mark.unit
+def test_process_all_with_one_face_gives_the_crop_of_process() -> None:
+    detection = make_detection(100, 10, 200, 100)
+    image = two_color_image()
+    preprocessor = FacePreprocessor(FakeDetector([detection]), PreprocessingConfig())
+
+    (face,) = preprocessor.process_all(image, MIN_FACE_PX, MAX_FACES)
+
+    assert np.array_equal(np.asarray(face.crop), np.asarray(preprocessor.process(image)))
+    assert face.crop.size == (160, 160)
+    assert face.probability == detection.probability
+
+
+@pytest.mark.unit
+def test_process_all_gives_every_face_from_left_to_right() -> None:
+    right = make_detection(400, 100, 500, 200)
+    left = make_detection(50, 100, 150, 200)
+    middle = make_detection(220, 100, 320, 200)
+
+    faces = faces_in([right, left, middle])
+
+    assert [face.box.left for face in faces] == [50, 220, 400]
+    assert all(face.crop.size == (160, 160) for face in faces)
+
+
+@pytest.mark.unit
+def test_faces_on_the_same_left_edge_go_from_top_to_bottom() -> None:
+    lower = make_detection(100, 180, 200, 280)
+    upper = make_detection(100, 10, 200, 110)
+
+    faces = faces_in([lower, upper])
+
+    assert [face.box.top for face in faces] == [10, 180]
+
+
+@pytest.mark.unit
+def test_faces_below_the_minimum_probability_are_ignored() -> None:
+    sure = make_detection(50, 100, 150, 200, probability=0.95)
+    unsure = make_detection(300, 100, 400, 200, probability=0.89)
+
+    assert [face.box.left for face in faces_in([sure, unsure])] == [50]
+    with pytest.raises(NoFaceDetectedError):
+        faces_in([unsure])
+
+
+@pytest.mark.unit
+def test_a_face_shorter_than_the_minimum_side_is_ignored() -> None:
+    big = make_detection(50, 100, 150, 200)
+    narrow = make_detection(300, 100, 379, 200)  # 79 px wide
+    exactly = make_detection(450, 100, 530, 200)  # 80 px wide
+
+    faces = faces_in([big, narrow, exactly])
+
+    assert [face.box.left for face in faces] == [50, 450]
+
+
+@pytest.mark.unit
+def test_when_every_face_is_too_small_it_is_no_face() -> None:
+    with pytest.raises(NoFaceDetectedError):
+        faces_in([make_detection(50, 100, 100, 150)])
+
+
+@pytest.mark.unit
+def test_only_the_biggest_faces_are_kept_up_to_the_limit() -> None:
+    sizes = [90 + index for index in range(25)]  # 25 faces, the biggest are the last ones
+    detections = [
+        make_detection(index * 20, 0, index * 20 + size, size) for index, size in enumerate(sizes)
+    ]
+    image = Image.new("RGB", (1000, 300), BLUE)
+
+    faces = faces_in(detections, image)
+
+    assert len(faces) == MAX_FACES
+    assert [face.box.left for face in faces] == [index * 20 for index in range(5, 25)]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("max_faces", [0, -1])
+def test_process_all_needs_room_for_at_least_one_face(max_faces: int) -> None:
+    preprocessor = FacePreprocessor(
+        FakeDetector([make_detection(50, 100, 150, 200)]), PreprocessingConfig()
+    )
+
+    with pytest.raises(ValueError, match="max_faces"):
+        preprocessor.process_all(group_image(), MIN_FACE_PX, max_faces)
+
+
+@pytest.mark.unit
+def test_the_box_is_whole_pixels_inside_the_image() -> None:
+    crossing = make_detection(-7.4, 10.6, 603.2, 190.4)  # fractional, past both vertical edges
+
+    (face,) = faces_in([crossing])
+
+    assert (face.box.left, face.box.top, face.box.right, face.box.bottom) == (0, 11, 600, 190)
+
+
+@pytest.mark.unit
+def test_the_minimum_side_and_the_ranking_use_the_limited_box() -> None:
+    mostly_outside = make_detection(-50, 100, 30, 200)  # 80 px wide raw, 30 px inside the image
+    inside = make_detection(300, 100, 400, 200)
+
+    faces = faces_in([mostly_outside, inside])
+
+    assert [face.box.left for face in faces] == [300]
+
+
+@pytest.mark.unit
+def test_a_box_that_ends_up_outside_the_image_is_ignored() -> None:
+    with pytest.raises(NoFaceDetectedError):
+        faces_in([make_detection(700, 100, 800, 200)])
+
+
+@pytest.mark.unit
+def test_the_strict_path_still_rejects_what_process_all_accepts() -> None:
+    detections = [make_detection(50, 100, 150, 200), make_detection(300, 100, 400, 200)]
+    config = PreprocessingConfig(selection=FaceSelection.STRICT)
+    preprocessor = FacePreprocessor(FakeDetector(detections), config)
+
+    with pytest.raises(MultipleFacesError):
+        preprocessor.process(group_image())
+    assert len(preprocessor.process_all(group_image(), MIN_FACE_PX, MAX_FACES)) == 2
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("selection", list(FaceSelection))
+def test_the_selection_does_not_change_process_all(selection: FaceSelection) -> None:
+    detections = [make_detection(50, 100, 150, 200), make_detection(300, 100, 400, 200)]
+    preprocessor = FacePreprocessor(
+        FakeDetector(detections), PreprocessingConfig(selection=selection)
+    )
+
+    assert len(preprocessor.process_all(group_image(), MIN_FACE_PX, MAX_FACES)) == 2
+
+
+@pytest.mark.unit
+def test_process_all_works_with_the_similarity_alignment() -> None:
+    config = PreprocessingConfig(alignment=AlignmentMode.SIMILARITY)
+    preprocessor = FacePreprocessor(FakeDetector([make_detection(100, 10, 200, 100)]), config)
+
+    (face,) = preprocessor.process_all(two_color_image(), MIN_FACE_PX, MAX_FACES)
+
+    assert face.crop.size == (160, 160)
+
+
+class SizeRecordingDetector:
+    """Remembers the size of the image it was given and puts one face inside it."""
+
+    def __init__(self) -> None:
+        self.seen: list[tuple[int, int]] = []
+
+    def detect(self, image: Image.Image) -> list[FaceDetection]:
+        self.seen.append(image.size)
+        width, height = image.size
+        return [make_detection(0, 0, width, height)]
+
+
+@pytest.mark.unit
+def test_the_detector_sees_the_photo_in_its_exif_orientation() -> None:
+    """The boxes of process_all are in the orientation the browser shows (spec 001, A15)."""
+    exif = Image.Exif()
+    exif[0x0112] = 6  # rotate 90 degrees clockwise when displayed
+    upload = encoded(Image.new("RGB", (400, 200), RED), "JPEG", exif=exif)
+    detector = SizeRecordingDetector()
+    preprocessor = FacePreprocessor(detector, PreprocessingConfig())
+
+    (face,) = preprocessor.process_all(load_image(upload), MIN_FACE_PX, MAX_FACES)
+
+    assert detector.seen == [(200, 400)]
+    assert (face.box.right, face.box.bottom) == (200, 400)

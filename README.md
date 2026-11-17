@@ -324,7 +324,7 @@ O E01 já acerta 98,75%, e 20 erros são comuns aos três modelos (pares difíce
 - O EER de validação dos modelos com fine-tuning é otimista: a mesma validação escolheu a época e o modelo.
 - O privado tem 13 participantes, galeria de 11 e cerca de 10 fotos de galeria por pessoa. O FAR é medido com 222 desconhecidos (22 fotos de uma participante e 200 do LFW): 0 aceitações dizem que o FAR real fica provavelmente abaixo de cerca de 1,4%, não que é zero. E 200 desses 222 desconhecidos são fotos de imprensa do LFW, de outro domínio e mais fáceis de rejeitar. Contando só os 22 do mesmo ambiente, 0 aceitações limitam o FAR a cerca de 14%: o FAR real no nosso ambiente provavelmente é maior que o medido.
 - O LFW é formado principalmente por homens brancos e figuras públicas. O desempenho pode não ser igual entre grupos demográficos, e isso não foi medido.
-- O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
+- O modo `strict` do MTCNN rejeitou indevidamente cerca de 1% das fotos privadas (3 de 284, um segundo rosto inexistente). Na aplicação, isso aparece no cadastro como o erro "mais de um rosto" numa foto com uma pessoa só, e a pessoa precisa tirar outra foto.
 - E03 e E05 (fine-tuning completo) ficaram de fora, por prazo e pelo risco de decorar as 433 identidades de treino (D5).
 
 **Custo computacional e complexidade.**
@@ -345,7 +345,7 @@ Os modelos têm o mesmo tamanho, então o desempenho não vem da complexidade da
 Aplicação web local com três telas no menu lateral ([D17](docs/decisions/D17-interface-web-lia.md), specs em [docs/specs/](docs/specs/)):
 
 - **Cadastro:** nome e de 1 a 10 fotos (webcam do navegador ou arquivo). A pessoa só é cadastrada se todas as fotos tiverem exatamente um rosto, e é recusada se o nome já existe (sem diferenciar maiúsculas de minúsculas) ou se o rosto já está cadastrado com outro nome.
-- **Reconhecimento:** uma foto. O resultado é a pessoa e a similaridade, ou "pessoa desconhecida" quando a similaridade fica abaixo do threshold (0,766, [D08](docs/decisions/D08-threshold-selection.md)). Uma face desconhecida nunca mostra o nome de quem ela mais se parece.
+- **Reconhecimento:** uma foto, com um ou **vários rostos** ([D19](docs/decisions/D19-multi-face-recognition.md)). A foto aparece com uma caixa numerada em cada rosto, e a lista traz, para cada um, a pessoa e a similaridade, ou "pessoa desconhecida" quando a similaridade fica abaixo do threshold (0,766, [D08](docs/decisions/D08-threshold-selection.md)). Uma face desconhecida nunca mostra o nome de quem ela mais se parece, e se a mesma pessoa aparece em mais de um rosto, a tela mostra todos e avisa. O cadastro continua com um rosto por foto.
 - **Pessoas cadastradas:** lista e exclusão, com confirmação.
 
 O reconhecimento compara o embedding da foto com os da galeria pelo **vizinho mais próximo** ([D06](docs/decisions/D06-comparison-strategy.md) e [D16](docs/decisions/D16-chosen-model.md)). A galeria é lida do banco a cada chamada, sem cache, então um cadastro ou uma exclusão vale na hora.
@@ -388,7 +388,7 @@ Rotas (todas sob `/api`):
 | `GET /config` | devolve o threshold da configuração, que a interface marca na barra de similaridade |
 | `GET /persons` | lista as pessoas com o número de embeddings de cada uma |
 | `POST /persons` | cadastra (campos `name` e `photos`, multipart) |
-| `POST /recognitions` | reconhece uma foto (campo `photo`, multipart) |
+| `POST /recognitions` | reconhece todos os rostos de uma foto (campo `photo`, multipart) e devolve a largura e a altura da imagem e, para cada rosto, a caixa, o status, o nome (só se reconhecido) e a similaridade |
 | `DELETE /persons/{id}` | exclui a pessoa e os embeddings dela |
 
 ### Como rodar
@@ -425,6 +425,7 @@ cp .env.example .env
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` ou `cuda` |
 | `FACE_APP_PORT` | `8000` | porta do servidor (o `--port` vale mais) |
 | `FACE_APP_MAX_UPLOAD_MB` | `10` | tamanho máximo de cada foto |
+| `FACE_APP_MIN_FACE_PX` | `80` | menor lado, em pixels, da caixa de um rosto no reconhecimento (rostos menores são ignorados; provisório, [D19](docs/decisions/D19-multi-face-recognition.md)) |
 | `FACE_APP_LOG_LEVEL` | `INFO` | nível mínimo dos logs |
 
 A variável de ambiente vale mais que o `.env`, e o `.env` vale mais que o padrão. O `.env` fica fora do Git. Um valor inválido, ou uma variável com nome errado no `.env`, faz o `python -m app` terminar com uma mensagem que diz qual variável corrigir, sem subir nada. O endereço 127.0.0.1 não é configurável, de propósito.
@@ -458,6 +459,7 @@ O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). 
 - **Exclusão em cascata** ([spec 006](docs/specs/006-person-deletion.md)): excluir uma pessoa apaga o registro e os embeddings numa transação. O SQLite roda com `secure_delete`, para o conteúdo apagado não ficar no arquivo, e o arquivo do banco é criado com permissão `0600` no Linux e no macOS (só o dono lê; o Windows não tem esse tipo de permissão).
 - **Só local.** O servidor escuta em 127.0.0.1 e a interface não carrega nada de fora (a política de segurança do navegador, CSP, só permite recursos da própria aplicação).
 - **Só a própria página fala com a API.** Como a aplicação não tem login, a API recusa um `Host` que não seja `127.0.0.1` ou `localhost` (contra DNS rebinding) e um POST ou DELETE cujo `Origin` não seja a página da aplicação (contra um formulário de outro site), como explica a [D18](docs/decisions/D18-api-guards.md).
+- **Foto de grupo:** o reconhecimento compara **todo rosto da foto** com as pessoas cadastradas, inclusive o de quem não consentiu. Nada é guardado (a foto e os embeddings são descartados ao terminar), a demonstração usa só as duas autoras ([D15](docs/decisions/D15-video-participants.md)) e a tela avisa. Em uso real, só use fotos de quem concordou.
 - **Logs sem dados pessoais:** registram contagens e status, não nomes nem fotos.
 - O banco e o checkpoint ficam fora do GitHub (ver [Privacidade e LGPD](#privacidade-e-lgpd)).
 
@@ -465,8 +467,9 @@ O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). 
 
 - A **similaridade é o cosseno** entre dois embeddings, não uma probabilidade: 80% não quer dizer "80% de chance de ser a pessoa". Só o threshold de 0,766, escolhido no E08, separa reconhecido de desconhecido.
 - No E08, com esse threshold, **9,2% das fotos de pessoas cadastradas foram rejeitadas** (FRR) e nenhum desconhecido foi aceito em 222. Na prática, uma pessoa cadastrada às vezes aparece como desconhecida e precisa tentar de novo. A galeria do E08 tinha 11 pessoas, então o desempenho com uma galeria bem maior não foi medido.
-- O reconhecimento é **foto a foto**: uma imagem por vez, sem vídeo contínuo, e com exatamente um rosto por imagem.
-- O MTCNN em modo `strict` rejeitou cerca de 1% das fotos privadas por "mais de um rosto" numa foto de uma pessoa só (3 de 284). Na aplicação, a pessoa precisa tirar outra foto.
+- O reconhecimento é **foto a foto**: uma imagem por vez, sem vídeo contínuo. Pode ter vários rostos, e o cadastro continua com exatamente um rosto por foto.
+- O MTCNN em modo `strict` rejeitou cerca de 1% das fotos privadas por "mais de um rosto" numa foto de uma pessoa só (3 de 284). Na aplicação, isso vale para o cadastro: a pessoa precisa tirar outra foto. O reconhecimento não usa o `strict`.
+- **Foto de grupo no reconhecimento:** o threshold foi medido com um rosto grande por foto (E08), e o FAR e o FRR de uma foto de grupo **não foram medidos**. Rostos menores que `FACE_APP_MIN_FACE_PX` (80 px no menor lado, valor provisório) são ignorados, e as caixas que o MTCNN deu em fotos do LFW (79 a 101 px de largura) ficam perto desse limite. A mesma pessoa pode aparecer em mais de um rosto (foto de uma foto, gêmeos), e a tela avisa em vez de escolher um ([D19](docs/decisions/D19-multi-face-recognition.md)).
 - Não há **prova de vida**: uma foto de uma foto pode ser aceita como a pessoa.
 - Não há autenticação, por isso a aplicação só é acessível na própria máquina.
 - Mais limites do modelo em [Resultados e análise](#resultados-e-análise).
@@ -870,7 +873,7 @@ Figures: [test ROC of the four models](experiments/figures/comparison_roc.png), 
 Local web application with three screens in the side menu ([D17](docs/decisions/D17-interface-web-lia.md), specs in [docs/specs/](docs/specs/), in Portuguese):
 
 - **Enrollment:** a name and 1 to 10 photos (browser webcam or file). The person is enrolled only if every photo has exactly one face, and is refused if the name already exists (case-insensitive) or if the face is already enrolled under another name.
-- **Recognition:** one photo. The result is the person and the similarity, or "unknown person" when the similarity is below the threshold (0.766, [D08](docs/decisions/D08-threshold-selection.md)). An unknown face never shows the name of the person it most resembles.
+- **Recognition:** one photo, with one or **several faces** ([D19](docs/decisions/D19-multi-face-recognition.md)). The photo is shown with a numbered box on each face, and the list gives, for each one, the person and the similarity, or "unknown person" when the similarity is below the threshold (0.766, [D08](docs/decisions/D08-threshold-selection.md)). An unknown face never shows the name of the person it most resembles, and if the same person appears in more than one face, the screen shows all of them and says so. Enrollment still takes one face per photo.
 - **Enrolled people:** list and deletion, with confirmation.
 
 Recognition compares the photo's embedding with the gallery's by **nearest neighbor** ([D06](docs/decisions/D06-comparison-strategy.md) and [D16](docs/decisions/D16-chosen-model.md)). The gallery is read from the database on every call, with no cache, so an enrollment or a deletion counts at once.
@@ -913,7 +916,7 @@ Routes (all under `/api`):
 | `GET /config` | returns the configured threshold, which the interface marks on the similarity bar |
 | `GET /persons` | lists the people with each one's number of embeddings |
 | `POST /persons` | enrolls (fields `name` and `photos`, multipart) |
-| `POST /recognitions` | recognizes one photo (field `photo`, multipart) |
+| `POST /recognitions` | recognizes every face of a photo (field `photo`, multipart) and returns the image width and height and, for each face, the box, the status, the name (only if recognized) and the similarity |
 | `DELETE /persons/{id}` | deletes the person and their embeddings |
 
 ### How to run
@@ -950,6 +953,7 @@ cp .env.example .env
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` or `cuda` |
 | `FACE_APP_PORT` | `8000` | server port (`--port` wins over it) |
 | `FACE_APP_MAX_UPLOAD_MB` | `10` | maximum size of each photo |
+| `FACE_APP_MIN_FACE_PX` | `80` | shortest side, in pixels, of a face box in recognition (smaller faces are ignored; provisional, [D19](docs/decisions/D19-multi-face-recognition.md)) |
 | `FACE_APP_LOG_LEVEL` | `INFO` | minimum log level |
 
 An environment variable wins over `.env`, and `.env` wins over the default. `.env` stays out of Git. An invalid value, or a misspelled variable in `.env`, makes `python -m app` exit with a message naming the variable to fix, without starting anything. The 127.0.0.1 address is not configurable, on purpose.
@@ -983,6 +987,7 @@ The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). 
 - **Cascade deletion** ([spec 006](docs/specs/006-person-deletion.md), in Portuguese): deleting a person removes the record and the embeddings in one transaction. SQLite runs with `secure_delete`, so deleted content does not stay in the file, and the database file is created with `0600` permissions on Linux and macOS (only the owner can read it; Windows has no such permission bits).
 - **Local only.** The server listens on 127.0.0.1 and the interface loads nothing from outside (the browser security policy, CSP, only allows the application's own resources).
 - **Only the application's own page talks to the API.** Since the application has no login, the API refuses a `Host` that is not `127.0.0.1` or `localhost` (against DNS rebinding) and a POST or DELETE whose `Origin` is not the application's page (against a form on another site), as explained in [D18](docs/decisions/D18-api-guards.md).
+- **Group photo:** recognition compares **every face of the photo** with the enrolled people, including the face of someone who did not consent. Nothing is stored (the photo and the embeddings are discarded when it ends), the demonstration uses only the two authors ([D15](docs/decisions/D15-video-participants.md)) and the screen warns about it. In real use, only use photos of people who agreed.
 - **Logs without personal data:** they record counts and status, not names or photos.
 - The database and the checkpoint stay out of GitHub (see [Privacy and LGPD](#privacy-and-lgpd)).
 
@@ -990,8 +995,9 @@ The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). 
 
 - The **similarity is the cosine** between two embeddings, not a probability: 80% does not mean "80% chance it is the person". Only the 0.766 threshold, chosen in E08, separates recognized from unknown.
 - In E08, at that threshold, **9.2% of enrolled people's photos were rejected** (FRR) and no unknown was accepted out of 222. In practice, an enrolled person sometimes shows up as unknown and has to try again. The E08 gallery had 11 people, so performance with a much larger gallery was not measured.
-- Recognition is **photo by photo**: one image at a time, no continuous video, and exactly one face per image.
-- MTCNN in `strict` mode rejected about 1% of the private photos for "more than one face" on a single-person photo (3 of 284). In the application, the person has to take another photo.
+- Recognition is **photo by photo**: one image at a time, no continuous video. It can have several faces, and enrollment still takes exactly one face per photo.
+- MTCNN in `strict` mode rejected about 1% of the private photos for "more than one face" on a single-person photo (3 of 284). In the application this applies to enrollment: the person has to take another photo. Recognition does not use `strict`.
+- **Group photo in recognition:** the threshold was measured with one big face per photo (E08), and the FAR and FRR of a group photo were **not measured**. Faces smaller than `FACE_APP_MIN_FACE_PX` (80 px on the shortest side, a provisional value) are ignored, and the boxes MTCNN gave on LFW photos (79 to 101 px wide) sit close to that limit. The same person can appear in more than one face (a photo of a photo, twins), and the screen says so instead of picking one ([D19](docs/decisions/D19-multi-face-recognition.md)).
 - There is no **liveness check**: a photo of a photo may be accepted as the person.
 - There is no authentication, which is why the application is only reachable on the machine itself.
 - More model limits in [Results and analysis](#results-and-analysis).

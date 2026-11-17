@@ -313,7 +313,6 @@ def test_the_enrollment_screen_gives_tips_for_good_photos() -> None:
     source = code_of(WEB_DIR / "views" / "enroll.js")
     assert "Dicas para boas fotos" in source
     assert "TIPS" in source
-    assert "um só rosto" in code_of(WEB_DIR / "views" / "recognize.js")
 
 
 def test_clearing_the_photos_also_clears_the_limit_warning_and_the_camera_can_be_stopped() -> None:
@@ -343,3 +342,34 @@ def test_a_person_id_is_encoded_in_the_url() -> None:
     source = code_of(WEB_DIR / "lib" / "api.js")
 
     assert "encodeURIComponent(id)" in source
+
+
+def test_the_recognition_screen_warns_that_every_face_is_compared() -> None:
+    """Spec 005, R29: a group photo can expose someone who did not agree (D19)."""
+    source = code_of(WEB_DIR / "views" / "recognize.js")
+
+    assert "vários rostos" in source
+    assert "Todo rosto da foto é comparado com as pessoas cadastradas" in source
+    assert "Use só fotos de quem concordou" in source
+
+
+def test_the_boxes_are_labeled_elements_placed_by_css_variables_and_not_a_canvas() -> None:
+    """Spec 005, R32: a layer of elements, each with a role and a label, placed in percentage."""
+    source = code_of(WEB_DIR / "views" / "recognize.js")
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
+
+    assert 'role: "img"' in source and "aria-label" in source
+    for variable in ("--left", "--top", "--width", "--height"):
+        assert f'setProperty("{variable}"' in source
+        assert f"var({variable})" in styles
+    assert "canvas" not in source.lower()
+
+
+def test_the_boxes_are_dropped_when_the_photo_does_not_fit_the_size_the_server_read() -> None:
+    """A box on the wrong face would tie a name to the wrong person (spec 005, R32)."""
+    source = code_of(WEB_DIR / "views" / "recognize.js")
+    styles = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
+
+    assert "naturalWidth" in source and "naturalHeight" in source
+    assert '"error"' in source
+    assert "image-orientation: from-image" in styles

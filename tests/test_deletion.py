@@ -15,8 +15,10 @@ from tests.app_support import (
     ANA,
     ANA_COLOR,
     BIA_COLOR,
+    MIN_FACE_PX,
     THRESHOLD,
     build_encoder,
+    only_face,
     photo,
     request,
 )
@@ -61,11 +63,11 @@ def test_a_deleted_person_is_no_longer_recognized_and_nobody_left_is_an_empty_ga
 ) -> None:
     enroll(repository, "Ana", ANA_COLOR)
     enroll(repository, "Bia", BIA_COLOR)
-    recognition = RecognitionService(build_encoder(), repository, THRESHOLD)
-    assert recognition.recognize(photo(ANA_COLOR)).person_name == "Ana"
+    recognition = RecognitionService(build_encoder(), repository, THRESHOLD, MIN_FACE_PX)
+    assert only_face(recognition.recognize(photo(ANA_COLOR))).person_name == "Ana"
 
     DeletionService(repository).delete(1)
-    after_ana = recognition.recognize(photo(ANA_COLOR))
+    after_ana = only_face(recognition.recognize(photo(ANA_COLOR)))
     DeletionService(repository).delete(2)
 
     assert after_ana.status is RecognitionStatus.UNKNOWN

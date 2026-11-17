@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     device: Literal["auto", "cpu", "cuda"] = "auto"
     port: int = Field(default=DEFAULT_PORT, ge=MIN_PORT, le=MAX_PORT)
     max_upload_mb: int = Field(default=10, ge=1, le=50)
+    # The shortest side a face box needs to be recognized (spec 001, R7). Provisional: the
+    # threshold was measured with big faces (decision D19).
+    min_face_px: int = Field(default=80, ge=20, le=500)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @field_validator("checkpoint_path", mode="before")

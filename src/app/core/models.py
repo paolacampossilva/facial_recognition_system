@@ -53,6 +53,29 @@ class RecognitionResult(BaseModel):
     similarity: float
 
 
+class FaceBox(BaseModel):
+    """Where a face is, in pixels of the image after its EXIF orientation (spec 001, R9)."""
+
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+
+class FaceResult(RecognitionResult):
+    """The result for one face of the image: the decision plus where the face is."""
+
+    box: FaceBox
+
+
+class RecognitionResponse(BaseModel):
+    """What the recognition says about an image: one result per face, left to right."""
+
+    image_width: int
+    image_height: int
+    faces: list[FaceResult] = Field(min_length=1)
+
+
 class ClientConfig(BaseModel):
     """The settings the interface needs to show a result (spec 005)."""
 

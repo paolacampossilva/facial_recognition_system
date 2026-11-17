@@ -72,6 +72,7 @@ Seguindo a seção 23, **fotos, recortes, embeddings privados, termos e a planil
 - **Threshold do E08:** é um único número escolhido na validação privada e publicado como parte da configuração. Por ser um agregado de todas as tentativas, ele não carrega a biometria de nenhuma participante, ao contrário de um classificador ajustado, que fica no cofre.
 - **Vídeos:** só Paola e Valentina aparecem (D15). Nenhuma participante aparece em vídeo, e nenhum resultado individual é mostrado.
 - **Aplicação (Parte 2):** guarda só embeddings, em SQLite, com exclusão em cascata (D12). Os logs não registram nomes, fotos ou embeddings (spec 007).
+- **Foto de grupo no reconhecimento (D19):** o reconhecimento compara todo rosto da foto com as pessoas cadastradas, inclusive o de quem não consentiu. É um tratamento a mais de dado biométrico de terceiros, então fica registrado como limitação: nada é guardado (a foto e os embeddings da consulta são descartados ao fim da requisição), nenhum nome de quem não está cadastrado é revelado (spec 004, R2), a tela do Reconhecimento avisa que só se deve usar foto de quem concordou, e a demonstração e os testes usam só as duas autoras (D15) ou imagens sintéticas e públicas. O cadastro continua com um rosto por foto, para ninguém ser cadastrado a partir de uma foto de grupo.
 
 ## Exclusão de uma participante
 

@@ -153,20 +153,65 @@ def test_recognition_with_an_empty_gallery_is_the_empty_gallery_error(client: Te
     assert response.json()["code"] == "empty_gallery"
 
 
-def test_recognition_returns_the_name_and_the_similarity(client: TestClient) -> None:
+def recognize(client: TestClient, content: bytes = EVEN_FILE):
+    return client.post("/api/recognitions", files={"photo": ("a.jpg", content, "image/jpeg")})
+
+
+def test_recognition_returns_one_face_with_its_name_box_and_similarity(
+    client: TestClient,
+) -> None:
     enroll(client, "Ana")
-    response = client.post("/api/recognitions", files={"photo": ("a.jpg", EVEN_FILE, "image/jpeg")})
+    response = recognize(client, EVEN_FILE)
     assert response.status_code == 200
-    assert response.json() == {"status": "recognized", "person_name": "Ana", "similarity": 0.91}
+    assert response.json() == {
+        "image_width": 600,
+        "image_height": 400,
+        "faces": [
+            {
+                "box": {"left": 150, "top": 60, "right": 450, "bottom": 360},
+                "status": "recognized",
+                "person_name": "Ana",
+                "similarity": 0.91,
+            }
+        ],
+    }
+
+
+def test_recognition_returns_one_result_per_face_from_left_to_right(client: TestClient) -> None:
+    enroll(client, "Ana")
+    response = recognize(client, b"grupo-any-bytes")
+    assert response.status_code == 200
+    faces = response.json()["faces"]
+    assert [face["status"] for face in faces] == ["recognized", "unknown"]
+    assert [face["person_name"] for face in faces] == ["Ana", None]
+    assert faces[0]["box"]["left"] < faces[1]["box"]["left"]
+
+
+def test_an_unknown_face_of_a_group_carries_no_name_anywhere(client: TestClient) -> None:
+    enroll(client, "Ana")
+    stranger = recognize(client, b"grupo-any-bytes").json()["faces"][1]
+    assert stranger["status"] == "unknown"
+    assert stranger["person_name"] is None
+    assert "Ana" not in str(stranger)
+
+
+def test_a_photo_with_no_face_is_no_face_detected_and_has_no_body_of_faces(
+    client: TestClient,
+) -> None:
+    enroll(client, "Ana")
+    response = recognize(client, b"sem-rosto-any-bytes")
+    assert response.status_code == 422
+    assert response.json()["code"] == "no_face_detected"
+    assert "faces" not in response.json()
 
 
 def test_an_unknown_face_carries_no_name(client: TestClient) -> None:
     enroll(client, "Ana")
-    response = client.post("/api/recognitions", files={"photo": ("a.jpg", ODD_FILE, "image/jpeg")})
+    response = recognize(client, ODD_FILE)
     assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "unknown"
-    assert body["person_name"] is None
+    (face,) = response.json()["faces"]
+    assert face["status"] == "unknown"
+    assert face["person_name"] is None
     assert "Ana" not in response.text
 
 
@@ -208,10 +253,6 @@ def test_an_unexpected_error_is_internal_error_without_leaking_details() -> None
     assert response.json() == {"code": "internal_error", "message": "Unexpected error"}
     assert "hunter2" not in response.text
     assert "Ana Souza" not in response.text
-
-
-def recognize(client: TestClient, content: bytes = EVEN_FILE):
-    return client.post("/api/recognitions", files={"photo": ("a.jpg", content, "image/jpeg")})
 
 
 EXPECTED_ERRORS: dict[str, tuple[Callable[[TestClient], Response], int, str]] = {

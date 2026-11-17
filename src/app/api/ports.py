@@ -11,7 +11,7 @@ from app.core.models import (
     EnrollmentRequest,
     EnrollmentResult,
     PersonSummary,
-    RecognitionResult,
+    RecognitionResponse,
 )
 
 
@@ -22,9 +22,9 @@ class EnrollmentPort(Protocol):
 
 
 class RecognitionPort(Protocol):
-    """Recognizes the face in one image."""
+    """Recognizes every face of one image."""
 
-    def recognize(self, image: bytes) -> RecognitionResult: ...
+    def recognize(self, image: bytes) -> RecognitionResponse: ...
 
 
 class DeletionPort(Protocol):

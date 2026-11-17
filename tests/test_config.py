@@ -36,6 +36,7 @@ def test_without_env_the_settings_are_the_defaults_of_the_spec() -> None:
     assert settings.port == 8000
     assert settings.max_upload_mb == 10
     assert settings.max_upload_bytes == 10 * 1024 * 1024
+    assert settings.min_face_px == 80
     assert settings.log_level == "INFO"
 
 
@@ -84,6 +85,8 @@ def test_the_environment_wins_over_the_env_file(
         ("FACE_APP_DEVICE", "tpu"),
         ("FACE_APP_MAX_UPLOAD_MB", "0"),
         ("FACE_APP_MAX_UPLOAD_MB", "51"),
+        ("FACE_APP_MIN_FACE_PX", "10"),
+        ("FACE_APP_MIN_FACE_PX", "600"),
         ("FACE_APP_LOG_LEVEL", "VERBOSE"),
     ],
 )

@@ -31,11 +31,13 @@ from tests.app_support import (
     ANA_COLOR,
     BIA_COLOR,
     CARLA_COLOR,
+    MIN_FACE_PX,
     NO_FACE,
     THRESHOLD,
     TWO_FACES,
     build_encoder,
     free_port,
+    group_photo,
     photo,
 )
 
@@ -51,6 +53,11 @@ SERVER_START_SECONDS: float = 10.0
 FAILED_REQUEST = re.compile(r"Failed to load resource: the server responded with a status of (\d+)")
 WIDE: dict[str, int] = {"width": 1280, "height": 900}
 NARROW: dict[str, int] = {"width": 600, "height": 900}
+
+
+def group_file(name: str, *faces: object) -> dict[str, object]:
+    """A group photo for the file input: one face per argument, left to right."""
+    return {"name": name, "mimeType": "image/png", "buffer": group_photo(*faces)}  # type: ignore[arg-type]
 
 
 def png(color: tuple[int, int, int], name: str, width: int | None = None) -> dict[str, object]:
@@ -82,7 +89,7 @@ def server() -> Iterator[str]:
     encoder = build_encoder()
     services = SimpleNamespace(
         enrollment=EnrollmentService(encoder, repository, THRESHOLD),
-        recognition=RecognitionService(encoder, repository, THRESHOLD),
+        recognition=RecognitionService(encoder, repository, THRESHOLD, MIN_FACE_PX),
         deletion=DeletionService(repository),
         persons=repository,
     )
@@ -464,6 +471,147 @@ def test_a_camera_that_goes_away_closes_the_camera_box(open_page) -> None:
     expect(page.locator("video.camera")).to_be_hidden()
     expect(page.get_by_role("button", name="Usar a câmera")).to_be_visible()
     expect(page.get_by_text("Não foi possível usar a câmera. Envie um arquivo")).to_be_visible()
+
+
+def enroll_ana_and_bia(page: Page) -> None:
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    enroll(page, "Bia", png(BIA_COLOR, "bia.png"))
+    expect(page.get_by_text("Cadastro de Bia concluído.")).to_be_visible()
+
+
+def box_fractions(page: Page) -> list[list[float]]:
+    """Each face box as fractions of the photo shown: left, top, width and height."""
+    page.wait_for_function("() => document.querySelector('.faces__photo img')?.naturalWidth > 0")
+    return page.evaluate(
+        """() => {
+            const image = document.querySelector('.faces__photo img').getBoundingClientRect();
+            return [...document.querySelectorAll('.face-box')].map((box) => {
+                const rect = box.getBoundingClientRect();
+                const left = (rect.left - image.left) / image.width;
+                const top = (rect.top - image.top) / image.height;
+                return [left, top, rect.width / image.width, rect.height / image.height];
+            });
+        }"""
+    )
+
+
+def test_a_group_photo_shows_a_box_and_a_result_for_each_known_face(open_page) -> None:
+    """A32, A35 and A39: the photo with two numbered boxes, and one result per face."""
+    page, _ = open_page()
+    enroll_ana_and_bia(page)
+    go_to(page, "Reconhecimento")
+
+    recognize(page, group_file("dupla.png", BIA_COLOR, ANA_COLOR))
+
+    panel = page.get_by_role("status")
+    expect(panel).to_have_count(1)
+    expect(panel.get_by_role("img", name="Rosto 1: Bia")).to_be_visible()
+    expect(panel.get_by_role("img", name="Rosto 2: Ana")).to_be_visible()
+    expect(panel.locator(".face-box")).to_have_count(2)
+    faces = panel.locator(".faces__list > li")
+    expect(faces).to_have_count(2)
+    expect(faces.nth(0)).to_contain_text("Rosto 1")
+    expect(faces.nth(0)).to_contain_text("Bia")
+    expect(faces.nth(1)).to_contain_text("Ana")
+
+
+def test_an_unknown_face_in_a_group_has_no_name_on_the_box_or_in_the_list(open_page) -> None:
+    """A33: one known and one unknown face; the stranger is never given a name."""
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Reconhecimento")
+
+    recognize(page, group_file("dupla.png", ANA_COLOR, BIA_COLOR))
+
+    panel = page.get_by_role("status")
+    expect(panel.get_by_role("img", name="Rosto 1: Ana")).to_be_visible()
+    expect(panel.get_by_role("img", name="Rosto 2: pessoa desconhecida")).to_be_visible()
+    stranger = panel.locator(".faces__list > li").nth(1)
+    expect(stranger).to_contain_text("Pessoa desconhecida")
+    expect(stranger).not_to_contain_text("Ana")
+    expect(stranger).to_contain_text("Abaixo do limite (0,766)")
+
+
+def test_the_same_person_in_two_faces_is_shown_twice_with_a_notice(open_page) -> None:
+    """A34: nothing is hidden or merged, and the screen says that the person repeats."""
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Reconhecimento")
+
+    recognize(page, group_file("repetida.png", ANA_COLOR, ANA_COLOR))
+
+    panel = page.get_by_role("status")
+    expect(panel.locator(".face-box")).to_have_count(2)
+    expect(panel.get_by_text("Ana aparece em 2 rostos desta foto")).to_be_visible()
+
+
+def test_a_face_too_small_is_left_out_and_a_photo_of_only_small_faces_is_no_face(
+    open_page,
+) -> None:
+    """A37: the minimum size of the face (spec 001, R7)."""
+    page, watch = open_page()
+    watch.expect_statuses(422)
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Reconhecimento")
+
+    recognize(page, group_file("um-pequeno.png", ANA_COLOR, (BIA_COLOR, 60)))
+    expect(page.get_by_role("status").locator(".face-box")).to_have_count(1)
+
+    recognize(page, group_file("so-pequeno.png", (ANA_COLOR, 60)))
+    expect(page.get_by_text("Nenhum rosto encontrado na imagem")).to_be_visible()
+    expect(page.locator(".face-box")).to_have_count(0)
+
+
+def test_the_boxes_stay_on_their_faces_when_the_photo_changes_size(open_page) -> None:
+    """A38: the boxes are placed in percentage, so a narrower window keeps them in place."""
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+    go_to(page, "Reconhecimento")
+    recognize(page, group_file("dupla.png", ANA_COLOR, BIA_COLOR))
+    expect(page.locator(".face-box")).to_have_count(2)
+
+    wide = box_fractions(page)
+    page.set_viewport_size(NARROW)
+    narrow = box_fractions(page)
+
+    assert wide[0][0] == pytest.approx(0.0, abs=0.02)
+    assert wide[0][2] == pytest.approx(100 / 204, abs=0.03)  # the left face is 100 of 204 px
+    assert wide[1][0] == pytest.approx(104 / 204, abs=0.03)
+    for before, after in zip(wide, narrow, strict=True):
+        assert after == pytest.approx(before, abs=0.03)
+        assert all(0.0 <= value <= 1.0 for value in after)
+
+
+def test_the_recognition_screen_says_that_every_face_is_compared(open_page) -> None:
+    """A40: the LGPD notice of spec 005, R29."""
+    page, _ = open_page()
+    enroll(page, "Ana", png(ANA_COLOR, "ana.png"))
+    expect(page.get_by_text("Cadastro de Ana concluído.")).to_be_visible()
+
+    go_to(page, "Reconhecimento")
+
+    expect(
+        page.get_by_text("Todo rosto da foto é comparado com as pessoas cadastradas")
+    ).to_be_visible()
+    expect(page.get_by_text("Use só fotos de quem concordou")).to_be_visible()
+
+
+def test_the_enrollment_still_refuses_a_group_photo(open_page) -> None:
+    """A36: the Cadastro stays strict, one face per photo."""
+    page, watch = open_page()
+    watch.expect_statuses(422)
+
+    enroll(page, "Dupla", group_file("dupla.png", ANA_COLOR, BIA_COLOR))
+
+    expect(page.get_by_text("Mais de um rosto na imagem")).to_be_visible()
+    page.locator("#menu").get_by_role("link", name=re.compile("^Pessoas cadastradas")).click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Sair sem salvar").click()
+    expect(page.get_by_text("Nenhuma pessoa cadastrada.")).to_be_visible()
 
 
 def test_a_slow_list_does_not_overwrite_the_screen_the_person_moved_to(open_page) -> None:
