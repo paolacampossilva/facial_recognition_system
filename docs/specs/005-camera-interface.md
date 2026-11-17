@@ -1,6 +1,6 @@
 # Spec 005: interface web
 
-- **Status:** Em revisão
+- **Status:** Aceita
 - **Data:** 2026-11-14
 - **Dona:** Paola
 - **Issue:** #39, #103 (vários rostos no reconhecimento)
