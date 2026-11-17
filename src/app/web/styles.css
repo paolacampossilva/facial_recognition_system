@@ -284,6 +284,28 @@ button .spinner { margin-right: 0; }
 .meter__limit { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 .result--ok .meter__limit { color: var(--ok); }
 
+/* ---- faces of a photo ------------------------------------------------------------------- */
+
+.faces { display: flex; flex-direction: column; gap: 16px; }
+.faces__photo { position: relative; margin: 0; overflow: hidden; border-radius: var(--radius); background: var(--surface-2); }
+.faces__photo img { display: block; width: 100%; height: auto; }
+.faces__layer { position: absolute; inset: 0; pointer-events: none; }
+/* Each box is placed by the fractions the view sets (--left, --top, --width, --height). */
+.face-box {
+  position: absolute; box-sizing: border-box; border: 3px solid var(--muted); border-radius: var(--radius-sm);
+  left: calc(var(--left) * 100%); top: calc(var(--top) * 100%);
+  width: calc(var(--width) * 100%); height: calc(var(--height) * 100%);
+}
+.face-box--recognized { border-color: var(--ok); }
+.face-box__tag {
+  position: absolute; top: 0; left: 0; min-width: 22px; padding: 0 6px;
+  border-bottom-right-radius: var(--radius-sm); background: var(--muted); color: var(--on-accent);
+  font-size: 13px; font-weight: 700; line-height: 22px; text-align: center;
+}
+.face-box--recognized .face-box__tag { background: var(--ok); }
+.faces__list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.result__label { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+
 .people {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
   margin: 0; padding: 0; list-style: none;

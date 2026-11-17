@@ -1,4 +1,5 @@
-// Recognition screen: one photo sent to POST /api/recognitions, with the result in a panel beside it.
+// Recognition screen: one photo sent to POST /api/recognitions, with the photo and one result per
+// face in a panel beside it.
 
 import { api } from "../lib/api.js";
 import { setCount } from "../lib/counter.js";
@@ -44,22 +45,61 @@ function similarityMeter(value, threshold, aboveLimit) {
     h("p", { class: "muted meter__raw" }, `Valor original: ${formatSimilarity(value)}`));
 }
 
-// An unknown face shows only the similarity, never a name (spec 004).
-function resultPanel(result, threshold) {
-  if (result.status === "recognized") {
-    return h("div", { class: "result result--ok", role: "status" },
-      h("div", { class: "result__who" },
-        avatar(result.person_name, true),
-        h("div", {}, h("p", { class: "muted" }, "Pessoa reconhecida"),
-          h("strong", { class: "result__name" }, result.person_name))),
-      similarityMeter(result.similarity, threshold, true));
-  }
-  return h("div", { class: "result", role: "status" },
-    h("div", { class: "result__who" },
-      h("span", { class: "avatar avatar--lg avatar--unknown", "aria-hidden": "true" }, "?"),
+// One face of the photo. An unknown face shows only the similarity, never a name (spec 004).
+function faceResult(face, number, threshold) {
+  const known = face.status === "recognized";
+  const who = known
+    ? [avatar(face.person_name, true),
+      h("div", {}, h("p", { class: "muted" }, "Pessoa reconhecida"),
+        h("strong", { class: "result__name" }, face.person_name))]
+    : [h("span", { class: "avatar avatar--lg avatar--unknown", "aria-hidden": "true" }, "?"),
       h("div", {}, h("p", { class: "muted" }, "Nenhuma pessoa cadastrada combina com este rosto"),
-        h("strong", { class: "result__name" }, "Pessoa desconhecida"))),
-    similarityMeter(result.similarity, threshold, false));
+        h("strong", { class: "result__name" }, "Pessoa desconhecida"))];
+  return h("li", { class: known ? "result result--ok" : "result" },
+    h("p", { class: "result__label" }, `Rosto ${number}`),
+    h("div", { class: "result__who" }, ...who),
+    similarityMeter(face.similarity, threshold, known));
+}
+
+// A box over the photo, placed as a fraction of the image (the CSP forbids style attributes in the
+// markup, so the fractions go in CSS variables). The API keeps every box inside the image, so the
+// fractions stay between 0 and 1. The number is written out as well as colored.
+function faceBox(face, number, imageWidth, imageHeight) {
+  const label = face.status === "recognized"
+    ? `Rosto ${number}: ${face.person_name}`
+    : `Rosto ${number}: pessoa desconhecida`;
+  const box = h("div", { class: `face-box face-box--${face.status}`, role: "img", "aria-label": label },
+    h("span", { class: "face-box__tag", "aria-hidden": "true" }, String(number)));
+  const { left, top, right, bottom } = face.box;
+  box.style.setProperty("--left", String(left / imageWidth));
+  box.style.setProperty("--top", String(top / imageHeight));
+  box.style.setProperty("--width", String((right - left) / imageWidth));
+  box.style.setProperty("--height", String((bottom - top) / imageHeight));
+  return box;
+}
+
+// "Ana aparece em 2 rostos desta foto": only a count of what the API returned, the API decides each face.
+function repeatedPeople(faces) {
+  const counts = new Map();
+  for (const face of faces) {
+    if (face.person_name !== null) counts.set(face.person_name, (counts.get(face.person_name) ?? 0) + 1);
+  }
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([name, count]) => notice("info", `${name} aparece em ${count} rostos desta foto`));
+}
+
+// The photo with a box on every face, then one result per face in the same order, left to right.
+function resultPanel(data, photoUrl, threshold) {
+  const photo = h("figure", { class: "faces__photo" },
+    h("img", { src: photoUrl, alt: "Foto enviada para o reconhecimento" }),
+    h("div", { class: "faces__layer" },
+      data.faces.map((face, index) => faceBox(face, index + 1, data.image_width, data.image_height))));
+  return h("div", { class: "faces", role: "status" },
+    photo,
+    h("ul", { class: "faces__list" },
+      data.faces.map((face, index) => faceResult(face, index + 1, threshold))),
+    ...repeatedPeople(data.faces));
 }
 
 export function recognizeView(root) {
@@ -69,6 +109,12 @@ export function recognizeView(root) {
   // an answer that arrives after the photo changed (or after leaving) is dropped.
   let alive = true;
   let latest = 0;
+  // The address of the photo shown with its boxes; it is released when the result goes away.
+  let photoUrl = null;
+  function releasePhoto() {
+    if (photoUrl !== null) URL.revokeObjectURL(photoUrl);
+    photoUrl = null;
+  }
   const heading = pageHead("Reconhecimento", "Envie uma foto para saber quem é a pessoa.");
   // The page is built once and only what follows the title is replaced, so the title keeps the
   // focus that the menu gives it when the screen opens.
@@ -84,6 +130,7 @@ export function recognizeView(root) {
     max: 1,
     onChange: (count) => {
       latest += 1;
+      releasePhoto();
       submit.disabled = count === 0;
       output.replaceChildren(waiting());
     },
@@ -91,14 +138,21 @@ export function recognizeView(root) {
 
   async function recognize() {
     const mine = ++latest;
+    releasePhoto();
     setBusy(submit, true);
     output.replaceChildren(loading("Reconhecendo…"));
-    const result = await api.recognize(picker.files()[0]);
+    const photo = picker.files()[0];
+    const result = await api.recognize(photo);
     if (!alive) return;
     setBusy(submit, false);
     submit.disabled = picker.count() === 0;
     if (mine !== latest) return; // the photo was replaced or removed meanwhile: the result is stale
-    output.replaceChildren(result.ok ? resultPanel(result.data.faces[0], threshold) : notice("error", describeError(result)));
+    if (!result.ok) {
+      output.replaceChildren(notice("error", describeError(result)));
+      return;
+    }
+    photoUrl = URL.createObjectURL(photo.blob);
+    output.replaceChildren(resultPanel(result.data, photoUrl, threshold));
   }
 
   async function render() {
@@ -121,7 +175,10 @@ export function recognizeView(root) {
       return;
     }
     paint(h("div", { class: "grid" },
-      card("Foto", "Pela câmera ou por arquivo. Use uma foto de frente, com um só rosto e boa luz.", picker.element,
+      card("Foto", "Pela câmera ou por arquivo. A foto pode ter vários rostos, de frente, grandes e bem iluminados.",
+        picker.element,
+        h("p", { class: "privacy" }, icon("lock"),
+          "Todo rosto da foto é comparado com as pessoas cadastradas. Use só fotos de quem concordou."),
         h("div", { class: "form-actions" }, submit)),
       card("Resultado", null, output)));
   }
@@ -131,6 +188,7 @@ export function recognizeView(root) {
   render();
   return () => {
     alive = false;
+    releasePhoto();
     picker.dispose();
   };
 }
