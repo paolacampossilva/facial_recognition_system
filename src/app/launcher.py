@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.config import DEFAULT_PORT, MAX_PORT, MIN_PORT, Settings, load_settings
 from app.core.errors import ConfigError, LaunchError
+from app.logs import uvicorn_log_config
 
 HOST: str = "127.0.0.1"
 APP_IMPORT_PATH: str = "app.main:app"
@@ -114,6 +115,7 @@ def run(
         reload=options.reload,
         reload_dirs=reload_dirs,
         log_level=options.log_level.lower(),
+        log_config=uvicorn_log_config(),
     )
 
 

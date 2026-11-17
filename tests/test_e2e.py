@@ -13,7 +13,6 @@ Requires the `playwright` package and Google Chrome installed; without them the 
 
 import contextlib
 import re
-import socket
 import threading
 import time
 from collections.abc import Iterator
@@ -36,6 +35,7 @@ from tests.app_support import (
     THRESHOLD,
     TWO_FACES,
     build_encoder,
+    free_port,
     photo,
 )
 
@@ -50,12 +50,6 @@ SERVER_START_SECONDS: float = 10.0
 FAILED_REQUEST = re.compile(r"Failed to load resource: the server responded with a status of (\d+)")
 WIDE: dict[str, int] = {"width": 1280, "height": 900}
 NARROW: dict[str, int] = {"width": 600, "height": 900}
-
-
-def free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
 
 
 def png(color: tuple[int, int, int], name: str, width: int | None = None) -> dict[str, object]:

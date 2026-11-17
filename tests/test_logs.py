@@ -2,16 +2,23 @@
 
 import logging
 import sys
+import threading
+import time
+import urllib.error
+import urllib.request
 from collections.abc import Iterator
 
 import pytest
+import uvicorn
 
+from app.api.app import create_app
+from app.config import Settings
 from app.core.deletion import DeletionService
 from app.core.enrollment import EnrollmentService
 from app.core.recognition import RecognitionService
-from app.logs import APP_LOGGER, AllowListFormatter, configure_logging
+from app.logs import APP_LOGGER, AllowListFormatter, configure_logging, uvicorn_log_config
 from app.storage.repository import SqlitePersonRepository
-from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, photo, request
+from tests.app_support import ANA_COLOR, THRESHOLD, build_encoder, free_port, photo, request
 
 pytestmark = pytest.mark.unit
 
@@ -95,3 +102,64 @@ def test_configuring_twice_does_not_duplicate_the_lines(
     logging.getLogger("app.core.test").info("once")
 
     assert capsys.readouterr().err.count("once") == 1
+
+
+PERSONAL_MESSAGE: str = "database /private/data.db password=hunter2 Ana Souza"
+
+
+def test_a_traceback_names_the_exception_but_never_its_message() -> None:
+    try:
+        raise RuntimeError(PERSONAL_MESSAGE)
+    except RuntimeError:
+        record = record_with()
+        record.exc_info = sys.exc_info()
+
+    text = AllowListFormatter().format(record)
+
+    assert text.endswith("RuntimeError")
+    assert "Traceback (most recent call last):" in text
+    assert "Ana Souza" not in text
+    assert "hunter2" not in text
+
+
+class ExplodingServices:
+    """Services whose every call fails with a message that holds personal data."""
+
+    @property
+    def persons(self) -> "ExplodingServices":
+        return self
+
+    def list_persons(self) -> list[object]:
+        raise RuntimeError(PERSONAL_MESSAGE)
+
+
+def test_an_unexpected_error_never_prints_its_message_through_the_server_logger(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    configure_logging("INFO")
+    port = free_port()
+    config = uvicorn.Config(
+        create_app(ExplodingServices(), Settings(threshold=THRESHOLD)),  # type: ignore[arg-type]
+        host="127.0.0.1",
+        port=port,
+        log_level="info",
+        log_config=uvicorn_log_config(),
+    )
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started and time.monotonic() < deadline:
+        time.sleep(0.05)
+    try:
+        with pytest.raises(urllib.error.HTTPError) as response:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/api/persons")  # noqa: S310
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+
+    printed = capsys.readouterr().err
+    assert response.value.code == 500
+    assert "RuntimeError" in printed
+    assert "Ana Souza" not in printed
+    assert "hunter2" not in printed

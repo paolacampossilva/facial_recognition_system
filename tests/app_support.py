@@ -5,6 +5,7 @@ Photos are solid-color PNGs: the color picks the embedding, the width picks how 
 detector finds.
 """
 
+import socket
 from io import BytesIO
 
 import numpy as np
@@ -103,3 +104,10 @@ def build_encoder(
 
 def request(name: str, *photos: bytes) -> EnrollmentRequest:
     return EnrollmentRequest(name=name, photos=list(photos))
+
+
+def free_port() -> int:
+    """A port nothing listens on right now, for a test server on the loopback address."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]

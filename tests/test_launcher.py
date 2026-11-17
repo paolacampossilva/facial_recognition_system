@@ -11,6 +11,8 @@ import pytest
 from app import launcher
 from app.core.errors import LaunchError
 from app.launcher import LaunchOptions, main, parse_options, port_is_free, run
+from app.logs import uvicorn_log_config
+from tests.app_support import free_port
 
 pytestmark = pytest.mark.unit
 
@@ -44,12 +46,6 @@ def busy_port() -> Iterator[int]:
         holder.bind(("127.0.0.1", 0))
         holder.listen()
         yield holder.getsockname()[1]
-
-
-def free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
 
 
 def test_the_defaults_are_port_8000_with_the_browser_and_without_reload() -> None:
@@ -106,6 +102,7 @@ def test_the_server_starts_on_the_loopback_address_with_the_given_port() -> None
         "reload": False,
         "reload_dirs": None,
         "log_level": "info",
+        "log_config": uvicorn_log_config(),
     }
 
 
