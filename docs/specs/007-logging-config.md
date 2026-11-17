@@ -33,7 +33,7 @@ O que muda de uma máquina para outra (o caminho do banco e do checkpoint, a GPU
 - **R5.** O `.env` só aceita as variáveis da R2. Uma linha desconhecida (por exemplo, `FACE_APP_TRESHOLD`, com erro de digitação) é um erro de configuração, para o valor não ser ignorado em silêncio.
 - **R6.** Configuração inválida (valor fora da faixa, tipo errado ou variável desconhecida no `.env`) lança `ConfigError`. Em `python -m app`, a aplicação **não sobe**: mostra uma mensagem com o nome da variável e o que ela aceita e termina com código 1, sem traceback.
 - **R7.** Os caminhos relativos valem a partir da pasta onde a aplicação é iniciada, que o README pede que seja a raiz do repositório.
-- **R8.** **O que não é configurável, de propósito:** o endereço `127.0.0.1` (a aplicação não tem autenticação e guarda biometria, spec 005, R14), a pasta da interface (faz parte do código), os PRAGMAs do SQLite (spec 006, R4) e a arquitetura do modelo (FaceNet, D16; só o checkpoint muda).
+- **R8.** **O que não é configurável, de propósito:** o endereço `127.0.0.1` (a aplicação não tem autenticação e guarda biometria, spec 005, R14), a pasta da interface (faz parte do código), os PRAGMAs do SQLite (spec 006, R4), a arquitetura do modelo (FaceNet, D16; só o checkpoint muda) e o máximo de 20 rostos por foto (spec 001, R8). Este último limita o custo do reconhecimento e não depende da máquina, ao contrário do tamanho mínimo do rosto (`FACE_APP_MIN_FACE_PX`), que depende da câmera e do uso e por isso é configurável.
 
 ### Logs
 

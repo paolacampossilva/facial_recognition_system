@@ -47,6 +47,7 @@ Dada uma imagem, a aplicação precisa dizer, para cada rosto que ela tem, se el
 | A17 | uma imagem em que o único rosto é menor que o tamanho mínimo | reconhece | propaga `NoFaceDetectedError` |
 | A18 | uma imagem com 25 rostos | reconhece | a lista tem os 20 de maior área (spec 001, R8) |
 | A19 | qualquer reconhecimento com sucesso | a resposta é inspecionada | traz a largura e a altura da imagem (depois da EXIF) e, para cada rosto, a caixa em pixels dessa imagem, com `0 <= left < right <= image_width` e `0 <= top < bottom <= image_height` |
+| A20 | uma imagem com três rostos e um repositório fake que conta as chamadas a `gallery()` | reconhece | `gallery()` é chamada uma vez (R11), e não uma por rosto |
 
 ## Interface
 
@@ -94,5 +95,5 @@ Exceção nova: `EmptyGalleryError`, herdando da exceção base da aplicação. 
 
 ## Testes
 
-- **Unitários:** A1 a A19 com detector, embedder e repositório fakes, usando vetores construídos para controlar a similaridade (inclusive o limite exato de A3). Vários rostos usam um detector roteirizado que devolve uma caixa por faixa da imagem, e um embedder que dá a cada faixa o seu vetor.
+- **Unitários:** A1 a A20 com detector, embedder e repositório fakes, usando vetores construídos para controlar a similaridade (inclusive o limite exato de A3). Vários rostos usam um detector roteirizado que devolve uma caixa por faixa da imagem, e um embedder que dá a cada faixa o seu vetor.
 - **Integração** (#47): A1, A2 e A4 com o modelo E06 real em imagens públicas, e A12 com uma montagem de dois rostos públicos.
