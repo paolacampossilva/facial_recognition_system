@@ -2,6 +2,7 @@
 
 import runpy
 import socket
+import sys
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -312,3 +313,34 @@ def test_the_browser_stays_closed_when_the_server_never_answers() -> None:
 
     assert not browser.opened.wait(timeout=0.3)
     assert browser.urls == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="creating a link needs a privilege on Windows")
+def test_a_database_folder_that_is_a_closed_vault_stops_before_the_model_loads(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    link = tmp_path / "private"
+    link.symlink_to(tmp_path / "vault-that-is-closed")
+    monkeypatch.setenv("FACE_APP_DATABASE_PATH", str(link / "app.db"))
+    server = FakeServer()
+
+    code = main(["--no-browser", "--port", str(free_port())], serve=server)
+
+    printed = capsys.readouterr().err
+    assert code == 1
+    assert printed.startswith("error: the folder of the database is not available")
+    assert "open the vault first" in printed
+    assert "Traceback" not in printed
+    assert server.calls == []
+
+
+def test_a_database_folder_that_can_be_created_is_created_before_the_server_starts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    database = tmp_path / "demo" / "app.db"
+    monkeypatch.setenv("FACE_APP_DATABASE_PATH", str(database))
+
+    code = main(["--no-browser", "--port", str(free_port())], serve=FakeServer())
+
+    assert code == 0
+    assert database.parent.is_dir()

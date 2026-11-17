@@ -24,6 +24,7 @@ from app.config import DEFAULT_PORT, MAX_PORT, MIN_PORT, Settings, load_settings
 from app.core.errors import AppError, ConfigError, LaunchError, ModelLoadError
 from app.embedder import TRAIN_HINT, pick_device
 from app.logs import uvicorn_log_config
+from app.storage.repository import ensure_database_folder
 
 HOST: str = "127.0.0.1"
 APP_IMPORT_PATH: str = "app.main:create"
@@ -90,7 +91,8 @@ def check_model_setup(settings: Settings) -> None:
     """Catches the usual first-run mistakes before the server starts and loads the model.
 
     The server calls the application factory itself and shows any error it raises as a traceback,
-    so the two mistakes a person is likely to make are checked here, where they become a message.
+    so the mistakes a person is likely to make are checked here, where they become a message.
+    The folder of the database is checked right after this, in `main`.
 
     Raises:
         ModelLoadError: The device is not available, or the configured checkpoint does not exist.
@@ -200,6 +202,7 @@ def main(
     options = parse_options(argv, settings)
     try:
         check_model_setup(settings)
+        ensure_database_folder(settings.database_path)
         run(options, serve=serve, open_browser=open_browser)
     except AppError as error:
         print(f"error: {error}", file=sys.stderr)

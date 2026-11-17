@@ -420,7 +420,7 @@ cp .env.example .env
 | Variável | Padrão | Para quê |
 |---|---|---|
 | `FACE_APP_THRESHOLD` | `0.766` | similaridade mínima para "mesma pessoa" (E08, [D08](docs/decisions/D08-threshold-selection.md)) |
-| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | banco SQLite de pessoas e embeddings |
+| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | banco SQLite de pessoas e embeddings. Se `data/private` for um link para o cofre e o cofre estiver fechado, `python -m app` para com `error: the folder of the database is not available` e código 1. Numa demonstração, use um caminho fora do cofre, como `data/demo/app.db` (o `.gitignore` e o hook bloqueiam `*.db`) |
 | `FACE_APP_CHECKPOINT_PATH` | `checkpoints/E06/best.pt` | checkpoint do modelo; vazio usa o FaceNet pré-treinado (E01) |
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` ou `cuda` |
 | `FACE_APP_PORT` | `8000` | porta do servidor (o `--port` vale mais) |
@@ -469,7 +469,7 @@ O resultado fica em `checkpoints/E06/best.pt` (cerca de 2 minutos na RTX 4060). 
 - No E08, com esse threshold, **9,2% das fotos de pessoas cadastradas foram rejeitadas** (FRR) e nenhum desconhecido foi aceito em 222. Na prática, uma pessoa cadastrada às vezes aparece como desconhecida e precisa tentar de novo. A galeria do E08 tinha 11 pessoas, então o desempenho com uma galeria bem maior não foi medido.
 - O reconhecimento é **foto a foto**: uma imagem por vez, sem vídeo contínuo. Pode ter vários rostos, e o cadastro continua com exatamente um rosto por foto.
 - O MTCNN em modo `strict` rejeitou cerca de 1% das fotos privadas por "mais de um rosto" numa foto de uma pessoa só (3 de 284). Na aplicação, isso vale para o cadastro: a pessoa precisa tirar outra foto. O reconhecimento não usa o `strict`.
-- **Foto de grupo no reconhecimento:** o threshold foi medido com um rosto grande por foto (E08), e o FAR e o FRR de uma foto de grupo **não foram medidos**. Rostos menores que `FACE_APP_MIN_FACE_PX` (80 px no menor lado, valor provisório) são ignorados, e as caixas que o MTCNN deu em fotos do LFW (79 a 101 px de largura) ficam perto desse limite. A mesma pessoa pode aparecer em mais de um rosto (foto de uma foto, gêmeos), e a tela avisa em vez de escolher um ([D19](docs/decisions/D19-multi-face-recognition.md)).
+- **Foto de grupo no reconhecimento:** o threshold foi medido com um rosto grande por foto (E08), e o FAR e o FRR de uma foto de grupo **não foram medidos**. Rostos menores que `FACE_APP_MIN_FACE_PX` (80 px no menor lado, valor provisório) são ignorados, e as caixas que o MTCNN deu em fotos do LFW (79 a 101 px de largura) ficam perto desse limite. Numa checagem com o E06 real (17/11, poucas fotos): rostos grandes e de frente deram similaridade 0,93 e 0,95, uma pessoa de frente e perto da câmera deu 0,82 a 0,84, e uma pessoa longe da câmera e de óculos deu 0,63 e saiu como desconhecida mesmo cadastrada com 5 fotos, então rosto distante vira falso "desconhecido". A mesma pessoa pode aparecer em mais de um rosto (foto de uma foto, gêmeos), e a tela avisa em vez de escolher um ([D19](docs/decisions/D19-multi-face-recognition.md)).
 - Não há **prova de vida**: uma foto de uma foto pode ser aceita como a pessoa.
 - Não há autenticação, por isso a aplicação só é acessível na própria máquina.
 - Mais limites do modelo em [Resultados e análise](#resultados-e-análise).
@@ -948,7 +948,7 @@ cp .env.example .env
 | Variable | Default | What for |
 |---|---|---|
 | `FACE_APP_THRESHOLD` | `0.766` | minimum similarity for "same person" (E08, [D08](docs/decisions/D08-threshold-selection.md)) |
-| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | SQLite database of people and embeddings |
+| `FACE_APP_DATABASE_PATH` | `data/private/app.db` | SQLite database of people and embeddings. If `data/private` is a link to the vault and the vault is closed, `python -m app` stops with `error: the folder of the database is not available` and exit code 1. For a demonstration, use a path outside the vault, such as `data/demo/app.db` (`.gitignore` and the hook block `*.db`) |
 | `FACE_APP_CHECKPOINT_PATH` | `checkpoints/E06/best.pt` | model checkpoint; empty uses the pretrained FaceNet (E01) |
 | `FACE_APP_DEVICE` | `auto` | `auto`, `cpu` or `cuda` |
 | `FACE_APP_PORT` | `8000` | server port (`--port` wins over it) |
@@ -997,7 +997,7 @@ The result goes to `checkpoints/E06/best.pt` (about 2 minutes on the RTX 4060). 
 - In E08, at that threshold, **9.2% of enrolled people's photos were rejected** (FRR) and no unknown was accepted out of 222. In practice, an enrolled person sometimes shows up as unknown and has to try again. The E08 gallery had 11 people, so performance with a much larger gallery was not measured.
 - Recognition is **photo by photo**: one image at a time, no continuous video. It can have several faces, and enrollment still takes exactly one face per photo.
 - MTCNN in `strict` mode rejected about 1% of the private photos for "more than one face" on a single-person photo (3 of 284). In the application this applies to enrollment: the person has to take another photo. Recognition does not use `strict`.
-- **Group photo in recognition:** the threshold was measured with one big face per photo (E08), and the FAR and FRR of a group photo were **not measured**. Faces smaller than `FACE_APP_MIN_FACE_PX` (80 px on the shortest side, a provisional value) are ignored, and the boxes MTCNN gave on LFW photos (79 to 101 px wide) sit close to that limit. The same person can appear in more than one face (a photo of a photo, twins), and the screen says so instead of picking one ([D19](docs/decisions/D19-multi-face-recognition.md)).
+- **Group photo in recognition:** the threshold was measured with one big face per photo (E08), and the FAR and FRR of a group photo were **not measured**. Faces smaller than `FACE_APP_MIN_FACE_PX` (80 px on the shortest side, a provisional value) are ignored, and the boxes MTCNN gave on LFW photos (79 to 101 px wide) sit close to that limit. In a check with the real E06 (17/11, few photos): big, frontal faces scored similarity 0.93 and 0.95, a person facing the camera up close scored 0.82 to 0.84, and a person far from the camera and wearing glasses scored 0.63 and came out unknown even though enrolled with 5 photos, so a distant face becomes a false "unknown". The same person can appear in more than one face (a photo of a photo, twins), and the screen says so instead of picking one ([D19](docs/decisions/D19-multi-face-recognition.md)).
 - There is no **liveness check**: a photo of a photo may be accepted as the person.
 - There is no authentication, which is why the application is only reachable on the machine itself.
 - More model limits in [Results and analysis](#results-and-analysis).

@@ -14,7 +14,12 @@ from pathlib import Path
 
 import numpy as np
 
-from app.core.errors import CorruptEmbeddingError, DuplicatePersonError, PersonNotFoundError
+from app.core.errors import (
+    CorruptEmbeddingError,
+    DatabaseUnavailableError,
+    DuplicatePersonError,
+    PersonNotFoundError,
+)
 from app.core.models import DeletionResult, PersonSummary
 from app.storage.models import Gallery, NewPerson
 
@@ -57,6 +62,24 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def ensure_database_folder(database_path: Path | str) -> None:
+    """Makes sure the folder of the database exists, creating it private when it does not.
+
+    Raises:
+        DatabaseUnavailableError: The folder cannot be created or used. The usual cause is a
+            `data/private` that links to a vault which is closed: the link is there, but what it
+            points to is not, and the operating system refuses to create it again.
+    """
+    folder = Path(database_path).parent
+    try:
+        folder.mkdir(mode=PRIVATE_FOLDER_MODE, parents=True, exist_ok=True)
+    except OSError as error:
+        raise DatabaseUnavailableError(
+            f"the folder of the database is not available: {folder} ({type(error).__name__}); "
+            f"if it is a link to the vault, open the vault first"
+        ) from error
+
+
 class SqlitePersonRepository:
     """Stores people with their embeddings and reads them back for recognition."""
 
@@ -65,14 +88,22 @@ class SqlitePersonRepository:
 
         Args:
             database_path: A file path, or `":memory:"` for a throwaway database (tests).
+
+        Raises:
+            DatabaseUnavailableError: The folder or the file of the database cannot be used.
         """
         self._lock = threading.Lock()
         target = str(database_path)
         if target != MEMORY_DATABASE:
-            Path(target).parent.mkdir(mode=PRIVATE_FOLDER_MODE, parents=True, exist_ok=True)
-            # Create the file private before SQLite does: SQLite would create it with the umask
-            # (usually readable by others), and its journal file copies the mode of the database.
-            os.close(os.open(target, os.O_CREAT | os.O_RDWR, PRIVATE_FILE_MODE))
+            ensure_database_folder(target)
+            try:
+                # Create the file private before SQLite does: SQLite would create it with the
+                # umask (usually readable by others), and its journal file copies its mode.
+                os.close(os.open(target, os.O_CREAT | os.O_RDWR, PRIVATE_FILE_MODE))
+            except OSError as error:
+                raise DatabaseUnavailableError(
+                    f"the database file cannot be created: {target} ({type(error).__name__})"
+                ) from error
         self._connection = sqlite3.connect(target, check_same_thread=False)
         # Without these two PRAGMAs the cascade is ignored and deleted content stays in the file.
         self._connection.execute("PRAGMA foreign_keys = ON")

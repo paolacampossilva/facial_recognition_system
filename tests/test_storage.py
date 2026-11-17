@@ -12,7 +12,12 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from app.core.errors import CorruptEmbeddingError, DuplicatePersonError, PersonNotFoundError
+from app.core.errors import (
+    CorruptEmbeddingError,
+    DatabaseUnavailableError,
+    DuplicatePersonError,
+    PersonNotFoundError,
+)
 from app.storage.models import NewPerson
 from app.storage.repository import MEMORY_DATABASE, SqlitePersonRepository, name_key
 
@@ -312,3 +317,23 @@ def test_the_repository_can_be_used_from_another_thread(
         summary = pool.submit(repository.add_person, person("Ana", 1)).result()
         listed = pool.submit(repository.list_persons).result()
     assert listed == [summary]
+
+
+def test_a_folder_that_is_a_file_is_a_database_error_and_not_a_crash(tmp_path: Path) -> None:
+    blocker = tmp_path / "private"
+    blocker.write_text("not a folder", encoding="utf-8")
+
+    with pytest.raises(DatabaseUnavailableError, match="not available"):
+        SqlitePersonRepository(blocker / "app.db")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="creating a link needs a privilege on Windows")
+def test_a_link_to_a_closed_vault_says_to_open_the_vault(tmp_path: Path) -> None:
+    """`data/private` links to a vault: closed, the link stays and what it points to is gone."""
+    link = tmp_path / "private"
+    link.symlink_to(tmp_path / "vault-that-is-closed")
+
+    with pytest.raises(DatabaseUnavailableError, match="open the vault first") as error:
+        SqlitePersonRepository(link / "app.db")
+
+    assert str(link) in str(error.value)
