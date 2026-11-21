@@ -48,6 +48,8 @@ O enunciado completo está em [docs/assignment.md](docs/assignment.md).
 
 **Vídeo da Parte 1:** [assistir no YouTube](https://www.youtube.com/watch?v=r8HYzewxVCQ)
 
+**Vídeo da Parte 2:** [assistir no YouTube](https://www.youtube.com/watch?v=4yBI-N_CDPg)
+
 | Parte | Objetivo | Entrega |
 |---|---|---|
 | Parte 1, Experimentação | Comparar modelos, estratégias de treinamento/fine-tuning, funções de perda e thresholds para descobrir a melhor configuração | Código, experimentos, métricas e vídeo com os resultados |
@@ -617,6 +619,8 @@ facial_recognition_system/
 The full assignment (in Portuguese) is in [docs/assignment.md](docs/assignment.md).
 
 **Part 1 video:** [watch on YouTube](https://www.youtube.com/watch?v=r8HYzewxVCQ)
+
+**Part 2 video:** [watch on YouTube](https://www.youtube.com/watch?v=4yBI-N_CDPg)
 
 | Part | Goal | Deliverable |
 |---|---|---|
