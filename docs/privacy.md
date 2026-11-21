@@ -138,4 +138,33 @@ Verificado por Paola e Valentina em 24/10/2026, na `dev` com o PR #91 já mergea
 - **O que continua exposto:** a versão antiga segue no histórico da branch `dev`, no da `main` e nas páginas dos PRs no GitHub. A `main` recebeu a `dev` por merge (PR #97, entrega da Parte 1), então o commit `a4c376a` também está no histórico dela, e tirá-lo exigiria reescrever o histórico das duas branches. O que há nele são só IDs anônimos, sem nome, foto nem embedding. Só o suporte do GitHub apaga as páginas dos PRs. A Parte 2 também entra na `main` por merge, e o registro desta seção não promete um histórico limpo da `main`.
 - **Comunicação:** como prevê "Se algo vazar", as participantes afetadas são avisadas do que foi exposto e da correção.
 
-A verificação da Parte 2 (#53) repete os mesmos comandos e acrescenta uma linha a este registro.
+A verificação da Parte 2 (#53) repete os mesmos comandos e está na seção seguinte.
+
+### Verificação da entrega da Parte 2
+
+Verificado em 21/11/2026, na `dev` no commit `cbd73b0` (merge do PR #123, último antes da entrega). As confirmações das duas foram dadas por escrito em 21/11.
+
+- **Histórico do Git:** `git log --all --format= --name-only | sort -u` lista 226 caminhos, cobrindo todas as branches e PRs, inclusive os fechados (299 commits). Os únicos binários continuam sendo `docs/participant_photo_guide.pdf` e os 11 gráficos agregados de `experiments/figures/`. Nenhum caminho em `data/private`, `faces/`, `embeddings/`, `checkpoints/` ou `consent/`, e nenhuma foto, `.db`, `.pt`, `.npz`, `.npy` ou `.pkl`. O maior arquivo do histórico tem 246 KB (`lfw_train.txt`, dado público).
+- **Segredos e dados pessoais:** nenhuma ocorrência de CPF, nem de chave ou token (`sk-`, `ghp_`, `AKIA`, chave privada), em todo o histórico.
+- **Resultados publicados:** o `E08.json` e a `E08_confusion.png` só têm a tabela de totais (59, 0, 6 e 222), sem ID, nome, foto ou embedding por participante. A ocorrência da Parte 1 continua como registrada acima: o commit `a4c376a` está no histórico da `main`, e a Parte 2 entra por merge.
+- **Aplicação:** o `data/demo/app.db` da gravação ficou fora do cofre e fora do Git (`*.db` no `.gitignore`). Guarda só embeddings (1 pessoa, 3 vetores de 512 dimensões, sem foto), todos do `model_id` do E06. A gravação usou `FACE_APP_DATABASE_PATH=data/demo/app.db`, e a Valentina conferiu o banco recebido pelo sha256 (`374c5274…`). Depois da gravação, a Valentina apagou a foto, o `app.db`, a cópia de segurança e a pasta `data/demo` dela. A Paola também apagou a pasta `data/demo` do Mac dela.
+- **Testes e lint:** no Mac, `pytest` com 593 passed (2 deselected), `ruff check` e `ruff format --check` sem pendências. No Windows da Valentina, na mesma `dev` (`cbd73b0`), 588 passed, 5 skipped e 2 deselected. Na primeira rodada, 7 testes de câmera do `test_e2e.py` falharam, com a máquina ocupada (suíte em 208 s). Eles passaram rodando só o `test_e2e.py` (37 passed) e de novo na suíte completa, então parecem intermitentes e não uma regressão.
+- **Vídeo 2:** publicado no YouTube ([assistir](https://www.youtube.com/watch?v=4yBI-N_CDPg)). As duas assistiram à versão editada e aprovaram a publicação antes dela, o que confirma "o vídeo respeita as autorizações" (D15): só as duas autoras aparecem, sem participante e sem resultado individual.
+- **Revisão dos PRs:** o #123 foi aprovado pela Valentina em 21/11. Ela também conferiu que o `a4c376a` está na `main` (o #97 entrou como merge), o que confirma a correção do histórico registrada na Parte 1.
+- **Anexo B, confirmação da Paola em 21/11:** nada do cofre (fotos, recortes, embeddings, termos, planilha) foi enviado ao Claude ou a outro serviço externo, só código e contagens agregadas; conhece o `docs/privacy.md` e as seções 12 a 25; nenhum dado do cofre apareceu na gravação dela (cenas 1 a 4). A pasta `data/demo` do Mac dela (com o `app.db` da gravação) foi apagada em 21/11.
+- **Anexo B, resposta da Valentina em 21/11:**
+  - **Confirmado:** nenhuma foto, recorte, embedding, termo ou planilha das participantes foi enviado a serviço externo (com as duas ressalvas abaixo); a gravação usou o banco de demonstração fora do cofre.
+  - **Confirmado após conferência:** as 13 participantes têm termo assinado em `V:\termos`, conferido contra a planilha (uma contagem automática de pastas chegou a indicar 14, e a conferência pasta por pasta deu 13); a Valentina conhece o `docs/privacy.md` e as seções 12 a 25; nenhum dado do cofre apareceu na gravação, nem na janela de abrir arquivo; o vídeo só tem as duas autoras; as fotos das participantes estão só no cofre do notebook da RTX 4060, sem cópia em celular, Downloads ou pendrive (#13).
+  - **#24:** cumprido o critério "pelo menos 2 participantes a mais do que a galeria": a galeria do E08 tem 11 participantes e são 13 no total, então 2 ficaram de fora como desconhecidas.
+  - **#13:** "Nada em nuvem ou mensageiro" não se cumpre ao pé da letra: as fotos chegaram por WhatsApp, como permite a cláusula do termo, com a conversa apagada em até 24 h e as datas na planilha. Nada foi para a nuvem.
+
+#### Ocorrência: nomes de arquivo do cofre numa sessão do Claude Code
+
+- **O que foi exposto:** em outubro, numa sessão do Claude Code, a Valentina rodou scripts locais no cofre para conferir a #24. A saída que o agente recebeu trazia contagens por ID (P00 a P20), extensões e o número de duplicatas, mas incluía também o nome de 2 arquivos `.zip` no formato "WhatsApp Unknown <data> at <hora>.zip". Não havia nome de pessoa, imagem nem conteúdo de arquivo.
+- **Por que é uma ocorrência:** a regra de "Agentes de IA e serviços externos" admite só contagens, sem nomes de arquivo. O que passou foi o nome de 2 arquivos de transferência, sem identificar ninguém.
+- **Correção:** a conferência foi refeita só com uma contagem agregada. A regra continua: o agente recebe só números.
+- **Comunicação às participantes:** a dupla decidiu não avisá-las, por ser risco baixo: os nomes só trazem data e hora da transferência pelo WhatsApp, não identificam ninguém e não houve imagem nem conteúdo. A ocorrência fica registrada aqui, e as duas integrantes estão cientes.
+
+#### Registro: dados da demonstração fora do cofre
+
+Os dados abaixo são das duas autoras, não de participantes (D15), mas passaram fora do cofre: a foto da Paola e o `app.db` (por WhatsApp), o print do Meet com as duas (em pasta sincronizada com o OneDrive) e o `best.pt` (treinado só com o LFW, D16). Nenhum deles tem dado de participante, e a auditoria do histórico do Git não achou nenhum deles no repositório.
