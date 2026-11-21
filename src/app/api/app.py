@@ -1,0 +1,108 @@
+"""FastAPI application: the JSON routes plus the static web interface, with security headers."""
+
+import logging
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
+from pathlib import Path
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import Response
+from starlette.types import Scope
+
+from app.api.errors import to_error_response
+from app.api.guard import (
+    LOCAL_HOSTS,
+    PRIVATE_HEADERS,
+    ApiResponseHeaders,
+    SameOriginOnly,
+    UploadSizeLimit,
+)
+from app.api.ports import Services
+from app.api.routes import build_router
+from app.config import Settings
+from app.core.errors import AppError
+from facial_recognition_system.preprocessing.errors import PreprocessingError
+
+logger = logging.getLogger(__name__)
+
+# Part of the code, not of the configuration (spec 007, R8).
+WEB_DIR: Path = Path(__file__).resolve().parent.parent / "web"
+
+WEB_HEADERS: dict[str, str] = {
+    "Content-Security-Policy": (
+        "default-src 'none'; script-src 'self'; style-src 'self'; "
+        "img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-cache",
+}
+
+
+class WebFiles(StaticFiles):
+    """The static screens, always served with the security headers."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers.update(WEB_HEADERS)
+        return response
+
+
+def handle_error(_: Request, error: Exception) -> JSONResponse:
+    """Edge of the API: turns any error into the single error body."""
+    status_code, body = to_error_response(error)
+    if status_code >= 500:
+        logger.error("unexpected error", exc_info=error)
+    # Starlette runs the handler of `Exception` outside the middleware, so the headers go here too.
+    return JSONResponse(
+        status_code=status_code,
+        content=body.model_dump(exclude_none=True),
+        headers=PRIVATE_HEADERS,
+    )
+
+
+def create_app(
+    services: Services,
+    settings: Settings,
+    web_dir: Path = WEB_DIR,
+    lifespan: Callable[[FastAPI], AbstractAsyncContextManager[None]] | None = None,
+) -> FastAPI:
+    """Builds the application around the given services and serves the interface from `web_dir`.
+
+    Args:
+        services: The enrollment, recognition, deletion and person-list services.
+        settings: The configuration (spec 007). The API uses the upload limit and hands the
+            threshold to the interface, which shows it on the result (it does not change what the
+            services decide).
+        web_dir: Folder with the static interface.
+        lifespan: What runs when the server starts and stops, such as closing the database.
+    """
+    application = FastAPI(
+        title="Face recognition", docs_url=None, redoc_url=None, lifespan=lifespan
+    )
+    application.state.services = services
+    application.state.settings = settings
+    application.include_router(build_router())
+    # The expected errors get their own handlers: Starlette answers them inside the middleware and
+    # stops there. The handler of `Exception` runs in the outermost middleware, which re-raises
+    # after answering, so the server logs a traceback; it is kept for the unexpected 500 only.
+    application.add_exception_handler(AppError, handle_error)
+    application.add_exception_handler(PreprocessingError, handle_error)
+    application.add_exception_handler(RequestValidationError, handle_error)
+    # A name the request model refuses (empty, too long) is raised while a route builds it.
+    application.add_exception_handler(ValidationError, handle_error)
+    application.add_exception_handler(Exception, handle_error)
+    application.mount("/", WebFiles(directory=web_dir, html=True), name="web")
+    # The last one added is the outermost: the headers go on every API response, even a refusal,
+    # then the Host is checked, then the Origin, then the size of the body.
+    application.add_middleware(UploadSizeLimit, max_photo_bytes=settings.max_upload_bytes)
+    application.add_middleware(SameOriginOnly)
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=LOCAL_HOSTS)
+    application.add_middleware(ApiResponseHeaders)
+    return application

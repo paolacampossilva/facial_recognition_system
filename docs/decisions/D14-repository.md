@@ -6,7 +6,7 @@
 
 ## Contexto
 
-Cada entrega é o link de um repositório GitHub (seção 2), e o professor avalia versionamento, commits compreensíveis, especificações, critérios de aceitação e revisão de código (seção 41). As duas integrantes precisam saber explicar todo o trabalho (seção 5), mesmo dividindo as tarefas em fatias (division.md). As duas entregas são sequenciais (24/10 e 14/11), e o repositório não pode conter nenhum dado privado em nenhum ponto do histórico (seções 18 e 21).
+Cada entrega é o link de um repositório GitHub (seção 2), e o professor avalia versionamento, commits compreensíveis, especificações, critérios de aceitação e revisão de código (seção 41). As duas integrantes precisam saber explicar todo o trabalho (seção 5), mesmo dividindo as tarefas em fatias (division.md). As duas entregas são sequenciais (24/10 e, após a prorrogação do prazo, 21/11), e o repositório não pode conter nenhum dado privado em nenhum ponto do histórico (seções 18 e 21).
 
 ## Decisão
 

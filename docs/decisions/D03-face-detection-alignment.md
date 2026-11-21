@@ -14,7 +14,7 @@ O pipeline do enunciado começa com detecção, alinhamento e pré-processamento
 
 - `--alignment crop` recorta a caixa do rosto do mesmo jeito que o `facenet-pytorch`, que é a entrada com que o FaceNet pré-treinado foi treinado.
 - **LFW:** `--selection center`, que fica com o rosto mais perto do centro, porque as fotos do LFW são centradas na pessoa rotulada e às vezes têm outras pessoas ao fundo.
-- **Dataset privado e aplicação:** `--selection strict`, que rejeita fotos com mais de um rosto.
+- **Dataset privado e cadastro da aplicação:** `--selection strict`, que rejeita fotos com mais de um rosto. O **reconhecimento** da aplicação usa todos os rostos da imagem, com o mesmo detector, a mesma probabilidade e o mesmo recorte ([D19](D19-multi-face-recognition.md)).
 - Fotos em que nenhum rosto passa de 0,9 ficam fora dos splits e são listadas no `preprocessing_report.json`. No LFW, só 1 de 13.233 fotos falhou.
 - O alinhamento por similaridade (5 pontos faciais no template do ArcFace) está implementado, mas não entra nos experimentos.
 
@@ -26,7 +26,7 @@ O pipeline do enunciado começa com detecção, alinhamento e pré-processamento
 
 ## Consequências
 
-- Experimentos e aplicação usam o mesmo código ([src/facial_recognition_system/preprocessing/](../../src/facial_recognition_system/preprocessing/)), então o threshold escolhido na Parte 1 vale para as imagens da Parte 2.
-- O `strict` transforma "mais de um rosto" num erro explícito (`MultipleFacesError`). O guia para participantes pede que só a pessoa apareça na foto.
+- Experimentos e aplicação usam o mesmo código ([src/facial_recognition_system/preprocessing/](../../src/facial_recognition_system/preprocessing/)), então o threshold escolhido na Parte 1 vale para as imagens da Parte 2 (com a ressalva da D19 para rostos pequenos em foto de grupo).
+- No cadastro, o `strict` transforma "mais de um rosto" num erro explícito (`MultipleFacesError`). O guia para participantes pede que só a pessoa apareça na foto.
 - Poses muito laterais podem não passar de 0,9. O guia pede que os dois olhos apareçam, e as falhas do dataset privado ficam no relatório.
 - Implementado em [scripts/preprocess_faces.py](../../scripts/preprocess_faces.py).

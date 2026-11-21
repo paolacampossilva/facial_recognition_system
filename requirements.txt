@@ -24,7 +24,18 @@ PyYAML==6.0.3
 # Validação do manifesto de datasets (scripts/download_datasets.py)
 pydantic==2.14.1
 
+# Aplicação web (API FastAPI que serve a interface, src/app/)
+fastapi==0.163.0
+starlette==1.10.0
+uvicorn==0.54.0
+python-multipart==0.0.33
+httpx2==2.16.0
+pydantic-settings==2.16.2
+python-dotenv==1.2.4
+
 # Desenvolvimento
 pytest==9.1.1
 ruff==0.17.1
 pre-commit==4.7.0
+# Teste e2e da interface: usa o Google Chrome instalado, sem baixar outro navegador
+playwright==1.64.1

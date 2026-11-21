@@ -16,7 +16,7 @@ Cada parte tem um vídeo público. O da Parte 1 apresenta problema, datasets, ar
 - **Vídeo da Parte 2:**
   - **cadastro e reconhecimento:** uma de nós se cadastra pela câmera e depois é reconhecida;
   - **pessoa desconhecida:** a outra aparece **antes** de se cadastrar e recebe "pessoa desconhecida";
-  - **situação de erro:** uma foto sem rosto ou com nós duas juntas (vários rostos);
+  - **situação de erro:** uma foto sem rosto ou, no **Cadastro**, com nós duas juntas (vários rostos). No Reconhecimento, vários rostos deixaram de ser erro e a mesma foto pode mostrar as duas reconhecidas juntas ([D19](D19-multi-face-recognition.md));
   - o banco da demonstração tem só nós duas e é apagado depois da gravação, usando a própria exclusão da aplicação, o que também demonstra a seção 39.
 - **Na tela:** nada do cofre, dos termos, da planilha ou de nomes de participantes. Terminal e explorador de arquivos só mostram código e dados públicos.
 

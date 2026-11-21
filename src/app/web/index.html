@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reconhecimento facial</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script src="theme-init.js"></script>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button id="menu-toggle" type="button" class="icon-btn" aria-label="Abrir o menu" aria-expanded="false" aria-controls="sidebar"><span class="icon icon--menu" aria-hidden="true"></span></button>
+      <span class="topbar__name">Reconhecimento facial</span>
+    </header>
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar__inner">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"><span class="icon icon--scan-face"></span></span>
+          <span class="brand__name">Reconhecimento facial</span>
+        </div>
+        <nav id="menu" class="menu" aria-label="Telas"></nav>
+        <div class="sidebar__foot">
+          <p class="sidebar__note"><span class="icon icon--lock" aria-hidden="true"></span>Os dados ficam só neste computador.</p>
+          <button id="theme" type="button" class="theme-btn"></button>
+        </div>
+      </div>
+    </aside>
+    <div id="scrim" class="scrim" hidden></div>
+    <main id="view" class="view">
+      <p class="muted" role="status"><span class="spinner" aria-hidden="true"></span>Carregando…</p>
+    </main>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

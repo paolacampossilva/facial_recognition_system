@@ -3,7 +3,9 @@
 Photos, videos, embeddings, checkpoints, fitted classifiers and databases may
 derive from the private dataset (LGPD), so they are rejected everywhere. PNG
 figures are accepted only in the folders that hold documentation and aggregated
-plots, and only data/README.md and data/splits/ may be versioned under data/.
+plots, only data/README.md and data/splits/ may be versioned under data/, and PDF, Word and
+Excel files are accepted only when they are on the allow list below (a signed consent form or
+the control spreadsheet uses those formats, so a folder rule is not enough).
 
 Usage:
     python scripts/check_private_files.py FILE [FILE ...]
@@ -52,9 +54,10 @@ FIGURE_DIRS: tuple[PurePosixPath, ...] = (
     PurePosixPath("docs"),
     PurePosixPath("experiments/figures"),
 )
-# Signed consent forms and the control spreadsheet use these formats, so only docs/ may hold them.
+# Signed consent forms and the control spreadsheet use these formats, so no document may be
+# committed unless it was checked and added here, one path at a time.
 DOCUMENT_SUFFIXES: frozenset[str] = frozenset({".pdf", ".docx", ".xlsx"})
-DOCUMENT_DIR: PurePosixPath = PurePosixPath("docs")
+ALLOWED_DOCUMENTS: tuple[PurePosixPath, ...] = (PurePosixPath("docs/participant_photo_guide.pdf"),)
 PRIVATE_DIR_NAMES: frozenset[str] = frozenset({"faces", "embeddings", "checkpoints", "consent"})
 DATA_DIR: PurePosixPath = PurePosixPath("data")
 ALLOWED_DATA_PATHS: tuple[PurePosixPath, ...] = (
@@ -93,8 +96,11 @@ def find_violation(path: str) -> str | None:
     if suffix in FIGURE_SUFFIXES and not _is_under(file_path, FIGURE_DIRS):
         return "PNG files are only allowed in docs/ and experiments/figures/"
 
-    if suffix in DOCUMENT_SUFFIXES and not file_path.is_relative_to(DOCUMENT_DIR):
-        return "PDF, Word and Excel files are only allowed in docs/"
+    if suffix in DOCUMENT_SUFFIXES and file_path not in ALLOWED_DOCUMENTS:
+        return (
+            "PDF, Word and Excel files are blocked unless listed in ALLOWED_DOCUMENTS "
+            "(scripts/check_private_files.py); list one only after checking it has no personal data"
+        )
 
     return None
 
